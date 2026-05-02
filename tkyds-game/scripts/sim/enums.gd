@@ -1,0 +1,39 @@
+class_name SimEnums
+extends RefCounted
+
+enum TimeSlot {
+	EARLY_MORNING,
+	MID_MORNING,
+	LATE_MORNING,
+	EARLY_AFTERNOON,
+	LATE_AFTERNOON,
+	EARLY_EVENING,
+	LATE_EVENING,
+	MIDDLE_OF_NIGHT,
+}
+
+enum WorkState {
+	IDLE,
+	EMPLOYED_NOT_WORKING,
+	WORKING,
+}
+
+enum ContractStatus {
+	ACTIVE,
+	EXPIRED,
+	BREACHED,
+}
+
+const SLOT_NAMES := {
+	TimeSlot.EARLY_MORNING: "EARLY_MORNING",
+	TimeSlot.MID_MORNING: "MID_MORNING",
+	TimeSlot.LATE_MORNING: "LATE_MORNING",
+	TimeSlot.EARLY_AFTERNOON: "EARLY_AFTERNOON",
+	TimeSlot.LATE_AFTERNOON: "LATE_AFTERNOON",
+	TimeSlot.EARLY_EVENING: "EARLY_EVENING",
+	TimeSlot.LATE_EVENING: "LATE_EVENING",
+	TimeSlot.MIDDLE_OF_NIGHT: "MIDDLE_OF_NIGHT",
+}
+
+static func slot_name(slot: int) -> String:
+	return SLOT_NAMES.get(slot, "UNKNOWN")

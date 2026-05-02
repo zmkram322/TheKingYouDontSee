@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://ijaeu2srr5dr"]
+
+[ext_resource type="Script" path="res://scripts/ui/debug_view.gd" id="1_o5qli"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="DebugView" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 124.0
+offset_bottom = 129.0
+script = ExtResource("1_o5qli")
+
+[node name="ClockLabel" type="Label" parent="DebugView"]
+layout_mode = 2
+
+[node name="MarketLabel" type="Label" parent="DebugView"]
+layout_mode = 2
+
+[node name="ActorContainer" type="VBoxContainer" parent="DebugView"]
+layout_mode = 2

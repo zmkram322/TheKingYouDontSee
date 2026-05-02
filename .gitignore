@@ -1,0 +1,17 @@
+# Python virtualenv (project tooling for BMad scripts)
+.venv/
+
+# Claude Code local config (user paths + regenerable BMad skill copies)
+.claude/
+
+# BMad per-user overrides
+_bmad/custom/*.user.toml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp

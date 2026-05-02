@@ -1,0 +1,26 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="The King You Don't See"
+run/main_scene="res://scenes/prototype.tscn"
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+SimClock="*res://scripts/autoloads/sim_clock.gd"
+WindowBus="*res://scripts/autoloads/window_bus.gd"
+WindowOrchestrator="*res://scripts/autoloads/window_orchestrator.gd"
+
+[dotnet]
+
+project/assembly_name="The King You Don't See"

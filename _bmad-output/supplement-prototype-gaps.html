@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.1.251">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>supplement-prototype-gaps</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="supplement-prototype-gaps_files/libs/clipboard/clipboard.min.js"></script>
+<script src="supplement-prototype-gaps_files/libs/quarto-html/quarto.js"></script>
+<script src="supplement-prototype-gaps_files/libs/quarto-html/popper.min.js"></script>
+<script src="supplement-prototype-gaps_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="supplement-prototype-gaps_files/libs/quarto-html/anchor.min.js"></script>
+<link href="supplement-prototype-gaps_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="supplement-prototype-gaps_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="supplement-prototype-gaps_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="supplement-prototype-gaps_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="supplement-prototype-gaps_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+<section id="the-king-you-dont-see-prototype-gaps-supplement" class="level1">
+<h1>The King You Don’t See — Prototype Gaps Supplement</h1>
+<p><strong>Status:</strong> In progress. Decisions captured from party-mode elicitation session. <strong>Input to:</strong> <code>/gds-game-architecture</code> <strong>Session date:</strong> 2026-04-27</p>
+<hr>
+<section id="preamble-foundational-design-language" class="level2">
+<h2 class="anchored" data-anchor-id="preamble-foundational-design-language">Preamble — Foundational Design Language</h2>
+<p>Before the four formal gaps can be resolved, the session surfaced a foundational layer of design vocabulary and actor composition that all gap decisions build on. This section locks that layer.</p>
+<hr>
+</section>
+<section id="section-1-vocabulary" class="level2">
+<h2 class="anchored" data-anchor-id="section-1-vocabulary">Section 1 — Vocabulary</h2>
+<p>These terms are now canonical across all design and implementation discussions.</p>
+<table class="table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Phase</strong></td>
+<td>A discrete step in an actor’s daily routine. Ephemeral — does not survive a save. Owned by <code>BehaviorSchedule</code>.</td>
+</tr>
+<tr class="even">
+<td><strong>Routine</strong></td>
+<td>An ordered sequence of Phases defining a role’s daily cadence. Data, not logic. Externally assigned to a worker by their lord via <code>LordDirective</code>.</td>
+</tr>
+<tr class="odd">
+<td><strong>Routine Variant</strong></td>
+<td>A named routine configuration the lord can assign. Initial variants: <code>STANDARD_ROUTINE</code>, <code>DOUBLE_SHIFT_ROUTINE</code>. Routine swaps take effect only at day_tick boundary — never mid-phase.</td>
+</tr>
+<tr class="even">
+<td><strong>Interrupt</strong></td>
+<td>An <code>event_interrupt</code> signal that breaks the current phase mid-cycle. Sourced from the SimClock event queue.</td>
+</tr>
+<tr class="odd">
+<td><strong>Obligation</strong></td>
+<td><em>(Rejected.)</em> Previously considered as a phase injected by an external authority. Superseded by Routine Variants — the lord changes the whole routine, not individual phases.</td>
+</tr>
+<tr class="even">
+<td><strong>Headless Event</strong></td>
+<td>A sim-layer event with no active-layer representation. No signal emitted. Processors handle silently.</td>
+</tr>
+<tr class="odd">
+<td><strong>Latent Event</strong></td>
+<td>A sim event that <em>could</em> surface to the active layer. Emits a self-contained payload to the event bus. If nothing is listening, it disappears harmlessly. The sim does not know or care if anyone catches it.</td>
+</tr>
+<tr class="even">
+<td><strong>WorkerReport</strong></td>
+<td>A typed snapshot of a worker’s state at night_tick. Emitted by the worker, received by the lord’s <code>LordLedger</code>.</td>
+</tr>
+<tr class="odd">
+<td><strong>LordDirective</strong></td>
+<td>A resource on the worker actor. The lord writes it; the worker’s <code>BehaviorSchedule</code> reads it. Never the reverse.</td>
+</tr>
+<tr class="even">
+<td><strong>LordLedger</strong></td>
+<td>A node component on the lord actor. Accumulates <code>WorkerReport</code> entries: most-recent per worker, plus a rolling 7-night history.</td>
+</tr>
+<tr class="odd">
+<td><strong>LordPolicyEngine</strong></td>
+<td>A node component on the lord actor. Reads <code>LordLedger</code> at day_tick, applies AI decision logic, writes updated <code>LordDirective</code> resources to affected workers.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="section-2-actor-composition-model" class="level2">
+<h2 class="anchored" data-anchor-id="section-2-actor-composition-model">Section 2 — Actor Composition Model</h2>
+<section id="worker-actor" class="level3">
+<h3 class="anchored" data-anchor-id="worker-actor">Worker Actor</h3>
+<pre><code>Actor (Node)
+├── EconomicProfile   (Resource)  — grain, coin; saveable, high-read-frequency
+├── NeedsState        (Resource)  — hunger, restfulness, morale; drives behavioral decisions
+├── ContractState     (Resource)  — employer_id, wage, contract lifecycle state
+├── LordDirective     (Resource)  — current routine assignment; lord writes, worker reads
+├── BehaviorSchedule  (Node)      — reads LordDirective; advances phase on day_tick signal
+└── RoleCapabilities  (Node)
+    └── FarmerCapability (Resource) — assigned_plot_id, land_area, crop_type</code></pre>
+<p><strong>Key principles:</strong> - The actor is a <strong>Node that owns components</strong>, not a flat struct. - Resources are for durable, serializable, high-frequency-read data. - <code>BehaviorSchedule</code> is a Node because it receives signals, can be paused, and can be replaced when an actor changes role. - Processors receive the actor node and query capabilities — they never switch on a role enum.</p>
+</section>
+<section id="lord-actor" class="level3">
+<h3 class="anchored" data-anchor-id="lord-actor">Lord Actor</h3>
+<pre><code>Actor (Node)
+├── EconomicProfile   (Resource)
+├── NeedsState        (Resource)  — lords have needs too (abstracted in early epics)
+├── ContractState     (Resource)  — obligations to higher lords, tax agreements
+├── LordLedger        (Node)      — accumulates WorkerReports from all managed workers
+└── LordPolicyEngine  (Node)      — reads ledger at day_tick; writes LordDirectives</code></pre>
+<hr>
+</section>
+</section>
+<section id="section-3-morale-model" class="level2">
+<h2 class="anchored" data-anchor-id="section-3-morale-model">Section 3 — Morale Model</h2>
+<p><strong>Rule:</strong> Morale is a float in <code>NeedsState</code>. It has one drain source and one recovery source.</p>
+<table class="table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Event</th>
+<th>Morale Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Actor completes a WORKING phase</td>
+<td>Decrements morale by <code>work_morale_cost</code></td>
+</tr>
+<tr class="even">
+<td>Actor completes a SOCIALIZING phase (tavern)</td>
+<td>Increments morale by <code>social_morale_recovery</code></td>
+</tr>
+<tr class="odd">
+<td>RESTING phase</td>
+<td>No morale effect (restfulness recovery only)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>DOUBLE_SHIFT_ROUTINE</strong> removes the SOCIALIZING phase. Without recovery, morale drains monotonically until the work incapacity threshold is crossed.</p>
+<p><strong>Tuning parameters</strong> (not locked — requires playtesting): - <code>work_morale_cost</code> — morale drained per WORKING phase - <code>social_morale_recovery</code> — morale recovered per SOCIALIZING phase - <code>morale_incapacity_threshold</code> — floor below which <code>UNABLE_TO_WORK</code> is set - These values live in the archetype config resource, not hardcoded in processors.</p>
+<p><strong>Balance contract:</strong> Morale must drain gradually. There is a warning band between “morale feels bad” and the <code>UNABLE_TO_WORK</code> threshold. A lord reading their ledger has at minimum 2–3 nights to intervene before incapacity.</p>
+<hr>
+</section>
+<section id="section-4-condition-states" class="level2">
+<h2 class="anchored" data-anchor-id="section-4-condition-states">Section 4 — Condition States</h2>
+<p>Four condition states. These are flags that modify or suspend the routine. They are not phases.</p>
+<table class="table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Flag</th>
+<th>Meaning</th>
+<th>Upstream Inputs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>HUNGRY</code></td>
+<td>Food need is unmet</td>
+<td>Hunger float in <code>NeedsState</code> crosses threshold</td>
+</tr>
+<tr class="even">
+<td><code>BROKE</code></td>
+<td>Cannot afford goods at current market prices</td>
+<td>Coin in <code>EconomicProfile</code> vs.&nbsp;market price</td>
+</tr>
+<tr class="odd">
+<td><code>UNABLE_TO_WORK</code></td>
+<td>Actor cannot perform labor this tick</td>
+<td>Terminal output of morale collapse, food failure, or economic squeeze</td>
+</tr>
+<tr class="even">
+<td><code>MARKET_SEEKING</code></td>
+<td>Actor is pathfinding to a non-local market</td>
+<td>Price differential exceeds travel cost (actor has sufficient coin)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>HUNGRY</strong> and <strong>BROKE</strong> are <em>inputs to</em> <code>UNABLE_TO_WORK</code>, not synonyms. An actor can be HUNGRY and still work — for a while. When they cross the threshold, <code>UNABLE_TO_WORK</code> is set AND <code>incapacity_cause</code> is written.</p>
+<p><strong>STRIKING</strong> (prototype name) is retired. <code>UNABLE_TO_WORK</code> replaces it with cause attribution.</p>
+<hr>
+</section>
+<section id="section-5-work-incapacity-cause-attribution" class="level2">
+<h2 class="anchored" data-anchor-id="section-5-work-incapacity-cause-attribution">Section 5 — Work Incapacity Cause Attribution</h2>
+<p><code>UNABLE_TO_WORK</code> alone is not actionable. The lord needs to know <em>why</em>. Each cause requires a different intervention.</p>
+<pre class="gdscript"><code>enum WorkIncapacityCause {
+    NONE,              # actor is capable — no incapacity
+    MORALE_COLLAPSE,   # morale drained below work threshold (overwork, no recovery)
+    FOOD_ABSENT,       # food not available in market or actor inventory
+    FOOD_UNAFFORDABLE, # food exists but price exceeds wages (economic squeeze)
+    COMPOUNDING,       # multiple causes simultaneously active
+}</code></pre>
+<p><strong>Cause → Lord intervention mapping:</strong></p>
+<table class="table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Cause</th>
+<th>Player/Lord Response</th>
+<th>Problem Type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>MORALE_COLLAPSE</code></td>
+<td>Change routine (ease schedule, grant rest)</td>
+<td>Management — internal to lord control</td>
+</tr>
+<tr class="even">
+<td><code>FOOD_ABSENT</code></td>
+<td>Supply-side action (trade routes, production)</td>
+<td>Logistics — external systems</td>
+</tr>
+<tr class="odd">
+<td><code>FOOD_UNAFFORDABLE</code></td>
+<td>Wage intervention, price caps, merchant pressure</td>
+<td>Political-economic — adversarial actor</td>
+</tr>
+<tr class="even">
+<td><code>COMPOUNDING</code></td>
+<td>Multiple interventions required</td>
+<td>Systemic failure</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Reserved for later scope</strong> (architecture must not close the door): - <code>GRIEF_TRAUMA</code> — social cause; requires a human gesture from the lord, not a schedule change - <code>ILLNESS</code> — body failure; lord can mitigate (healers, sanitation) but not prevent outright</p>
+<hr>
+</section>
+<section id="section-6-night-tick-reporting-chain" class="level2">
+<h2 class="anchored" data-anchor-id="section-6-night-tick-reporting-chain">Section 6 — Night-Tick Reporting Chain</h2>
+<p><strong>Flow:</strong></p>
+<pre><code>Worker (night_tick fires)
+    → emits WorkerReport snapshot
+        → LordLedger.receive_report()      [passive accumulation]
+            → LordPolicyEngine.evaluate()  [at next day_tick]
+                → writes LordDirective     [takes effect at next day_tick boundary]</code></pre>
+<p><strong>Separation:</strong> There is always a half-cycle gap between worker emission (night_tick) and lord decision (day_tick). Lords are not omniscient. A worker can bottom out their morale and sit there for up to one full night before the lord knows. This is intentional world coherence, not a system flaw.</p>
+<p><strong>Population aggregation:</strong> <code>LordLedger</code> maintains a <code>nightly_cause_summary</code> — a count of actors per <code>WorkIncapacityCause</code> per night. The <code>LordPolicyEngine</code> reads the summary for systemic signals (e.g., five actors in the same region reporting <code>FOOD_ABSENT</code> on the same night = supply chain failure, not individual bad luck).</p>
+<hr>
+</section>
+<section id="section-7-presentation-layer-hybrid" class="level2">
+<h2 class="anchored" data-anchor-id="section-7-presentation-layer-hybrid">Section 7 — Presentation Layer (Hybrid)</h2>
+<p>The report serves two consumers with different needs:</p>
+<table class="table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Consumer</th>
+<th>What They See</th>
+<th>Format</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>LordPolicyEngine</code> (AI)</td>
+<td>Typed floats, cause enum, condition flags, trend deltas</td>
+<td>Structured <code>WorkerReport</code> data</td>
+</tr>
+<tr class="even">
+<td>Player (as lord)</td>
+<td>Human-texture narrative dispatches; threshold alerts</td>
+<td>Editorial filter over the same data</td>
+</tr>
+</tbody>
+</table>
+<p>The system captures everything. The player presentation layer filters to <strong>signals</strong> (threshold crossings, cause attributions, trend alerts) — not raw telemetry. The player should feel like they are reading morning intelligence dispatches, not auditing a spreadsheet.</p>
+<p><strong>Dispatch design principle:</strong> Signals must be legible in retrospect. After a work incapacity event, the player should be able to look back at the prior three dispatches and say “it was all there.” The dispatches are the tutorial — they teach the player to read the system without tooltips.</p>
+<hr>
+</section>
+<section id="section-8-stub-code" class="level2">
+<h2 class="anchored" data-anchor-id="section-8-stub-code">Section 8 — Stub Code</h2>
+<section id="work_incapacity_cause.gd" class="level3">
+<h3 class="anchored" data-anchor-id="work_incapacity_cause.gd"><code>work_incapacity_cause.gd</code></h3>
+<pre class="gdscript"><code>class_name WorkIncapacityCause
+
+enum Cause {
+    NONE,
+    MORALE_COLLAPSE,
+    FOOD_ABSENT,
+    FOOD_UNAFFORDABLE,
+    COMPOUNDING,
+    # Reserved: GRIEF_TRAUMA, ILLNESS
+}</code></pre>
+</section>
+<section id="economic_profile.gd" class="level3">
+<h3 class="anchored" data-anchor-id="economic_profile.gd"><code>economic_profile.gd</code></h3>
+<pre class="gdscript"><code>class_name EconomicProfile
+extends Resource
+
+var grain: float = 0.0
+var coin: float = 0.0
+# Extended via archetype config — do not add role-specific fields here</code></pre>
+</section>
+<section id="needs_state.gd" class="level3">
+<h3 class="anchored" data-anchor-id="needs_state.gd"><code>needs_state.gd</code></h3>
+<pre class="gdscript"><code>class_name NeedsState
+extends Resource
+
+var hunger: float = 0.0       # 0.0 = satisfied, 1.0 = starving
+var restfulness: float = 1.0  # 0.0 = exhausted, 1.0 = fully rested
+var morale: float = 1.0       # 0.0 = incapacitated, 1.0 = content
+
+# Condition flag set when morale crosses incapacity threshold
+var unable_to_work: bool = false
+var incapacity_cause: WorkIncapacityCause.Cause = WorkIncapacityCause.Cause.NONE
+
+# Condition flags
+var is_hungry: bool = false
+var is_broke: bool = false
+var is_market_seeking: bool = false</code></pre>
+</section>
+<section id="contract_state.gd" class="level3">
+<h3 class="anchored" data-anchor-id="contract_state.gd"><code>contract_state.gd</code></h3>
+<pre class="gdscript"><code>class_name ContractState
+extends Resource
+
+var employer_id: StringName = ""
+var wage: float = 0.0
+
+enum Status { NONE, ACTIVE, BREACHED, DISSOLVED }
+var status: Status = Status.NONE</code></pre>
+</section>
+<section id="lord_directive.gd" class="level3">
+<h3 class="anchored" data-anchor-id="lord_directive.gd"><code>lord_directive.gd</code></h3>
+<pre class="gdscript"><code>class_name LordDirective
+extends Resource
+
+# Lord writes. Worker reads. Never the reverse.
+enum Routine { STANDARD, DOUBLE_SHIFT }
+var assigned_routine: Routine = Routine.STANDARD
+
+# Pending routine — queued, takes effect at next day_tick boundary
+var pending_routine: Routine = Routine.STANDARD
+var routine_change_pending: bool = false</code></pre>
+</section>
+<section id="farmer_capability.gd" class="level3">
+<h3 class="anchored" data-anchor-id="farmer_capability.gd"><code>farmer_capability.gd</code></h3>
+<pre class="gdscript"><code>class_name FarmerCapability
+extends Resource
+
+var assigned_plot_id: StringName = ""
+var land_area: float = 1.0
+var crop_type: StringName = "grain"</code></pre>
+</section>
+<section id="behavior_schedule.gd" class="level3">
+<h3 class="anchored" data-anchor-id="behavior_schedule.gd"><code>behavior_schedule.gd</code></h3>
+<pre class="gdscript"><code>class_name BehaviorSchedule
+extends Node
+
+enum Phase {
+    IDLE,
+    TRAVELING,
+    WORKING,
+    DEPOSITING,
+    SOCIALIZING,
+    RESTING,
+}
+
+var current_phase: Phase = Phase.IDLE
+var lord_directive: LordDirective  # injected reference
+
+func _ready() -&gt; void:
+    pass  # subscribe to SimClock.day_tick in implementation
+
+func _on_day_tick() -&gt; void:
+    _apply_pending_routine()
+    _advance_phase()
+
+func _apply_pending_routine() -&gt; void:
+    if lord_directive.routine_change_pending:
+        lord_directive.assigned_routine = lord_directive.pending_routine
+        lord_directive.routine_change_pending = false
+
+func _advance_phase() -&gt; void:
+    pass  # implementation: step through routine phases, emit Latent Events</code></pre>
+</section>
+<section id="worker_report.gd" class="level3">
+<h3 class="anchored" data-anchor-id="worker_report.gd"><code>worker_report.gd</code></h3>
+<pre class="gdscript"><code>class_name WorkerReport
+extends Resource
+
+var actor_id: StringName = ""
+var tick: int = 0
+
+# Core typed fields — stable contract between actor and lord systems
+var morale: float = 0.0
+var hunger: float = 0.0
+var restfulness: float = 0.0
+var coin: float = 0.0
+var condition_flags: Array[StringName] = []
+var routine_id: StringName = ""
+var incapacity_cause: WorkIncapacityCause.Cause = WorkIncapacityCause.Cause.NONE
+
+# Flexible escape hatch — experimental or role-specific floats
+# e.g. { "productivity_index": 0.87, "days_on_double_shift": 3.0 }
+var extended_floats: Dictionary = {}</code></pre>
+</section>
+<section id="lord_ledger.gd" class="level3">
+<h3 class="anchored" data-anchor-id="lord_ledger.gd"><code>lord_ledger.gd</code></h3>
+<pre class="gdscript"><code>class_name LordLedger
+extends Node
+
+const HISTORY_DEPTH: int = 7  # one week of night reports
+
+# Most recent report per worker
+var current_reports: Dictionary = {}       # { actor_id: WorkerReport }
+
+# Rolling history per worker
+var report_history: Dictionary = {}        # { actor_id: Array[WorkerReport] }
+
+# Population-level summary per night — computed on receipt, read by PolicyEngine
+var nightly_cause_summary: Dictionary = {} # { WorkIncapacityCause.Cause: int }
+
+func receive_report(report: WorkerReport) -&gt; void:
+    current_reports[report.actor_id] = report
+    _append_history(report)
+    _update_cause_summary(report)
+
+func get_morale_trend(actor_id: StringName, nights: int = 3) -&gt; float:
+    # Returns average morale delta over last N nights — negative = declining
+    pass  # implementation
+
+func _append_history(report: WorkerReport) -&gt; void:
+    if report.actor_id not in report_history:
+        report_history[report.actor_id] = []
+    var history: Array = report_history[report.actor_id]
+    history.append(report)
+    if history.size() &gt; HISTORY_DEPTH:
+        history.pop_front()
+
+func _update_cause_summary(report: WorkerReport) -&gt; void:
+    if report.incapacity_cause == WorkIncapacityCause.Cause.NONE:
+        return
+    var cause = report.incapacity_cause
+    nightly_cause_summary[cause] = nightly_cause_summary.get(cause, 0) + 1</code></pre>
+</section>
+<section id="lord_policy_engine.gd" class="level3">
+<h3 class="anchored" data-anchor-id="lord_policy_engine.gd"><code>lord_policy_engine.gd</code></h3>
+<pre class="gdscript"><code>class_name LordPolicyEngine
+extends Node
+
+var ledger: LordLedger  # injected reference
+
+func _on_day_tick() -&gt; void:
+    _evaluate_population_signals()
+    _evaluate_per_actor()
+
+func _evaluate_population_signals() -&gt; void:
+    # Read ledger.nightly_cause_summary for systemic conditions
+    # e.g. FOOD_ABSENT in 3+ workers = supply chain failure signal
+    pass  # implementation
+
+func _evaluate_per_actor() -&gt; void:
+    for actor_id in ledger.current_reports:
+        var report: WorkerReport = ledger.current_reports[actor_id]
+        var trend: float = ledger.get_morale_trend(actor_id)
+        _decide_directive(actor_id, report, trend)
+
+func _decide_directive(actor_id: StringName, report: WorkerReport, morale_trend: float) -&gt; void:
+    # Read report.incapacity_cause and morale_trend
+    # Write updated LordDirective to the target worker actor
+    pass  # implementation</code></pre>
+</section>
+<section id="actor.gd-skeleton" class="level3">
+<h3 class="anchored" data-anchor-id="actor.gd-skeleton"><code>actor.gd</code> (skeleton)</h3>
+<pre class="gdscript"><code>class_name Actor
+extends Node
+
+@export var economic_profile: EconomicProfile
+@export var needs_state: NeedsState
+@export var contract_state: ContractState
+@export var lord_directive: LordDirective
+@onready var behavior_schedule: BehaviorSchedule = $BehaviorSchedule
+@onready var role_capabilities: Node = $RoleCapabilities
+
+func get_capability(capability_class) -&gt; Resource:
+    for child in role_capabilities.get_children():
+        if child is capability_class:
+            return child
+    return null
+
+func emit_night_report(tick: int) -&gt; WorkerReport:
+    var report := WorkerReport.new()
+    report.actor_id = name
+    report.tick = tick
+    report.morale = needs_state.morale
+    report.hunger = needs_state.hunger
+    report.restfulness = needs_state.restfulness
+    report.coin = economic_profile.coin
+    report.routine_id = str(lord_directive.assigned_routine)
+    report.incapacity_cause = needs_state.incapacity_cause
+    if needs_state.is_hungry:
+        report.condition_flags.append("HUNGRY")
+    if needs_state.is_broke:
+        report.condition_flags.append("BROKE")
+    if needs_state.unable_to_work:
+        report.condition_flags.append("UNABLE_TO_WORK")
+    if needs_state.is_market_seeking:
+        report.condition_flags.append("MARKET_SEEKING")
+    return report</code></pre>
+<hr>
+</section>
+</section>
+<section id="open-design-questions-to-be-resolved-in-subsequent-gaps" class="level2">
+<h2 class="anchored" data-anchor-id="open-design-questions-to-be-resolved-in-subsequent-gaps">Open Design Questions (to be resolved in subsequent gaps)</h2>
+<ul>
+<li><strong>Gap 1 — NPC Decision Model:</strong> Full decision function shape for worker condition state evaluation (when exactly does morale flip UNABLE_TO_WORK; how does BROKE interact with FOOD_UNAFFORDABLE; how does MARKET_SEEKING evaluate travel cost vs.&nbsp;price differential).</li>
+<li><strong>Gap 2 — Actor State Decomposition:</strong> Full field inventory for Epic 2 vs.&nbsp;prototype; day_tick vs.&nbsp;week_tick vs.&nbsp;event_interrupt update cadence per resource.</li>
+<li><strong>Gap 3 — World Construction Grammar:</strong> How does a world seed produce lord hierarchy, regional resource profiles, and actor instantiation order.</li>
+<li><strong>Gap 4 — Archetype Extensibility:</strong> How processors access archetype-specific behavioral weights; where archetype config lives; how new archetypes are added without modifying existing processors.</li>
+</ul>
+<hr>
+<p><em>This document is a living supplement. Append gap decisions below as the session continues.</em></p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
