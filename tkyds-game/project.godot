@@ -21,6 +21,7 @@ SimClock="*res://scripts/autoloads/sim_clock.gd"
 WindowBus="*res://scripts/autoloads/window_bus.gd"
 WindowOrchestrator="*res://scripts/autoloads/window_orchestrator.gd"
 Goods="*res://scripts/autoloads/good_registry.gd"
+Jobs="*res://scripts/autoloads/job_registry.gd"
 
 [dotnet]
 

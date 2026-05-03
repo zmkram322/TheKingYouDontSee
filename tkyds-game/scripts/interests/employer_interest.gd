@@ -3,6 +3,7 @@ extends Interest
 
 var labor_market: LaborMarket
 @export var desired_workers: int = 2
+@export var job_category: StringName = &"farming"
 
 func connect_to_bus() -> void:
 	WindowBus.labor_market_opened.connect(post_open_jobs)
@@ -28,10 +29,11 @@ func pay_outstanding_wages() -> void:
 		return
 	print("    %s.EmployerInterest.pay_outstanding_wages() — settling %d payable(s)" % [owner.actor_id, n])
 	var supply := labor_market.supply_for_scarcity() if labor_market != null else 0
+	var job := Jobs.config_for(job_category)
 	var total_paid: int = 0
 	for payable in owner.accounts.payables:
 		var worker := owner.get_node(payable.worker) as Actor
-		var rate := WageCalculator.calculate_wage_per_slot(owner, worker, supply)
+		var rate := WageCalculator.calculate_wage_per_slot(owner, worker, job, supply)
 		var coin_owed := int(round(payable.slots_worked * rate))
 		owner.accounts.coin -= coin_owed
 		worker.accounts.coin += coin_owed

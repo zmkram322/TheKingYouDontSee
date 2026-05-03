@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="JobCategory" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/economy/job_category.gd" id="1_farming"]
+
+[resource]
+script = ExtResource("1_farming")
+job_id = &"farming"
+skill_key = &"farming"
+minimum_wage = 1.0
+base_skill = 2.0
+x_0 = 100.0
+a = 1.0
+k = 1.0
+s_0 = 2.0

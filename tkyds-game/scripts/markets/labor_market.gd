@@ -28,10 +28,12 @@ func clear() -> void:
 	var rankings: Dictionary = {}
 	for employer_path in employers:
 		var employer := get_node(employer_path) as Actor
+		var employer_interest := employer.find_interest(EmployerInterest) as EmployerInterest
+		var job := Jobs.config_for(employer_interest.job_category) if employer_interest != null else null
 		var ranked: Array = []
 		for worker_path in workers:
 			var worker := get_node(worker_path) as Actor
-			var asked_wage: float = WageCalculator.calculate_wage_per_slot(employer, worker, supply)
+			var asked_wage: float = WageCalculator.calculate_wage_per_slot(employer, worker, job, supply)
 			var expected_productivity: float = 1.0
 			var ratio: float = expected_productivity / max(asked_wage, 0.01)
 			ranked.append({"worker": worker_path, "ratio": ratio})
