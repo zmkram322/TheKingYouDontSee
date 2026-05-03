@@ -51,25 +51,21 @@ func _ready() -> void:
 	print("[Bootstrap] complete — actors: %s" % str(region.actors.map(func(a): return a.actor_id)))
 	print("[Bootstrap] starting clock\n")
 
-func _make_worker(id: StringName, labor_market: LaborMarket, retail_market: RetailMarket) -> Worker:
-	var w := Worker.new()
+func _make_worker(id: StringName, labor_market: LaborMarket, retail_market: RetailMarket) -> Actor:
+	var w := Actor.new()
 	w.name = String(id)
 	w.actor_id = id
 	w.accounts = Accounts.new()
-	w.accounts.coin = 0
-	w.work_state = SimEnums.WorkState.IDLE
 	var working := WorkingInterest.new()
 	working.labor_market = labor_market
-	w.working_interest = working
 	var grain := GrainInterest.new()
 	grain.retail_market = retail_market
 	grain.daily_demand = 2
-	w.grain_interest = grain
 	w.interests = [working, grain]
 	return w
 
-func _make_land_owner(id: StringName, plot: LandPlot, labor_market: LaborMarket, wholesale_market: WholesaleMarket, retail_market: RetailMarket) -> LandOwner:
-	var lo := LandOwner.new()
+func _make_land_owner(id: StringName, plot: LandPlot, labor_market: LaborMarket, wholesale_market: WholesaleMarket, retail_market: RetailMarket) -> Actor:
+	var lo := Actor.new()
 	lo.name = String(id)
 	lo.actor_id = id
 	lo.accounts = Accounts.new()
@@ -77,19 +73,18 @@ func _make_land_owner(id: StringName, plot: LandPlot, labor_market: LaborMarket,
 	lo.accounts.owned_resources = [plot]
 	var production := ProductionInterest.new()
 	production.plot = plot
-	production.labor_market = labor_market
 	production.wholesale_market = wholesale_market
-	production.desired_workers = 2
-	lo.production_interest = production
+	var employer := EmployerInterest.new()
+	employer.labor_market = labor_market
+	employer.desired_workers = 2
 	var grain := GrainInterest.new()
 	grain.retail_market = retail_market
 	grain.daily_demand = 2
-	lo.grain_interest = grain
-	lo.interests = [production, grain]
+	lo.interests = [production, employer, grain]
 	return lo
 
-func _make_merchant(id: StringName, wholesale_market: WholesaleMarket, retail_market: RetailMarket) -> Merchant:
-	var m := Merchant.new()
+func _make_merchant(id: StringName, wholesale_market: WholesaleMarket, retail_market: RetailMarket) -> Actor:
+	var m := Actor.new()
 	m.name = String(id)
 	m.actor_id = id
 	m.accounts = Accounts.new()
@@ -99,10 +94,8 @@ func _make_merchant(id: StringName, wholesale_market: WholesaleMarket, retail_ma
 	mercantile.retail_market = retail_market
 	mercantile.good_id = &"grain"
 	mercantile.target_inventory = 60
-	m.mercantile_interest = mercantile
 	var grain := GrainInterest.new()
 	grain.retail_market = retail_market
 	grain.daily_demand = 2
-	m.grain_interest = grain
 	m.interests = [mercantile, grain]
 	return m

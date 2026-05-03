@@ -4,15 +4,30 @@ extends Node
 @export var actor_id: StringName = &""
 @export var accounts: Accounts
 @export var interests: Array[Interest] = []
-@export var grain_interest: GrainInterest
 
 func _ready() -> void:
-	_wire_signals()
+	for interest in interests:
+		interest.owner = self
+		interest.connect_to_bus()
+		print("[Wire] %s attached %s" % [actor_id, interest.get_script().get_global_name()])
 
-func _wire_signals() -> void:
-	SimClock.daily_tick.connect(tick_each_slot)
-	print("[Wire] %s.tick_each_slot ← SimClock.daily_tick" % actor_id)
+func _exit_tree() -> void:
+	for interest in interests:
+		interest.disconnect_from_bus()
+		interest.owner = null
 
-func tick_each_slot(slot: int) -> void:
-	if grain_interest != null and slot == SimEnums.TimeSlot.LATE_EVENING:
-		grain_interest.place_grain_order(self)
+func add_interest(interest: Interest) -> void:
+	interests.append(interest)
+	interest.owner = self
+	interest.connect_to_bus()
+
+func remove_interest(interest: Interest) -> void:
+	interest.disconnect_from_bus()
+	interest.owner = null
+	interests.erase(interest)
+
+func find_interest(type: Variant) -> Interest:
+	for i in interests:
+		if is_instance_of(i, type):
+			return i
+	return null

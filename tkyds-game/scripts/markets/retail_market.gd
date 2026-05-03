@@ -8,5 +8,5 @@ func _ready() -> void:
 	print("[Wire] RetailMarket.clear ← WindowBus.retail_market_closed")
 
 func clear() -> void:
-	print("    RetailMarket.clear(%s) — transfer grain merchant→consumers at flat price; coin reverse; consumers' outstanding_demand decremented" % good_id)
+	print("[CLEAR]    RetailMarket.clear(%s) — transfer grain merchant→consumers at flat price; coin reverse; consumers' outstanding_demand decremented" % good_id)
 	reset_pools()
