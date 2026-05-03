@@ -11,18 +11,18 @@ func handle_daily_slot(slot: int) -> void:
 			WindowBus.open_work_window()
 		SimEnums.TimeSlot.EARLY_EVENING:
 			WindowBus.close_work_window()
-		SimEnums.TimeSlot.LATE_EVENING:
-			WindowBus.open_labor_market()
-			WindowBus.close_labor_market()
 		_:
 			pass
 
 func fire_weekly_burst() -> void:
 	print("  [Orchestrator] weekly burst begins")
+	WindowBus.fire_wages_due()
+	WindowBus.fire_weekly_books_close()
 	WindowBus.fire_merchant_restock()
 	WindowBus.open_wholesale_market()
 	WindowBus.close_wholesale_market()
 	WindowBus.open_retail_market()
 	WindowBus.close_retail_market()
-	WindowBus.fire_wages_due()
+	WindowBus.open_labor_market()
+	WindowBus.close_labor_market()
 	print("  [Orchestrator] weekly burst ends")

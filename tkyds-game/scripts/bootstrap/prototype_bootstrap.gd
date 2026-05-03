@@ -60,7 +60,6 @@ func _make_worker(id: StringName, labor_market: LaborMarket, retail_market: Reta
 	working.labor_market = labor_market
 	var grain := GrainInterest.new()
 	grain.retail_market = retail_market
-	grain.daily_demand = 2
 	w.interests = [working, grain]
 	return w
 
@@ -79,7 +78,6 @@ func _make_land_owner(id: StringName, plot: LandPlot, labor_market: LaborMarket,
 	employer.desired_workers = 2
 	var grain := GrainInterest.new()
 	grain.retail_market = retail_market
-	grain.daily_demand = 2
 	lo.interests = [production, employer, grain]
 	return lo
 
@@ -96,6 +94,5 @@ func _make_merchant(id: StringName, wholesale_market: WholesaleMarket, retail_ma
 	mercantile.target_inventory = 60
 	var grain := GrainInterest.new()
 	grain.retail_market = retail_market
-	grain.daily_demand = 2
 	m.interests = [mercantile, grain]
 	return m

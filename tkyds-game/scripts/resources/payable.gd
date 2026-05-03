@@ -1,6 +1,6 @@
 class_name Payable
 extends Resource
 
-@export var owed_to: NodePath
-@export var amount: int = 0
-@export var reason: StringName = &""
+@export var worker: NodePath
+@export var slots_worked: int = 0
+@export var contract: NodePath

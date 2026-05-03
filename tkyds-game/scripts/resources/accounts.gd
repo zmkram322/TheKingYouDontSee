@@ -7,3 +7,6 @@ extends Resource
 @export var contracts: Array[Contract] = []
 @export var payables: Array[Payable] = []
 @export var receivables: Array[Receivable] = []
+@export var skills: Dictionary = {}
+@export var weekly_costs: Dictionary = {}
+@export var weekly_outputs: Dictionary = {}

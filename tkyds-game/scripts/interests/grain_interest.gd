@@ -2,25 +2,30 @@ class_name GrainInterest
 extends Interest
 
 var retail_market: RetailMarket
-@export var daily_demand: int = 2
-var outstanding_demand: int = 0
+var outstanding_demand: float = 0.0
 
 func connect_to_bus() -> void:
-	SimClock.daily_tick.connect(_consider_placing_order)
+	WindowBus.retail_market_opened.connect(register_for_retail_clearing)
 
 func disconnect_from_bus() -> void:
-	SimClock.daily_tick.disconnect(_consider_placing_order)
+	WindowBus.retail_market_opened.disconnect(register_for_retail_clearing)
 
-func _consider_placing_order(slot: int) -> void:
-	if slot != SimEnums.TimeSlot.LATE_EVENING: return
-	place_grain_order()
+func register_for_retail_clearing() -> void:
+	if retail_market == null:
+		return
+	retail_market.queue_demand(owner, 0)
+	print("    %s.GrainInterest.register_for_retail_clearing() — registered as grain demander" % owner.actor_id)
 
-func place_grain_order() -> void:
-	outstanding_demand += daily_demand
-	print("    %s.GrainInterest.place_grain_order() — +%d grain demand (outstanding=%d)" % [owner.actor_id, daily_demand, outstanding_demand])
-	if retail_market != null:
-		retail_market.queue_demand(owner, daily_demand)
+func compute_demand_at_price(price: float, days: int) -> float:
+	var cfg := Goods.config_for(&"grain")
+	return cfg.a_per_actor_daily * pow(price, -cfg.elasticity) * float(days)
 
-func record_receipt(qty: int) -> void:
-	outstanding_demand = max(0, outstanding_demand - qty)
-	print("    GrainInterest.record_receipt(%d) — outstanding_demand now %d" % [qty, outstanding_demand])
+func decay_carried_demand() -> float:
+	var cfg := Goods.config_for(&"grain")
+	outstanding_demand *= (1.0 - cfg.decay_lambda)
+	return outstanding_demand
+
+func record_clearing(wanted: float, received: float) -> void:
+	outstanding_demand = max(0.0, wanted - received)
+	print("    %s.GrainInterest.record_clearing() — wanted %.1f, received %.1f, %.1f outstanding" %
+		[owner.actor_id, wanted, received, outstanding_demand])

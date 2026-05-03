@@ -28,7 +28,7 @@ func _advance_one_slot() -> void:
 	var day := current_day
 	print("\n[Day %d %s]" % [day, SimEnums.slot_name(slot)])
 	daily_tick.emit(slot)
-	if slot == SimEnums.TimeSlot.EARLY_MORNING and day % 7 == 0:
+	if slot == SimEnums.TimeSlot.EARLY_MORNING and day % 7 == 1:
 		print("[SimClock] weekly_tick (day %d)" % day)
 		weekly_tick.emit()
 	current_slot += 1

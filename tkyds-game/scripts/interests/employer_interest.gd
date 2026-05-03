@@ -23,8 +23,22 @@ func post_open_jobs() -> void:
 
 func pay_outstanding_wages() -> void:
 	var n := owner.accounts.payables.size() if owner.accounts != null else 0
-	print("    %s.EmployerInterest.pay_outstanding_wages() — walk %d payable(s); decrement coin; pay each worker; clear payables" % [owner.actor_id, n])
-	# Math lands in the next session. Print-only for now.
+	if n == 0:
+		print("    %s.EmployerInterest.pay_outstanding_wages() — nothing to settle" % owner.actor_id)
+		return
+	print("    %s.EmployerInterest.pay_outstanding_wages() — settling %d payable(s)" % [owner.actor_id, n])
+	var supply := labor_market.supply_for_scarcity() if labor_market != null else 0
+	var total_paid: int = 0
+	for payable in owner.accounts.payables:
+		var worker := owner.get_node(payable.worker) as Actor
+		var rate := WageCalculator.calculate_wage_per_slot(owner, worker, supply)
+		var coin_owed := int(round(payable.slots_worked * rate))
+		owner.accounts.coin -= coin_owed
+		worker.accounts.coin += coin_owed
+		total_paid += coin_owed
+		print("      paid %s: %d slots × %.2f rate = %d coin" % [worker.actor_id, payable.slots_worked, rate, coin_owed])
+	owner.accounts.payables.clear()
+	owner.accounts.weekly_costs[&"wages"] = owner.accounts.weekly_costs.get(&"wages", 0) + total_paid
 
 func filled_positions() -> int:
 	if owner == null or owner.accounts == null:

@@ -10,6 +10,7 @@ signal retail_market_opened
 signal retail_market_closed
 signal merchant_restock
 signal wages_due
+signal weekly_books_close
 
 func open_labor_market() -> void:
 	print("  [Bus] open_labor_market")
@@ -50,3 +51,7 @@ func fire_merchant_restock() -> void:
 func fire_wages_due() -> void:
 	print("  [Bus] wages_due")
 	wages_due.emit()
+
+func fire_weekly_books_close() -> void:
+	print("  [Bus] weekly_books_close")
+	weekly_books_close.emit()

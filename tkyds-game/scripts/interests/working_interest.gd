@@ -3,6 +3,7 @@ extends Interest
 
 @export var work_state: SimEnums.WorkState = SimEnums.WorkState.IDLE
 var labor_market: LaborMarket
+var slots_worked_today: int = 0
 
 func connect_to_bus() -> void:
 	WindowBus.labor_market_opened.connect(look_for_work)
@@ -38,13 +39,39 @@ func begin_working() -> void:
 		print("    %s.work_state → WORKING" % owner.actor_id)
 
 func do_one_work_slot(slot: int) -> void:
-	# Filter internally — only do work during a work-window slot AND when WORKING.
 	if work_state != SimEnums.WorkState.WORKING: return
 	if slot < SimEnums.TimeSlot.MID_MORNING or slot > SimEnums.TimeSlot.LATE_AFTERNOON: return
-	print("    %s.WorkingInterest.do_one_work_slot() — +1 grain to worker inventory" % owner.actor_id)
+	slots_worked_today += 1
+	print("    %s.WorkingInterest.do_one_work_slot() — slot %d worked (today %d)" %
+		[owner.actor_id, slot, slots_worked_today])
 
 func deliver_grain_and_bill() -> void:
-	if current_contract() == null: return
-	print("    %s.WorkingInterest.hand_grain_to_owner_and_bill() — transfer grain to LandOwner; emit Payable (wages)" % owner.actor_id)
+	var contract := current_contract()
+	if contract == null: return
+	var employer := owner.get_node(contract.employer) as Actor
+	# Produced grain = slots worked today × 1 grain/slot. Goes straight to employer.
+	# Worker's personal inventory (retail purchases, etc.) stays untouched.
+	var grain_produced: int = slots_worked_today
+	employer.accounts.inventory[&"grain"] = employer.accounts.inventory.get(&"grain", 0) + grain_produced
+	employer.accounts.weekly_outputs[&"grain"] = employer.accounts.weekly_outputs.get(&"grain", 0) + grain_produced
+	# Accumulate Payable
+	var payable := find_or_create_payable_for(employer, contract, owner)
+	payable.slots_worked += slots_worked_today
+	print("    %s.WorkingInterest.deliver_grain_and_bill() — %d grain → %s; +%d slots on payable (now %d)" %
+		[owner.actor_id, grain_produced, employer.actor_id, slots_worked_today, payable.slots_worked])
+	slots_worked_today = 0
 	work_state = SimEnums.WorkState.EMPLOYED_NOT_WORKING
 	print("    %s.work_state → EMPLOYED_NOT_WORKING" % owner.actor_id)
+
+func find_or_create_payable_for(employer: Actor, _contract: LaborContract, worker: Actor) -> Payable:
+	# Contract is a Resource, not a Node — payable.contract stays empty NodePath at v0.
+	# v0 settlement reads rate fresh via WageCalculator, so contract reference isn't needed yet.
+	var worker_path := worker.get_path()
+	for p in employer.accounts.payables:
+		if p is Payable and p.worker == worker_path:
+			return p
+	var fresh := Payable.new()
+	fresh.worker = worker_path
+	fresh.slots_worked = 0
+	employer.accounts.payables.append(fresh)
+	return fresh
