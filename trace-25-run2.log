@@ -1,0 +1,579 @@
+﻿Godot Engine v4.4.stable.mono.official.4c311cbee - https://godotengine.org
+
+[SimClock] ready — seconds_per_slot=0.100 max_days=14
+[WindowOrchestrator] ready — listening to SimClock.daily_tick and SimClock.weekly_tick
+Godot_v4.4-stable_mono_win64_console.exe : SCRIPT ERROR: Invalid type in function '_register' in base 'Node 
+(good_registry.gd)'. The Object-derived class of argument 1 (Resource) is not a subclass of the expected argument 
+class.
+At line:1 char:1
++ & 'Z:\Godot\Godot_v4.4-stable_mono_win64\Godot_v4.4-stable_mono_win64 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (SCRIPT ERROR: I...argument class.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   at: _ready (res://scripts/autoloads/good_registry.gd:8)
+[Wire] Jobs registered: farming (skill_key=farming, min_wage=1.00, base_skill=2.0)
+[Jobs] ready — 1 job(s) registered
+[Bootstrap] starting v0 prototype — 1 Region, 4 Actors, 3 Markets
+[Wire] LaborMarket ready (pull-on-open)
+[Wire] WholesaleMarket ready (pull-on-open; period_length=7)
+[Wire] RetailMarket ready (pull-on-open; period_length=7)
+[Wire] worker_1 attached WorkingInterest
+[Wire] worker_1 attached GrainInterest
+[Wire] worker_2 attached WorkingInterest
+[Wire] worker_2 attached GrainInterest
+[Wire] land_owner_1 attached ProductionInterest
+[Wire] land_owner_1 attached EmployerInterest
+[Wire] land_owner_1 attached GrainInterest
+[Wire] merchant_1 attached MercantileInterest
+[Wire] merchant_1 attached GrainInterest
+[Bootstrap] complete — actors: [&"worker_1", &"worker_2", &"land_owner_1", &"merchant_1"]
+[Bootstrap] starting clock
+
+
+[Day 1 EARLY_MORNING]
+[SimClock] weekly_tick (day 1)
+  [Orchestrator] weekly burst begins
+    land_owner_1.EmployerInterest.settle_outstanding_wages() — nothing to settle
+    land_owner_1.ProductionInterest.respond_to_supply_call — output=0, wages=-0, cost_basis=0.00, qty_offered=-0
+    merchant_1.MercantileInterest.respond_to_wholesale_demand_call — on_hand=-0.0, target=60, deficit=60.0
+[CLEAR]    WholesaleMarket — nothing to clear (supply=0.0, demand=60.0)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+[CLEAR]    RetailMarket — nothing to clear (supply=0.0, demanders=0)
+    worker_1 offers self to LaborMarket
+    worker_2 offers self to LaborMarket
+    land_owner_1.EmployerInterest — desired=2 filled=0 open=2
+[CLEAR]      contract: worker_1 ↔ land_owner_1, week=1, wage_per_slot=1.00
+[CLEAR]      contract: worker_2 ↔ land_owner_1, week=1, wage_per_slot=1.00
+  [Orchestrator] weekly burst ends
+
+[Day 1 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 1 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 1 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 1 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 1 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 1 LATE_EVENING]
+
+[Day 1 MIDDLE_OF_NIGHT]
+
+[Day 2 EARLY_MORNING]
+
+[Day 2 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 2 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 2 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 2 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 2 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 2 LATE_EVENING]
+
+[Day 2 MIDDLE_OF_NIGHT]
+
+[Day 3 EARLY_MORNING]
+
+[Day 3 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 3 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 3 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 3 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 3 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 3 LATE_EVENING]
+
+[Day 3 MIDDLE_OF_NIGHT]
+
+[Day 4 EARLY_MORNING]
+
+[Day 4 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 4 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 4 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 4 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 4 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 4 LATE_EVENING]
+
+[Day 4 MIDDLE_OF_NIGHT]
+
+[Day 5 EARLY_MORNING]
+
+[Day 5 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 5 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 5 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 5 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 5 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 5 LATE_EVENING]
+
+[Day 5 MIDDLE_OF_NIGHT]
+
+[Day 6 EARLY_MORNING]
+
+[Day 6 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 6 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 6 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 6 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 6 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 6 LATE_EVENING]
+
+[Day 6 MIDDLE_OF_NIGHT]
+
+[Day 7 EARLY_MORNING]
+
+[Day 7 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 7 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 7 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 7 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 7 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 7 LATE_EVENING]
+
+[Day 7 MIDDLE_OF_NIGHT]
+
+[Day 8 EARLY_MORNING]
+[SimClock] weekly_tick (day 8)
+  [Orchestrator] weekly burst begins
+    land_owner_1.EmployerInterest.settle_outstanding_wages() — settling 2 payable(s)
+      paid worker_1: 28.00 coin (clears Payable:worker_1 on land_owner_1)
+      paid worker_2: 28.00 coin (clears Payable:worker_2 on land_owner_1)
+    land_owner_1.ProductionInterest.respond_to_supply_call — output=56, wages=56, cost_basis=1.00, qty_offered=56
+    merchant_1.MercantileInterest.respond_to_wholesale_demand_call — on_hand=-0.0, target=60, deficit=60.0
+[CLEAR]    WholesaleMarket — supply=56, demand=60, price=1.00
+    land_owner_1 sold 56 grain to merchant_1 @ 1.00 (total 56.00)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: RetailMarket._compute_equilibrium_price (res://scripts/markets/retail_market.gd:72)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'decay_lambda' on a base object of type 'Nil'.
+   at: GrainInterest.decay_carried_demand (res://scripts/interests/grain_interest.gd:28)
+ERROR: Goods.config_for(): unknown good grain
+   at: push_error (core/variant/variant_utility.cpp:1098)
+SCRIPT ERROR: Invalid access to property or key 'a_per_actor_daily' on a base object of type 'Nil'.
+   at: GrainInterest.compute_demand_at_price (res://scripts/interests/grain_interest.gd:24)
+[CLEAR]    RetailMarket — nothing to clear (supply=56.0, demanders=0)
+[CLEAR]    LaborMarket — nothing to match (employers=0, workers=0)
+  [Orchestrator] weekly burst ends
+
+[Day 8 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 8 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 8 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 8 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 8 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 8 LATE_EVENING]
+
+[Day 8 MIDDLE_OF_NIGHT]
+
+[Day 9 EARLY_MORNING]
+
+[Day 9 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 9 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 9 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 9 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 9 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 9 LATE_EVENING]
+
+[Day 9 MIDDLE_OF_NIGHT]
+
+[Day 10 EARLY_MORNING]
+
+[Day 10 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 10 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 10 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 10 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 10 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 10 LATE_EVENING]
+
+[Day 10 MIDDLE_OF_NIGHT]
+
+[Day 11 EARLY_MORNING]
+
+[Day 11 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 11 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 11 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 11 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 11 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 11 LATE_EVENING]
+
+[Day 11 MIDDLE_OF_NIGHT]
+
+[Day 12 EARLY_MORNING]
+
+[Day 12 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 12 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 12 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 12 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 12 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 12 LATE_EVENING]
+
+[Day 12 MIDDLE_OF_NIGHT]
+
+[Day 13 EARLY_MORNING]
+
+[Day 13 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 13 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 13 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 13 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 13 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 13 LATE_EVENING]
+
+[Day 13 MIDDLE_OF_NIGHT]
+
+[Day 14 EARLY_MORNING]
+
+[Day 14 MID_MORNING]
+  [Bus] open_work_window
+    worker_1.work_state → WORKING
+    worker_2.work_state → WORKING
+    worker_1.WorkingInterest — slot 1 worked (today 1)
+    worker_2.WorkingInterest — slot 1 worked (today 1)
+
+[Day 14 LATE_MORNING]
+    worker_1.WorkingInterest — slot 2 worked (today 2)
+    worker_2.WorkingInterest — slot 2 worked (today 2)
+
+[Day 14 EARLY_AFTERNOON]
+    worker_1.WorkingInterest — slot 3 worked (today 3)
+    worker_2.WorkingInterest — slot 3 worked (today 3)
+
+[Day 14 LATE_AFTERNOON]
+    worker_1.WorkingInterest — slot 4 worked (today 4)
+    worker_2.WorkingInterest — slot 4 worked (today 4)
+
+[Day 14 EARLY_EVENING]
+  [Bus] close_work_window
+    worker_1 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_1.work_state → EMPLOYED_NOT_WORKING
+    worker_2 WorkDayActivity closed — slots=4 grain=4 wages_accrued=4.00
+    worker_2.work_state → EMPLOYED_NOT_WORKING
+
+[Day 14 LATE_EVENING]
+
+[Day 14 MIDDLE_OF_NIGHT]
+
+[SimClock] reached max_days=14, stopping
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2378)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:614)

@@ -1,0 +1,269 @@
+﻿Godot Engine v4.4.stable.mono.official.4c311cbee - https://godotengine.org
+
+Godot_v4.4-stable_mono_win64_console.exe : SCRIPT ERROR: Parse Error: Identifier "WeeklyBurstActivity" not declared 
+in the current scope.
+At line:1 char:1
++ & 'Z:\Godot\Godot_v4.4-stable_mono_win64\Godot_v4.4-stable_mono_win64 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (SCRIPT ERROR: P... current scope.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   at: GDScript::reload (res://scripts/autoloads/window_orchestrator.gd:32)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "burst" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://scripts/autoloads/window_orchestrator.gd:32)
+ERROR: Failed to load script "res://scripts/autoloads/window_orchestrator.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript.cpp:3022)
+ERROR: Failed to instantiate an autoload, script 'res://scripts/autoloads/window_orchestrator.gd' does not inherit 
+from 'Node'.
+   at: start (main/main.cpp:4052)
+SCRIPT ERROR: Parse Error: Identifier "FinancialBook" not declared in the current scope.
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:83)
+SCRIPT ERROR: Parse Error: Identifier "SkillsBook" not declared in the current scope.
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:84)
+SCRIPT ERROR: Parse Error: Identifier "VitalsBook" not declared in the current scope.
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:85)
+SCRIPT ERROR: Parse Error: Could not find type "FinancialBook" in the current scope.
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:91)
+SCRIPT ERROR: Parse Error: Could not resolve external class member "financial".
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:91)
+SCRIPT ERROR: Parse Error: Could not find type "JournalEntry" in the current scope.
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:92)
+SCRIPT ERROR: Parse Error: Identifier "JournalEntry" not declared in the current scope.
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:93)
+SCRIPT ERROR: Parse Error: Identifier "JournalEntry" not declared in the current scope.
+   at: GDScript::reload (res://scripts/bootstrap/prototype_bootstrap.gd:94)
+ERROR: Failed to load script "res://scripts/bootstrap/prototype_bootstrap.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript.cpp:3022)
+[SimClock] ready — seconds_per_slot=0.100 max_days=14
+[Wire] Goods registered: grain (e_g=0.40, A=2.0, λ=0.30)
+[Goods] ready — 1 good(s) registered
+[Wire] Jobs registered: farming (skill_key=farming, min_wage=1.00, base_skill=2.0)
+[Jobs] ready — 1 job(s) registered
+
+[Day 1 EARLY_MORNING]
+[SimClock] weekly_tick (day 1)
+
+[Day 1 MID_MORNING]
+
+[Day 1 LATE_MORNING]
+
+[Day 1 EARLY_AFTERNOON]
+
+[Day 1 LATE_AFTERNOON]
+
+[Day 1 EARLY_EVENING]
+
+[Day 1 LATE_EVENING]
+
+[Day 1 MIDDLE_OF_NIGHT]
+
+[Day 2 EARLY_MORNING]
+
+[Day 2 MID_MORNING]
+
+[Day 2 LATE_MORNING]
+
+[Day 2 EARLY_AFTERNOON]
+
+[Day 2 LATE_AFTERNOON]
+
+[Day 2 EARLY_EVENING]
+
+[Day 2 LATE_EVENING]
+
+[Day 2 MIDDLE_OF_NIGHT]
+
+[Day 3 EARLY_MORNING]
+
+[Day 3 MID_MORNING]
+
+[Day 3 LATE_MORNING]
+
+[Day 3 EARLY_AFTERNOON]
+
+[Day 3 LATE_AFTERNOON]
+
+[Day 3 EARLY_EVENING]
+
+[Day 3 LATE_EVENING]
+
+[Day 3 MIDDLE_OF_NIGHT]
+
+[Day 4 EARLY_MORNING]
+
+[Day 4 MID_MORNING]
+
+[Day 4 LATE_MORNING]
+
+[Day 4 EARLY_AFTERNOON]
+
+[Day 4 LATE_AFTERNOON]
+
+[Day 4 EARLY_EVENING]
+
+[Day 4 LATE_EVENING]
+
+[Day 4 MIDDLE_OF_NIGHT]
+
+[Day 5 EARLY_MORNING]
+
+[Day 5 MID_MORNING]
+
+[Day 5 LATE_MORNING]
+
+[Day 5 EARLY_AFTERNOON]
+
+[Day 5 LATE_AFTERNOON]
+
+[Day 5 EARLY_EVENING]
+
+[Day 5 LATE_EVENING]
+
+[Day 5 MIDDLE_OF_NIGHT]
+
+[Day 6 EARLY_MORNING]
+
+[Day 6 MID_MORNING]
+
+[Day 6 LATE_MORNING]
+
+[Day 6 EARLY_AFTERNOON]
+
+[Day 6 LATE_AFTERNOON]
+
+[Day 6 EARLY_EVENING]
+
+[Day 6 LATE_EVENING]
+
+[Day 6 MIDDLE_OF_NIGHT]
+
+[Day 7 EARLY_MORNING]
+
+[Day 7 MID_MORNING]
+
+[Day 7 LATE_MORNING]
+
+[Day 7 EARLY_AFTERNOON]
+
+[Day 7 LATE_AFTERNOON]
+
+[Day 7 EARLY_EVENING]
+
+[Day 7 LATE_EVENING]
+
+[Day 7 MIDDLE_OF_NIGHT]
+
+[Day 8 EARLY_MORNING]
+[SimClock] weekly_tick (day 8)
+
+[Day 8 MID_MORNING]
+
+[Day 8 LATE_MORNING]
+
+[Day 8 EARLY_AFTERNOON]
+
+[Day 8 LATE_AFTERNOON]
+
+[Day 8 EARLY_EVENING]
+
+[Day 8 LATE_EVENING]
+
+[Day 8 MIDDLE_OF_NIGHT]
+
+[Day 9 EARLY_MORNING]
+
+[Day 9 MID_MORNING]
+
+[Day 9 LATE_MORNING]
+
+[Day 9 EARLY_AFTERNOON]
+
+[Day 9 LATE_AFTERNOON]
+
+[Day 9 EARLY_EVENING]
+
+[Day 9 LATE_EVENING]
+
+[Day 9 MIDDLE_OF_NIGHT]
+
+[Day 10 EARLY_MORNING]
+
+[Day 10 MID_MORNING]
+
+[Day 10 LATE_MORNING]
+
+[Day 10 EARLY_AFTERNOON]
+
+[Day 10 LATE_AFTERNOON]
+
+[Day 10 EARLY_EVENING]
+
+[Day 10 LATE_EVENING]
+
+[Day 10 MIDDLE_OF_NIGHT]
+
+[Day 11 EARLY_MORNING]
+
+[Day 11 MID_MORNING]
+
+[Day 11 LATE_MORNING]
+
+[Day 11 EARLY_AFTERNOON]
+
+[Day 11 LATE_AFTERNOON]
+
+[Day 11 EARLY_EVENING]
+
+[Day 11 LATE_EVENING]
+
+[Day 11 MIDDLE_OF_NIGHT]
+
+[Day 12 EARLY_MORNING]
+
+[Day 12 MID_MORNING]
+
+[Day 12 LATE_MORNING]
+
+[Day 12 EARLY_AFTERNOON]
+
+[Day 12 LATE_AFTERNOON]
+
+[Day 12 EARLY_EVENING]
+
+[Day 12 LATE_EVENING]
+
+[Day 12 MIDDLE_OF_NIGHT]
+
+[Day 13 EARLY_MORNING]
+
+[Day 13 MID_MORNING]
+
+[Day 13 LATE_MORNING]
+
+[Day 13 EARLY_AFTERNOON]
+
+[Day 13 LATE_AFTERNOON]
+
+[Day 13 EARLY_EVENING]
+
+[Day 13 LATE_EVENING]
+
+[Day 13 MIDDLE_OF_NIGHT]
+
+[Day 14 EARLY_MORNING]
+
+[Day 14 MID_MORNING]
+
+[Day 14 LATE_MORNING]
+
+[Day 14 EARLY_AFTERNOON]
+
+[Day 14 LATE_AFTERNOON]
+
+[Day 14 EARLY_EVENING]
+
+[Day 14 LATE_EVENING]
+
+[Day 14 MIDDLE_OF_NIGHT]
+
+[SimClock] reached max_days=14, stopping

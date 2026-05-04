@@ -1,52 +1,69 @@
 class_name EmployerInterest
 extends Interest
 
-var labor_market: LaborMarket
 @export var desired_workers: int = 2
 @export var job_category: StringName = &"farming"
 
 func connect_to_bus() -> void:
-	WindowBus.labor_market_opened.connect(post_open_jobs)
-	WindowBus.wages_due.connect(pay_outstanding_wages)
+	pass    # LaborMarket pulls open positions on open_market.
 
 func disconnect_from_bus() -> void:
-	WindowBus.labor_market_opened.disconnect(post_open_jobs)
-	WindowBus.wages_due.disconnect(pay_outstanding_wages)
-	# Phase 3+ cleanup clause (documented now, not implemented at v0):
+	pass
+	# Phase 3+ cleanup clause:
 	# if there is a still-ACTIVE contract for an employer, mark it BREACHED here.
 
-func post_open_jobs() -> void:
-	var open := desired_workers - filled_positions()
-	print("    %s.EmployerInterest.post_open_jobs() — desired=%d filled=%d open=%d" % [owner.actor_id, desired_workers, filled_positions(), open])
-	if open <= 0 or labor_market == null:
-		return
-	labor_market.queue_demand(owner, open)
-
-func pay_outstanding_wages() -> void:
-	var n := owner.accounts.payables.size() if owner.accounts != null else 0
-	if n == 0:
-		print("    %s.EmployerInterest.pay_outstanding_wages() — nothing to settle" % owner.actor_id)
-		return
-	print("    %s.EmployerInterest.pay_outstanding_wages() — settling %d payable(s)" % [owner.actor_id, n])
-	var supply := labor_market.supply_for_scarcity() if labor_market != null else 0
-	var job := Jobs.config_for(job_category)
-	var total_paid: int = 0
-	for payable in owner.accounts.payables:
-		var worker := owner.get_node(payable.worker) as Actor
-		var rate := WageCalculator.calculate_wage_per_slot(owner, worker, job, supply)
-		var coin_owed := int(round(payable.slots_worked * rate))
-		owner.accounts.coin -= coin_owed
-		worker.accounts.coin += coin_owed
-		total_paid += coin_owed
-		print("      paid %s: %d slots × %.2f rate = %d coin" % [worker.actor_id, payable.slots_worked, rate, coin_owed])
-	owner.accounts.payables.clear()
-	owner.accounts.weekly_costs[&"wages"] = owner.accounts.weekly_costs.get(&"wages", 0) + total_paid
-
 func filled_positions() -> int:
+	return employees().size()
+
+# Population seam (Section 5.2): "the workers at this employer" is enumerable
+# from day one. v0 doesn't aggregate over them, but the cross-actor population
+# query primitive (v0.5+) builds on this enumerator.
+func employees() -> Array[Actor]:
+	var out: Array[Actor] = []
 	if owner == null or owner.accounts == null:
-		return 0
-	var count := 0
+		return out
 	for c in owner.accounts.contracts:
 		if c is LaborContract and c.status == Contract.Status.ACTIVE and c.employer == owner.get_path():
-			count += 1
-	return count
+			var w := owner.get_node_or_null(c.worker) as Actor
+			if w != null:
+				out.append(w)
+	return out
+
+func open_positions() -> int:
+	return max(0, desired_workers - filled_positions())
+
+# Called by WindowOrchestrator at week's wage settlement step. Walks the
+# employer's outstanding Payable accounts and creates+closes a
+# WagePaymentActivity per worker.
+func settle_outstanding_wages() -> void:
+	if owner == null or owner.accounts == null:
+		return
+	var outstanding: Array = owner.accounts.outstanding_payables()
+	if outstanding.is_empty():
+		print("    %s.EmployerInterest.settle_outstanding_wages() — nothing to settle" % owner.actor_id)
+		return
+	print("    %s.EmployerInterest.settle_outstanding_wages() — settling %d payable(s)" %
+		[owner.actor_id, outstanding.size()])
+	for entry in outstanding:
+		var counterparty: StringName = entry["counterparty"]
+		var amount: float = entry["amount"]
+		var worker := _find_worker_by_id(counterparty)
+		if worker == null:
+			push_error("EmployerInterest: cannot resolve worker %s for payment" % counterparty)
+			continue
+		var pay_act := WagePaymentActivity.new()
+		pay_act.employer = owner
+		pay_act.worker = worker
+		pay_act.amount = amount
+		pay_act.participants = [owner.get_path(), worker.get_path()]
+		pay_act.begin(SimClock.current_day)
+		pay_act.close(SimClock.current_day)
+		owner.accounts.activities.append(pay_act)
+
+func _find_worker_by_id(actor_id: StringName) -> Actor:
+	for c in owner.accounts.contracts:
+		if c is LaborContract and c.employer == owner.get_path():
+			var w := owner.get_node_or_null(c.worker) as Actor
+			if w != null and w.actor_id == actor_id:
+				return w
+	return null

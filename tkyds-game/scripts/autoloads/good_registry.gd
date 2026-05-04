@@ -1,11 +1,13 @@
 extends Node
 
-const _GRAIN := preload("res://scripts/economy/goods/grain.tres")
-
 var _by_id: Dictionary = {}
 
 func _ready() -> void:
-	_register(_GRAIN)
+	var grain := load("res://scripts/economy/goods/grain.tres") as GoodConfig
+	if grain == null:
+		push_error("good_registry: failed to load grain.tres as GoodConfig")
+		return
+	_register(grain)
 	print("[Goods] ready — %d good(s) registered" % _by_id.size())
 
 func _register(cfg: GoodConfig) -> void:

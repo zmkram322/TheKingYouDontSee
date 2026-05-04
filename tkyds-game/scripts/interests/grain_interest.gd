@@ -5,16 +5,19 @@ var retail_market: RetailMarket
 var outstanding_demand: float = 0.0
 
 func connect_to_bus() -> void:
-	WindowBus.retail_market_opened.connect(register_for_retail_clearing)
+	pass    # RetailMarket pulls demand on open.
 
 func disconnect_from_bus() -> void:
-	WindowBus.retail_market_opened.disconnect(register_for_retail_clearing)
+	pass
 
-func register_for_retail_clearing() -> void:
-	if retail_market == null:
-		return
-	retail_market.queue_demand(owner, 0)
-	print("    %s.GrainInterest.register_for_retail_clearing() — registered as grain demander" % owner.actor_id)
+# Retail demand call: returns this actor's grain demand at the offered price.
+# The market typically calls this with its computed P_m. Outstanding (carry-forward)
+# demand is added; decay applied on the carry portion.
+func respond_to_retail_demand_call(_market: RetailMarket, price: float, days: int) -> DemandRequest:
+	decay_carried_demand()
+	var this_period: float = compute_demand_at_price(price, days)
+	var want: float = this_period + outstanding_demand
+	return DemandRequest.make(owner.get_path(), want)
 
 func compute_demand_at_price(price: float, days: int) -> float:
 	var cfg := Goods.config_for(&"grain")

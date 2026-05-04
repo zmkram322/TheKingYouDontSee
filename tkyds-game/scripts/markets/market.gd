@@ -1,23 +1,34 @@
 class_name Market
 extends Node
 
+# Markets in the rebuild use pull-on-open. Suppliers and demanders register
+# during bootstrap; open_market(tick) polls them. Clearing creates+closes
+# concrete activity Resources per match — the activity's on_close writes the
+# books. The cost-basis bug class (where a cached field went stale relative
+# to the books) is structurally eliminated: every cost-basis read is a
+# FinancialBook period query.
+
 var region: Region
+@export var period_length: int = 7      # days per market period
 
-var supply_pool: Dictionary = {}
-var demand_pool: Dictionary = {}
+# Filled at bootstrap. Kept as Actor refs (not NodePaths) since markets and
+# their actors live in the same scene tree and we need fast iteration.
+var registered_suppliers: Array[Actor] = []
+var registered_demanders: Array[Actor] = []
 
-func queue_supply(actor: Actor, qty: int) -> void:
-	supply_pool[actor.get_path()] = supply_pool.get(actor.get_path(), 0) + qty
-	print("[QUEUE]    %s.queue_supply(%s, %d)" % [name, actor.actor_id, qty])
+# Most recent clearing event — D3 partial-supply visibility for player UI.
+var last_clearing_event: MarketClearingEvent
 
-func queue_demand(actor: Actor, qty: int) -> void:
-	demand_pool[actor.get_path()] = demand_pool.get(actor.get_path(), 0) + qty
-	print("[QUEUE]    %s.queue_demand(%s, %d)" % [name, actor.actor_id, qty])
+func register_supplier(actor: Actor) -> void:
+	if not registered_suppliers.has(actor):
+		registered_suppliers.append(actor)
 
-func clear() -> void:
-	print("[CLEAR]    %s.clear() — base no-op" % name)
+func register_demander(actor: Actor) -> void:
+	if not registered_demanders.has(actor):
+		registered_demanders.append(actor)
 
-func reset_pools() -> void:
-	supply_pool.clear()
-	demand_pool.clear()
-	print("    %s.reset_pools()" % name)
+func open_market(_tick: int) -> void:
+	pass
+
+func clear_market(_tick: int) -> void:
+	pass

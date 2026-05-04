@@ -2,21 +2,18 @@ class_name WorkingInterest
 extends Interest
 
 @export var work_state: SimEnums.WorkState = SimEnums.WorkState.IDLE
-var labor_market: LaborMarket
-var slots_worked_today: int = 0
+var current_day_activity: WorkDayActivity = null
 
 func connect_to_bus() -> void:
-	WindowBus.labor_market_opened.connect(look_for_work)
 	WindowBus.work_window_opened.connect(begin_working)
-	WindowBus.work_window_closed.connect(deliver_grain_and_bill)
+	WindowBus.work_window_closed.connect(close_workday)
 	SimClock.daily_tick.connect(do_one_work_slot)
 
 func disconnect_from_bus() -> void:
-	WindowBus.labor_market_opened.disconnect(look_for_work)
 	WindowBus.work_window_opened.disconnect(begin_working)
-	WindowBus.work_window_closed.disconnect(deliver_grain_and_bill)
+	WindowBus.work_window_closed.disconnect(close_workday)
 	SimClock.daily_tick.disconnect(do_one_work_slot)
-	# Phase 3+ cleanup clause (documented now, not implemented at v0):
+	# Phase 3+ cleanup clause:
 	# if there is a still-ACTIVE contract for this worker, mark it BREACHED here.
 
 func current_contract() -> LaborContract:
@@ -27,51 +24,48 @@ func current_contract() -> LaborContract:
 			return c
 	return null
 
-func look_for_work() -> void:
-	if work_state != SimEnums.WorkState.IDLE: return
-	print("    %s.WorkingInterest.look_for_work() — offering self to LaborMarket" % owner.actor_id)
-	if labor_market != null:
-		labor_market.queue_supply(owner, 1)
+# LaborMarket pulls this on open_market. v0: a worker offers themselves if
+# they are IDLE (no active contract).
+func is_seeking_work() -> bool:
+	return work_state == SimEnums.WorkState.IDLE and current_contract() == null
 
 func begin_working() -> void:
-	if current_contract() != null:
-		work_state = SimEnums.WorkState.WORKING
-		print("    %s.work_state → WORKING" % owner.actor_id)
+	var contract := current_contract()
+	if contract == null:
+		return
+	work_state = SimEnums.WorkState.WORKING
+	var employer := owner.get_node(contract.employer) as Actor
+	current_day_activity = WorkDayActivity.new()
+	current_day_activity.worker = owner
+	current_day_activity.employer = employer
+	current_day_activity.contract = contract
+	current_day_activity.participants = [owner.get_path(), employer.get_path()]
+	current_day_activity.begin(SimClock.current_day)
+	print("    %s.work_state → WORKING" % owner.actor_id)
 
 func do_one_work_slot(slot: int) -> void:
-	if work_state != SimEnums.WorkState.WORKING: return
-	if slot < SimEnums.TimeSlot.MID_MORNING or slot > SimEnums.TimeSlot.LATE_AFTERNOON: return
-	slots_worked_today += 1
-	print("    %s.WorkingInterest.do_one_work_slot() — slot %d worked (today %d)" %
-		[owner.actor_id, slot, slots_worked_today])
+	if work_state != SimEnums.WorkState.WORKING:
+		return
+	if slot < SimEnums.TimeSlot.MID_MORNING or slot > SimEnums.TimeSlot.LATE_AFTERNOON:
+		return
+	if current_day_activity == null:
+		return
+	var slot_act := WorkSlotActivity.new()
+	slot_act.worker = owner
+	slot_act.contract = current_day_activity.contract
+	slot_act.parent_activity_ref = current_day_activity
+	slot_act.participants = [owner.get_path()]
+	current_day_activity.child_activities.append(slot_act)
+	slot_act.begin(SimClock.current_day)
+	slot_act.close(SimClock.current_day)
+	print("    %s.WorkingInterest — slot %d worked (today %d)" %
+		[owner.actor_id, slot, current_day_activity.slots_worked])
 
-func deliver_grain_and_bill() -> void:
-	var contract := current_contract()
-	if contract == null: return
-	var employer := owner.get_node(contract.employer) as Actor
-	# Produced grain = slots worked today × 1 grain/slot. Goes straight to employer.
-	# Worker's personal inventory (retail purchases, etc.) stays untouched.
-	var grain_produced: int = slots_worked_today
-	employer.accounts.inventory[&"grain"] = employer.accounts.inventory.get(&"grain", 0) + grain_produced
-	employer.accounts.weekly_outputs[&"grain"] = employer.accounts.weekly_outputs.get(&"grain", 0) + grain_produced
-	# Accumulate Payable
-	var payable := find_or_create_payable_for(employer, contract, owner)
-	payable.slots_worked += slots_worked_today
-	print("    %s.WorkingInterest.deliver_grain_and_bill() — %d grain → %s; +%d slots on payable (now %d)" %
-		[owner.actor_id, grain_produced, employer.actor_id, slots_worked_today, payable.slots_worked])
-	slots_worked_today = 0
+func close_workday() -> void:
+	if current_day_activity == null:
+		return
+	current_day_activity.close(SimClock.current_day)
+	owner.accounts.activities.append(current_day_activity)
+	current_day_activity = null
 	work_state = SimEnums.WorkState.EMPLOYED_NOT_WORKING
 	print("    %s.work_state → EMPLOYED_NOT_WORKING" % owner.actor_id)
-
-func find_or_create_payable_for(employer: Actor, _contract: LaborContract, worker: Actor) -> Payable:
-	# Contract is a Resource, not a Node — payable.contract stays empty NodePath at v0.
-	# v0 settlement reads rate fresh via WageCalculator, so contract reference isn't needed yet.
-	var worker_path := worker.get_path()
-	for p in employer.accounts.payables:
-		if p is Payable and p.worker == worker_path:
-			return p
-	var fresh := Payable.new()
-	fresh.worker = worker_path
-	fresh.slots_worked = 0
-	employer.accounts.payables.append(fresh)
-	return fresh

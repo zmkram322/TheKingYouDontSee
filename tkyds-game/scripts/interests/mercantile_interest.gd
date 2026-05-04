@@ -8,35 +8,32 @@ var retail_market: RetailMarket
 @export var max_wholesale_price: float = 2.0
 @export var delta_retail: float = 0.1
 @export var min_retail_margin: float = 0.0
-var wholesale_cost_per_unit: float = 0.0
+
+# Cost basis carried forward from the most recent wholesale buy. Used by
+# RetailPurchaseActivity to recognize COGS on retail sales. v0 single-batch:
+# this is the unit cost paid for the current week's inventory.
+var wholesale_cost_per_unit: float = 1.0
 
 func connect_to_bus() -> void:
-	WindowBus.merchant_restock.connect(place_buy_order_at_wholesale)
-	WindowBus.wholesale_market_closed.connect(send_inventory_to_retail)
+	pass    # Markets pull-on-open via respond_to_demand_call.
 
 func disconnect_from_bus() -> void:
-	WindowBus.merchant_restock.disconnect(place_buy_order_at_wholesale)
-	WindowBus.wholesale_market_closed.disconnect(send_inventory_to_retail)
+	pass
 
-func place_buy_order_at_wholesale() -> void:
-	var on_hand: int = owner.accounts.inventory.get(good_id, 0)
-	var deficit: int = max(0, target_inventory - on_hand)
-	print("    %s.MercantileInterest.place_buy_order_at_wholesale() — on_hand=%d, target=%d, deficit=%d" %
+# Wholesale demand call. Restock-deficit drives the demand quantity; the
+# merchant walks away if the offered cost basis exceeds max_wholesale_price.
+func respond_to_wholesale_demand_call(_market: WholesaleMarket, _tick: int) -> DemandRequest:
+	var on_hand: float = owner.accounts.inventory_of(good_id)
+	var deficit: float = max(0.0, float(target_inventory) - on_hand)
+	print("    %s.MercantileInterest.respond_to_wholesale_demand_call — on_hand=%.1f, target=%d, deficit=%.1f" %
 		[owner.actor_id, on_hand, target_inventory, deficit])
-	if deficit == 0 or wholesale_market == null:
-		return
-	var ask: float = wholesale_market.compute_clearing_price()
-	if ask > max_wholesale_price:
-		print("    %s walks away — wholesale ask %.2f exceeds ceiling %.2f" % [owner.actor_id, ask, max_wholesale_price])
-		return
-	wholesale_market.queue_demand(owner, deficit)
+	return DemandRequest.make(owner.get_path(), deficit, max_wholesale_price)
 
-func send_inventory_to_retail() -> void:
-	var qty: int = owner.accounts.inventory.get(good_id, 0)
-	print("    %s.MercantileInterest.send_inventory_to_retail() — supplying %d %s to RetailMarket" %
-		[owner.actor_id, qty, good_id])
-	if retail_market != null and qty > 0:
-		retail_market.queue_supply(owner, qty)
+# Retail supply call: merchant offers all on-hand inventory at retail clearing.
+func respond_to_retail_supply_call(_market: RetailMarket, _tick: int) -> SupplyOffer:
+	var qty: float = owner.accounts.inventory_of(good_id)
+	# unit-cost basis = wholesale_cost_per_unit (carried forward from recent buy).
+	return SupplyOffer.make(owner.get_path(), qty, wholesale_cost_per_unit)
 
 func compute_retail_price(p_star: float) -> float:
 	var clamped_delta: float = max(0.0, delta_retail)

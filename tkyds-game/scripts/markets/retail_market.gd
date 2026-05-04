@@ -14,107 +14,127 @@ enum ClearingStrategy {
 
 @export var clearing_strategy: ClearingStrategy = ClearingStrategy.PROPORTIONAL
 
+var _supply_offers: Array[SupplyOffer] = []
+var _demand_requests: Array[DemandRequest] = []
+var _p_star: float = 0.0
+var _p_m: float = 0.0
+
 func _ready() -> void:
-	WindowBus.retail_market_closed.connect(clear)
-	print("[Wire] RetailMarket.clear ← WindowBus.retail_market_closed")
+	print("[Wire] RetailMarket ready (pull-on-open; period_length=%d)" % period_length)
 
-func compute_equilibrium_price(_good_id: StringName) -> float:
+func open_market(tick: int) -> void:
+	_supply_offers.clear()
+	_demand_requests.clear()
+	# Pull supply (merchants)
+	for supplier in registered_suppliers:
+		var mercantile := supplier.find_interest(MercantileInterest) as MercantileInterest
+		if mercantile == null:
+			continue
+		var offer := mercantile.respond_to_retail_supply_call(self, tick)
+		if offer != null and offer.quantity > 0.0:
+			_supply_offers.append(offer)
+
+	# Compute equilibrium price from total supply and per-actor demand at P*=1.
+	# We need a price to ask demanders. Phase 2 math: P* = (A_total / Q_s)^(1/e_g)
+	# where A_total sums isoelastic A across registered demanders.
 	var total_supply: float = 0.0
-	for actor_path in supply_pool.keys():
-		total_supply += float(supply_pool[actor_path])
-	if total_supply <= 0.0:
-		return 0.0
+	for offer in _supply_offers:
+		total_supply += offer.quantity
+	_p_star = _compute_equilibrium_price(total_supply, registered_demanders.size())
+	# Merchant markup → final P_m offered to demanders.
+	var merchant_interest: MercantileInterest = null
+	if not registered_suppliers.is_empty():
+		merchant_interest = registered_suppliers[0].find_interest(MercantileInterest) as MercantileInterest
+	_p_m = merchant_interest.compute_retail_price(_p_star) if merchant_interest != null else _p_star
 
-	var cfg := Goods.config_for(_good_id)
-	var a_total: float = 0.0
-	for actor_path in demand_pool.keys():
-		a_total += cfg.a_per_actor_daily * 7.0    # weekly aggregation; days=7 in v0
-	return pow(a_total / total_supply, 1.0 / cfg.elasticity)
+	# Pull demand at P_m
+	for demander in registered_demanders:
+		var grain := demander.find_interest(GrainInterest) as GrainInterest
+		if grain == null:
+			continue
+		var req := grain.respond_to_retail_demand_call(self, _p_m, period_length)
+		if req != null and req.quantity > 0.0:
+			_demand_requests.append(req)
 
-func clear() -> void:
+func clear_market(tick: int) -> void:
 	match clearing_strategy:
 		ClearingStrategy.PROPORTIONAL:
-			_clear_proportional()
+			_clear_proportional(tick)
 		ClearingStrategy.FIFO:
-			_clear_fifo()
+			push_error("RetailMarket: FIFO strategy not implemented in v0")
 		_:
 			push_error("RetailMarket: unimplemented clearing strategy %d" % clearing_strategy)
 
-func _clear_proportional() -> void:
+func _compute_equilibrium_price(total_supply: float, num_demanders: int) -> float:
+	if total_supply <= 0.0 or num_demanders <= 0:
+		return 0.0
+	var cfg := Goods.config_for(good_id)
+	var a_total: float = cfg.a_per_actor_daily * float(period_length) * float(num_demanders)
+	return pow(a_total / total_supply, 1.0 / cfg.elasticity)
+
+func _clear_proportional(tick: int) -> void:
+	var event := MarketClearingEvent.new()
+	event.tick = tick
+	event.market_name = StringName(name)
+	event.good_id = good_id
+
 	var total_supply: float = 0.0
-	for actor_path in supply_pool.keys():
-		total_supply += float(supply_pool[actor_path])
-
-	if total_supply <= 0.0 or demand_pool.is_empty():
-		print("[CLEAR]    RetailMarket.clear() — nothing to clear (supply=%.1f, demanders=%d)" % [total_supply, demand_pool.size()])
-		supply_pool.clear()
-		demand_pool.clear()
-		return
-
-	# Single-merchant v0: one supplier
-	var merchant_path: NodePath = supply_pool.keys()[0]
-	var merchant := get_node(merchant_path) as Actor
-	var merchant_interest := merchant.find_interest(MercantileInterest) as MercantileInterest
-
-	var p_star: float = compute_equilibrium_price(good_id)
-	var p_m: float = merchant_interest.compute_retail_price(p_star)
-	print("[CLEAR]    RetailMarket.clear() — supply=%.1f, P*=%.2f, P_m=%.2f" % [total_supply, p_star, p_m])
-
-	# Per-actor demand resolution
-	var actor_wants: Dictionary = {}
+	for offer in _supply_offers:
+		total_supply += offer.quantity
+		event.responding_suppliers.append(offer.supplier)
 	var total_want: float = 0.0
-	for actor_path in demand_pool.keys():
-		var actor := get_node(actor_path) as Actor
-		var gi := actor.find_interest(GrainInterest) as GrainInterest
-		if gi == null:
-			continue
-		gi.decay_carried_demand()
-		var this_week: float = gi.compute_demand_at_price(p_m, 7)
-		var want: float = this_week + gi.outstanding_demand
-		actor_wants[actor_path] = want
-		total_want += want
+	for req in _demand_requests:
+		total_want += req.quantity
+		event.responding_demanders.append(req.demander)
 
-	if total_want <= 0.0:
-		print("[CLEAR]    RetailMarket.clear() — no demand expressed")
-		supply_pool.clear()
-		demand_pool.clear()
+	event.total_supply = total_supply
+	event.total_demand = total_want
+	event.clearing_price = _p_m
+
+	if total_supply <= 0.0 or total_want <= 0.0:
+		last_clearing_event = event
+		print("[CLEAR]    RetailMarket — nothing to clear (supply=%.1f, demanders=%d)" %
+			[total_supply, _demand_requests.size()])
 		return
 
-	# Allocate proportionally, cap by affordability per actor
-	for actor_path in actor_wants.keys():
-		var actor := get_node(actor_path) as Actor
-		var gi := actor.find_interest(GrainInterest) as GrainInterest
-		var want: float = actor_wants[actor_path]
-		var supply_share: float = total_supply * (want / total_want)
-		var affordable: float = float(actor.accounts.coin) / max(p_m, 0.001)
-		var received: float = min(want, min(supply_share, affordable))
-		var coin_paid: int = int(round(received * p_m))
-		var grain_received: int = int(round(received))
+	# Single-merchant v0 — supply-side bookkeeping points to one merchant.
+	var merchant: Actor = registered_suppliers[0] if not registered_suppliers.is_empty() else null
+	var merchant_interest := merchant.find_interest(MercantileInterest) as MercantileInterest
+	var unit_cost: float = merchant_interest.wholesale_cost_per_unit if merchant_interest != null else 1.0
 
-		actor.accounts.inventory[good_id] = actor.accounts.inventory.get(good_id, 0) + grain_received
-		actor.accounts.coin -= coin_paid
-		merchant.accounts.inventory[good_id] = merchant.accounts.inventory.get(good_id, 0) - grain_received
-		merchant.accounts.coin += coin_paid
+	print("[CLEAR]    RetailMarket — supply=%.1f, P*=%.2f, P_m=%.2f" % [total_supply, _p_star, _p_m])
 
-		if affordable < want:
-			print("    %s: wanted %.1f, could afford %.1f, received %.1f. %.1f outstanding." %
-				[actor.actor_id, want, affordable, received, max(0.0, want - received)])
-		else:
-			print("    %s: wanted %.1f, received %.1f. %.1f outstanding." %
-				[actor.actor_id, want, received, max(0.0, want - received)])
+	# Per-buyer allocation: proportional, then capped by affordability (coin/P_m).
+	for req in _demand_requests:
+		var buyer := get_node_or_null(req.demander) as Actor
+		if buyer == null:
+			continue
+		var supply_share: float = total_supply * (req.quantity / total_want)
+		var affordable: float = buyer.accounts.cash() / max(_p_m, 0.001)
+		var received: float = min(req.quantity, min(supply_share, affordable))
+		if received <= 0.0:
+			_record_buyer_clearing(buyer, req.quantity, 0.0)
+			continue
 
-		gi.record_clearing(want, received)
+		var sale := RetailPurchaseActivity.new()
+		sale.merchant = merchant
+		sale.buyer = buyer
+		sale.good_id = good_id
+		sale.quantity = received
+		sale.unit_price = _p_m
+		sale.unit_cost_basis = unit_cost
+		sale.participants = [merchant.get_path(), buyer.get_path()]
+		sale.begin(tick)
+		if sale.close(tick):
+			merchant.accounts.activities.append(sale)
+		_record_buyer_clearing(buyer, req.quantity, received)
+		if affordable < req.quantity:
+			print("    %s: wanted %.1f, could afford %.1f, received %.1f" %
+				[buyer.actor_id, req.quantity, affordable, received])
 
-	# Leftover stays with merchant inventory (carried across weeks)
-	var allocated: float = 0.0
-	for actor_path in actor_wants.keys():
-		allocated += min(actor_wants[actor_path], total_supply * (actor_wants[actor_path] / total_want))
-	var leftover: float = total_supply - allocated
-	if leftover > 0.5:
-		print("[CLEAR]    leftover with merchant: %.1f %s" % [leftover, good_id])
+	last_clearing_event = event
 
-	supply_pool.clear()
-	demand_pool.clear()
-
-func _clear_fifo() -> void:
-	push_error("RetailMarket: FIFO strategy not implemented in v0")
+func _record_buyer_clearing(buyer: Actor, wanted: float, received: float) -> void:
+	var grain := buyer.find_interest(GrainInterest) as GrainInterest
+	if grain != null:
+		grain.record_clearing(wanted, received)

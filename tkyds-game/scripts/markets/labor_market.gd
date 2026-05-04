@@ -1,98 +1,114 @@
 class_name LaborMarket
 extends Market
 
+# Pull-on-open. Workers register as suppliers, employers as demanders. On
+# open, each is polled for a per-tick offer. Clearing creates one
+# LaborContractActivity per match; the activity's on_close locks the wage
+# rate (via WageCalculator) and writes the contract to both parties'
+# `accounts.contracts`.
+
 enum ClearingStrategy { RANDOM, FIFO }
 
 @export var clearing_strategy: ClearingStrategy = ClearingStrategy.RANDOM
 
+# Built fresh each open_market call.
+var _seeking_workers: Array[Actor] = []
+var _hiring_employers: Array[Actor] = []
+var _positions_open: Dictionary = {}     # employer NodePath → int
+
 func _ready() -> void:
-	WindowBus.labor_market_closed.connect(clear)
-	print("[Wire] LaborMarket.clear ← WindowBus.labor_market_closed")
+	print("[Wire] LaborMarket ready (pull-on-open)")
 
 func supply_for_scarcity() -> int:
-	# v0: hardcoded global headcount; phase 3+ uses regional registry.
+	# v0: hardcoded global headcount; phase 3+ reads regional registry.
 	return 2
 
-func clear() -> void:
-	var employers: Array = demand_pool.keys()
-	var workers: Array = supply_pool.keys()
-	var supply: int = workers.size()
+func open_market(_tick: int) -> void:
+	_seeking_workers.clear()
+	_hiring_employers.clear()
+	_positions_open.clear()
+	for worker in registered_suppliers:
+		var wi := worker.find_interest(WorkingInterest) as WorkingInterest
+		if wi == null:
+			continue
+		if wi.is_seeking_work():
+			_seeking_workers.append(worker)
+			print("    %s offers self to LaborMarket" % worker.actor_id)
+	for employer in registered_demanders:
+		var ei := employer.find_interest(EmployerInterest) as EmployerInterest
+		if ei == null:
+			continue
+		var open := ei.open_positions()
+		if open > 0:
+			_hiring_employers.append(employer)
+			_positions_open[employer.get_path()] = open
+			print("    %s.EmployerInterest — desired=%d filled=%d open=%d" %
+				[employer.actor_id, ei.desired_workers, ei.filled_positions(), open])
 
-	if employers.is_empty() or workers.is_empty():
-		print("[CLEAR]    LaborMarket.clear() — nothing to match (employers=%d, workers=%d)" % [employers.size(), workers.size()])
-		supply_pool.clear()
-		demand_pool.clear()
+func clear_market(tick: int) -> void:
+	if _hiring_employers.is_empty() or _seeking_workers.is_empty():
+		print("[CLEAR]    LaborMarket — nothing to match (employers=%d, workers=%d)" %
+			[_hiring_employers.size(), _seeking_workers.size()])
 		return
 
-	# Step 1: each employer ranks candidates by expected_productivity / asked_wage
+	var supply: int = _seeking_workers.size()
+
+	# Step 1: each employer ranks candidates by expected_productivity / asked_wage.
 	var rankings: Dictionary = {}
-	for employer_path in employers:
-		var employer := get_node(employer_path) as Actor
-		var employer_interest := employer.find_interest(EmployerInterest) as EmployerInterest
-		var job := Jobs.config_for(employer_interest.job_category) if employer_interest != null else null
+	for employer in _hiring_employers:
+		var ei := employer.find_interest(EmployerInterest) as EmployerInterest
+		var job: JobCategory = Jobs.config_for(ei.job_category) if ei != null else null
 		var ranked: Array = []
-		for worker_path in workers:
-			var worker := get_node(worker_path) as Actor
+		for worker in _seeking_workers:
 			var asked_wage: float = WageCalculator.calculate_wage_per_slot(employer, worker, job, supply)
 			var expected_productivity: float = 1.0
-			var ratio: float = expected_productivity / max(asked_wage, 0.01)
-			ranked.append({"worker": worker_path, "ratio": ratio})
+			ranked.append({"worker": worker, "ratio": expected_productivity / max(asked_wage, 0.01)})
 		ranked.sort_custom(func(a, b): return a["ratio"] > b["ratio"])
 		ranked.shuffle()
-		rankings[employer_path] = ranked
+		rankings[employer] = ranked
 
-	# Step 2: pick order via clearing_strategy
-	var pick_order: Array = employers.duplicate()
+	# Step 2: pick order via clearing_strategy.
+	var pick_order: Array[Actor] = _hiring_employers.duplicate()
 	match clearing_strategy:
 		ClearingStrategy.RANDOM:
 			pick_order.shuffle()
 		ClearingStrategy.FIFO:
 			pass
-		# phase 3+: CHARISMA_PICK reads each employer's charisma; PRODUCTIVITY_RANK reads worker skills
 
-	# Step 3: draft loop
-	var unmatched: Array = workers.duplicate()
-	var positions_remaining: Dictionary = {}
-	for employer_path in employers:
-		positions_remaining[employer_path] = int(demand_pool[employer_path])
-
+	# Step 3: draft loop.
+	var unmatched: Array[Actor] = _seeking_workers.duplicate()
 	while true:
 		var any_picked: bool = false
-		for employer_path in pick_order:
-			if positions_remaining[employer_path] <= 0:
+		for employer in pick_order:
+			if int(_positions_open[employer.get_path()]) <= 0:
 				continue
-			for entry in rankings[employer_path]:
-				var worker_path = entry["worker"]
-				if not (worker_path in unmatched):
+			for entry in rankings[employer]:
+				var worker: Actor = entry["worker"]
+				if not unmatched.has(worker):
 					continue
-				_write_contract(employer_path, worker_path)
-				unmatched.erase(worker_path)
-				positions_remaining[employer_path] -= 1
+				_strike_contract(employer, worker, supply, tick)
+				unmatched.erase(worker)
+				_positions_open[employer.get_path()] = int(_positions_open[employer.get_path()]) - 1
 				any_picked = true
 				break
 		if not any_picked:
 			break
 
-	for employer_path in employers:
-		if positions_remaining[employer_path] > 0:
-			var employer := get_node(employer_path) as Actor
-			print("[CLEAR]    %s left with %d open positions" % [employer.actor_id, positions_remaining[employer_path]])
-	for worker_path in unmatched:
-		var worker := get_node(worker_path) as Actor
+	for employer in _hiring_employers:
+		var remaining: int = int(_positions_open[employer.get_path()])
+		if remaining > 0:
+			print("[CLEAR]    %s left with %d open positions" % [employer.actor_id, remaining])
+	for worker in unmatched:
 		print("[CLEAR]    %s left without contract" % worker.actor_id)
 
-	supply_pool.clear()
-	demand_pool.clear()
-
-func _write_contract(employer_path: NodePath, worker_path: NodePath) -> void:
-	var employer := get_node(employer_path) as Actor
-	var worker := get_node(worker_path) as Actor
-	var contract := LaborContract.new()
-	contract.employer = employer_path
-	contract.worker = worker_path
-	contract.wage_per_work_unit = 0   # legacy field; rate is recomputed at settlement
-	contract.agreed_at_week = (SimClock.current_day - 1) / 7 + 1
-	contract.status = Contract.Status.ACTIVE
-	worker.accounts.contracts.append(contract)
-	employer.accounts.contracts.append(contract)
-	print("[CLEAR]      contract: %s ↔ %s, week=%d" % [worker.actor_id, employer.actor_id, contract.agreed_at_week])
+func _strike_contract(employer: Actor, worker: Actor, supply: int, tick: int) -> void:
+	var ei := employer.find_interest(EmployerInterest) as EmployerInterest
+	var act := LaborContractActivity.new()
+	act.employer = employer
+	act.worker = worker
+	act.job_id = ei.job_category if ei != null else &"farming"
+	act.current_supply = supply
+	act.participants = [employer.get_path(), worker.get_path()]
+	act.begin(tick)
+	if act.close(tick):
+		employer.accounts.activities.append(act)

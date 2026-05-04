@@ -5,29 +5,33 @@ extends Interest
 @export var good_id: StringName = &"grain"
 @export var current_delta: float = 0.0
 var wholesale_market: WholesaleMarket
-var weekly_cost_basis: float = 0.0
 
 func connect_to_bus() -> void:
-	WindowBus.weekly_books_close.connect(settle_weekly_production)
+	pass    # No coordination signals needed — markets pull-on-open.
 
 func disconnect_from_bus() -> void:
-	WindowBus.weekly_books_close.disconnect(settle_weekly_production)
+	pass
 
-func settle_weekly_production() -> void:
-	var costs: int = 0
-	for v in owner.accounts.weekly_costs.values():
-		costs += int(v)
-	var output: int = owner.accounts.weekly_outputs.get(good_id, 0)
-	if output > 0:
-		weekly_cost_basis = float(costs) / float(output)
-	else:
-		weekly_cost_basis = 0.0
-	print("    %s.ProductionInterest.settle_weekly_production() — costs=%d, output=%d %s, cost_basis=%.2f" %
-		[owner.actor_id, costs, output, good_id, weekly_cost_basis])
-	if output > 0 and wholesale_market != null:
-		wholesale_market.queue_supply(owner, output)
-	owner.accounts.weekly_costs.clear()
-	owner.accounts.weekly_outputs.clear()
+# Called by WholesaleMarket.open_market(tick). Cost basis is computed as a
+# FinancialBook period query — never cached. The cost-basis bug is structurally
+# eliminated: the books are always current, and order-of-call within the burst
+# does not affect the answer.
+func respond_to_supply_call(market: WholesaleMarket, tick: int) -> SupplyOffer:
+	var fb: FinancialBook = owner.accounts.financial()
+	if fb == null:
+		return SupplyOffer.make(owner.get_path(), 0.0, 0.0)
+	var period_start: int = max(0, tick - market.period_length)
+	# Production_Output_Value is credit-natural — balance reads as the natural
+	# positive total output value over the window.
+	var output: float = fb.balance(Accounts.A_PRODUCTION_OUTPUT_VALUE, period_start, tick)
+	# Wages_Expense is debit-natural — balance reads negative cumulative; negate.
+	var wages: float = -fb.balance(Accounts.A_WAGES_EXPENSE, period_start, tick)
+	var cost_basis: float = (wages / output) if output > 0.0 else 0.0
+	# Quantity offered = inventory of good_id available right now (running balance).
+	var quantity: float = owner.accounts.inventory_of(good_id)
+	print("    %s.ProductionInterest.respond_to_supply_call — output=%.0f, wages=%.0f, cost_basis=%.2f, qty_offered=%.0f" %
+		[owner.actor_id, output, wages, cost_basis, quantity])
+	return SupplyOffer.make(owner.get_path(), quantity, cost_basis)
 
 func compute_supplier_delta() -> float:
 	return current_delta

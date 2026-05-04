@@ -3,82 +3,132 @@ extends Market
 
 @export var good_id: StringName = &"grain"
 
+var _supply_offers: Array[SupplyOffer] = []
+var _demand_requests: Array[DemandRequest] = []
+
 func _ready() -> void:
-	WindowBus.wholesale_market_closed.connect(clear)
-	print("[Wire] WholesaleMarket.clear ← WindowBus.wholesale_market_closed")
+	print("[Wire] WholesaleMarket ready (pull-on-open; period_length=%d)" % period_length)
 
-func compute_clearing_price() -> float:
-	# v0: single producer. Phase 3+ multi-producer needs aggregation strategy.
-	var producers: Array = supply_pool.keys()
-	if producers.is_empty():
-		return 0.0
-	var supplier := get_node(producers[0]) as Actor
-	var production := supplier.find_interest(ProductionInterest) as ProductionInterest
-	if production == null:
-		return 0.0
-	return production.weekly_cost_basis * (1.0 + production.compute_supplier_delta())
+func open_market(tick: int) -> void:
+	_supply_offers.clear()
+	_demand_requests.clear()
+	# Pull supply
+	for supplier in registered_suppliers:
+		var production := supplier.find_interest(ProductionInterest) as ProductionInterest
+		if production == null:
+			continue
+		var offer := production.respond_to_supply_call(self, tick)
+		if offer != null and offer.quantity > 0.0:
+			_supply_offers.append(offer)
+	# Pull demand
+	for demander in registered_demanders:
+		var mercantile := demander.find_interest(MercantileInterest) as MercantileInterest
+		if mercantile == null:
+			continue
+		var req := mercantile.respond_to_wholesale_demand_call(self, tick)
+		if req != null and req.quantity > 0.0:
+			_demand_requests.append(req)
 
-func clear() -> void:
-	var total_supply: int = 0
-	for actor_path in supply_pool.keys():
-		total_supply += int(supply_pool[actor_path])
-	var total_demand: int = 0
-	for actor_path in demand_pool.keys():
-		total_demand += int(demand_pool[actor_path])
+func clear_market(tick: int) -> void:
+	var event := MarketClearingEvent.new()
+	event.tick = tick
+	event.market_name = StringName(name)
+	event.good_id = good_id
 
-	if total_supply == 0 or total_demand == 0:
-		print("[CLEAR]    WholesaleMarket.clear() — nothing to clear (supply=%d, demand=%d)" % [total_supply, total_demand])
-		demand_pool.clear()
+	var total_supply: float = 0.0
+	var weighted_cost_basis_sum: float = 0.0
+	for offer in _supply_offers:
+		total_supply += offer.quantity
+		weighted_cost_basis_sum += offer.cost_basis * offer.quantity
+		event.responding_suppliers.append(offer.supplier)
+	for supplier in registered_suppliers:
+		var path := supplier.get_path()
+		var found := false
+		for offer in _supply_offers:
+			if offer.supplier == path:
+				found = true
+				break
+		if not found:
+			event.non_responding_suppliers.append(path)
+
+	var total_demand: float = 0.0
+	for req in _demand_requests:
+		total_demand += req.quantity
+		event.responding_demanders.append(req.demander)
+
+	event.total_supply = total_supply
+	event.total_demand = total_demand
+
+	if total_supply <= 0.0 or total_demand <= 0.0:
+		event.clearing_price = 0.0
+		last_clearing_event = event
+		print("[CLEAR]    WholesaleMarket — nothing to clear (supply=%.1f, demand=%.1f)" % [total_supply, total_demand])
 		return
 
-	var price: float = compute_clearing_price()
-	print("[CLEAR]    WholesaleMarket.clear() — supply=%d, demand=%d, price=%.2f" % [total_supply, total_demand, price])
+	# Weighted-avg cost basis × (1 + delta) — for v0 single supplier this
+	# collapses to that supplier's cost_basis.
+	var cost_basis: float = weighted_cost_basis_sum / total_supply
+	# Use first supplier's delta (v0 single-supplier); phase 3+ aggregates.
+	var delta: float = 0.0
+	if not registered_suppliers.is_empty():
+		var p := registered_suppliers[0].find_interest(ProductionInterest) as ProductionInterest
+		if p != null:
+			delta = p.compute_supplier_delta()
+	var price: float = cost_basis * (1.0 + delta)
+	event.clearing_price = price
+	print("[CLEAR]    WholesaleMarket — supply=%.0f, demand=%.0f, price=%.2f" % [total_supply, total_demand, price])
 
-	# Proportional allocations per demander (capped by demand and by coin budget)
-	var allocations: Dictionary = {}
-	for demander_path in demand_pool.keys():
-		var my_demand: int = int(demand_pool[demander_path])
-		var raw: int = int(floor(float(my_demand) * float(total_supply) / float(total_demand)))
-		var capped_by_demand: int = min(raw, my_demand)
-		var demander := get_node(demander_path) as Actor
-		var coin_cap: int = int(floor(float(demander.accounts.coin) / max(price, 0.001)))
-		allocations[demander_path] = min(capped_by_demand, coin_cap)
-
-	# Transfer grain + coin
-	for demander_path in allocations.keys():
-		var qty: int = allocations[demander_path]
-		if qty == 0:
+	# Demand-side ceiling check: drop any demand with max_price < price.
+	var effective_demand: Array[DemandRequest] = []
+	var effective_total_demand: float = 0.0
+	for req in _demand_requests:
+		if req.max_price >= 0.0 and price > req.max_price:
+			print("    %s walks away — wholesale ask %.2f exceeds ceiling %.2f" %
+				[String(req.demander), price, req.max_price])
 			continue
-		var demander := get_node(demander_path) as Actor
-		var total_paid: int = int(round(float(qty) * price))
-		demander.accounts.inventory[good_id] = demander.accounts.inventory.get(good_id, 0) + qty
-		demander.accounts.coin -= total_paid
+		effective_demand.append(req)
+		effective_total_demand += req.quantity
 
-		# Distribute payment to suppliers proportionally to their share of total_supply
-		for supplier_path in supply_pool.keys():
-			var supplier_share: float = float(supply_pool[supplier_path]) / float(total_supply)
-			var supplier_qty: int = int(round(float(qty) * supplier_share))
-			var supplier_payment: int = int(round(float(supplier_qty) * price))
-			var supplier := get_node(supplier_path) as Actor
-			supplier.accounts.coin += supplier_payment
-			supplier.accounts.inventory[good_id] = supplier.accounts.inventory.get(good_id, 0) - supplier_qty
-			# Track this supply pool entry shrinkage so leftover stays accurate
-			supply_pool[supplier_path] = int(supply_pool[supplier_path]) - supplier_qty
-			print("    %s sold %d %s to %s for %d coin" % [supplier.actor_id, supplier_qty, good_id, demander.actor_id, supplier_payment])
+	if effective_total_demand <= 0.0:
+		last_clearing_event = event
+		return
 
-		# Section 2 amendment: write per-unit acquisition cost back to merchant
-		var merchant_interest := demander.find_interest(MercantileInterest) as MercantileInterest
-		if merchant_interest != null:
-			merchant_interest.wholesale_cost_per_unit = price
+	# Per-demander allocation: proportional, capped by demand and by demander's
+	# coin budget. Then create+close one WholesaleSaleActivity per
+	# (supplier, demander) pair.
+	for req in effective_demand:
+		var demander := get_node_or_null(req.demander) as Actor
+		if demander == null:
+			continue
+		var raw_share: float = floor(req.quantity * total_supply / effective_total_demand)
+		var capped_by_demand: float = min(raw_share, req.quantity)
+		var coin_cap: float = floor(demander.accounts.cash() / max(price, 0.001))
+		var allocated: float = min(capped_by_demand, coin_cap)
+		if allocated <= 0.0:
+			continue
 
-	# Leftover supply (from floor-rounding) stays in pool; clear demand
-	var leftover: int = 0
-	for actor_path in supply_pool.keys():
-		leftover += int(supply_pool[actor_path])
-	if leftover > 0:
-		print("[CLEAR]    %d %s remained in supply pool (floor-rounding)" % [leftover, good_id])
-	# Strip out zero-balance suppliers so the dict stays tidy
-	for actor_path in supply_pool.keys():
-		if int(supply_pool[actor_path]) <= 0:
-			supply_pool.erase(actor_path)
-	demand_pool.clear()
+		# Distribute allocation across suppliers proportional to each supplier's share.
+		for offer in _supply_offers:
+			var supplier_share: float = offer.quantity / total_supply
+			var supplier_qty: float = floor(allocated * supplier_share)
+			if supplier_qty <= 0.0:
+				continue
+			var supplier := get_node_or_null(offer.supplier) as Actor
+			if supplier == null:
+				continue
+			var sale := WholesaleSaleActivity.new()
+			sale.producer = supplier
+			sale.merchant = demander
+			sale.good_id = good_id
+			sale.quantity = supplier_qty
+			sale.price = price
+			sale.participants = [supplier.get_path(), demander.get_path()]
+			sale.begin(tick)
+			if sale.close(tick):
+				supplier.accounts.activities.append(sale)
+				# Update merchant's cost basis carrier — used by RetailPurchaseActivity.
+				var mi := demander.find_interest(MercantileInterest) as MercantileInterest
+				if mi != null:
+					mi.wholesale_cost_per_unit = price
+
+	last_clearing_event = event
