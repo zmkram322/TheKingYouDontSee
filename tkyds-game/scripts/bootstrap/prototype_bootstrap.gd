@@ -32,11 +32,17 @@ func _ready() -> void:
 	region.add_child(retail_market)
 	region.retail_markets[&"grain"] = retail_market
 
+	var grain_farming_pattern := load("res://scripts/economy/work_patterns/grain_farming.tres") as WorkPattern
+	if grain_farming_pattern == null:
+		push_error("Bootstrap: failed to load grain_farming.tres as WorkPattern")
+		return
+
 	var plot := LandPlot.new()
 	plot.resource_id = &"plot_1"
 	plot.size = 1.0
 	plot.producible_goods = [&"grain"]
 	plot.base_output_per_work_unit = 1.0
+	plot.work_pattern = grain_farming_pattern
 
 	var worker_1 := _make_worker(&"worker_1")
 	region.add_child(worker_1)

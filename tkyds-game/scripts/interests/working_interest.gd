@@ -2,7 +2,7 @@ class_name WorkingInterest
 extends Interest
 
 @export var work_state: SimEnums.WorkState = SimEnums.WorkState.IDLE
-var current_day_activity: WorkDayActivity = null
+var current_day_activity: Activity = null    # FarmingDayActivity or sibling
 
 func connect_to_bus() -> void:
 	WindowBus.work_window_opened.connect(begin_working)
@@ -29,19 +29,42 @@ func current_contract() -> LaborContract:
 func is_seeking_work() -> bool:
 	return work_state == SimEnums.WorkState.IDLE and current_contract() == null
 
+func _resolve_work_pattern(employer: Actor) -> WorkPattern:
+	# The plot is the source of truth for what work happens. v0 assumes one
+	# ProductionInterest per employer (one plot); when an employer owns
+	# multiple plots, the contract will need to specify which one.
+	var prod := employer.find_interest(ProductionInterest) as ProductionInterest
+	if prod == null or prod.plot == null:
+		return null
+	return prod.plot.work_pattern
+
 func begin_working() -> void:
 	var contract := current_contract()
 	if contract == null:
 		return
-	work_state = SimEnums.WorkState.WORKING
 	var employer := owner.get_node(contract.employer) as Actor
-	current_day_activity = WorkDayActivity.new()
-	current_day_activity.worker = owner
-	current_day_activity.employer = employer
-	current_day_activity.contract = contract
-	current_day_activity.participants = [owner.get_path(), employer.get_path()]
-	current_day_activity.begin(SimClock.current_day)
-	print("    %s.work_state → WORKING" % owner.actor_id)
+	var pattern := _resolve_work_pattern(employer)
+	if pattern == null:
+		push_error("%s: no work_pattern on employer's plot" % owner.actor_id)
+		return
+
+	work_state = SimEnums.WorkState.WORKING
+	var day := pattern.create_day_activity() as FarmingDayActivity
+	if day == null:
+		push_error("%s: pattern[%s] did not yield a FarmingDayActivity-compatible class" %
+			[owner.actor_id, pattern.pattern_id])
+		work_state = SimEnums.WorkState.EMPLOYED_NOT_WORKING
+		return
+	day.worker = owner
+	day.employer = employer
+	day.contract = contract
+	day.good_id = pattern.good_id
+	day.skill_id = pattern.skill_id
+	day.participants = [owner.get_path(), employer.get_path()]
+	day.begin(SimClock.current_day)
+	current_day_activity = day
+	print("    %s.work_state → WORKING (pattern=%s, good=%s)" %
+		[owner.actor_id, pattern.pattern_id, pattern.good_id])
 
 func do_one_work_slot(slot: int) -> void:
 	if work_state != SimEnums.WorkState.WORKING:
@@ -50,16 +73,25 @@ func do_one_work_slot(slot: int) -> void:
 		return
 	if current_day_activity == null:
 		return
-	var slot_act := WorkSlotActivity.new()
+	var contract := current_contract()
+	if contract == null:
+		return
+	var employer := owner.get_node(contract.employer) as Actor
+	var pattern := _resolve_work_pattern(employer)
+	if pattern == null:
+		return
+	var slot_act := pattern.create_slot_activity() as FarmingSlotActivity
+	if slot_act == null:
+		return
 	slot_act.worker = owner
-	slot_act.contract = current_day_activity.contract
+	slot_act.contract = contract
 	slot_act.parent_activity_ref = current_day_activity
 	slot_act.participants = [owner.get_path()]
 	current_day_activity.child_activities.append(slot_act)
 	slot_act.begin(SimClock.current_day)
 	slot_act.close(SimClock.current_day)
-	print("    %s.WorkingInterest — slot %d worked (today %d)" %
-		[owner.actor_id, slot, current_day_activity.slots_worked])
+	var slots: int = (current_day_activity as FarmingDayActivity).slots_worked
+	print("    %s.WorkingInterest — slot %d worked (today %d)" % [owner.actor_id, slot, slots])
 
 func close_workday() -> void:
 	if current_day_activity == null:
