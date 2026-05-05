@@ -2,7 +2,6 @@ class_name EmployerInterest
 extends Interest
 
 @export var desired_workers: int = 2
-@export var job_category: StringName = &"farming"
 
 func connect_to_bus() -> void:
 	pass    # LaborMarket pulls open positions on open_market.
@@ -11,6 +10,18 @@ func disconnect_from_bus() -> void:
 	pass
 	# Phase 3+ cleanup clause:
 	# if there is a still-ACTIVE contract for an employer, mark it BREACHED here.
+
+# What work happens here is sourced from the plot's WorkPattern, the same
+# lookup path WorkingInterest uses. v0 assumes one ProductionInterest /
+# one plot per employer; when an employer owns multiple plots the contract
+# will need to specify which one.
+func resolve_work_pattern() -> WorkPattern:
+	if owner == null:
+		return null
+	var prod := owner.find_interest(ProductionInterest) as ProductionInterest
+	if prod == null or prod.plot == null:
+		return null
+	return prod.plot.work_pattern
 
 func filled_positions() -> int:
 	return employees().size()

@@ -29,9 +29,6 @@ func fire_weekly_burst() -> void:
 		return
 	print("  [Orchestrator] weekly burst begins")
 	var tick: int = SimClock.current_day
-	var burst := WeeklyBurstActivity.new()
-	burst.tick = tick
-	burst.begin(tick)
 
 	# Step 1 — wage settlement: each employer pays outstanding payables.
 	for actor in _region.actors:
@@ -57,5 +54,4 @@ func fire_weekly_burst() -> void:
 		_region.labor_market.open_market(tick)
 		_region.labor_market.clear_market(tick)
 
-	burst.close(tick)
 	print("  [Orchestrator] weekly burst ends")

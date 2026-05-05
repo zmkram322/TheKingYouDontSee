@@ -45,18 +45,6 @@ Each item lists:
 
 ---
 
-### Multi-good economy + cross-price elasticity
-
-**What:** v0 has only grain. Adding a second good (bread, ale, cloth) means: (a) populate a new `*.tres` GoodConfig, (b) hook a new Interest (e.g., `BreadInterest`), (c) decide cross-price elasticity (do grain and bread substitute? complement?).
-
-**Why deferred:** Single-good prototype demonstrates the math; adding goods is mechanical but each one needs design (elasticity tier, decay-lambda, who produces it, who demands it).
-
-**Seam:** `GoodConfig` Resource pattern (Section 2) supports any good. `Goods` autoload's Array-driven registry just needs more entries. Demand formula `Q_d = A × P^(-e_g)` doesn't model cross-price effects; would need extension.
-
-**Trigger:** First non-grain good designed. Likely bread (intermediate product from grain) — also surfaces the private-subtraction question above.
-
----
-
 ### Per-actor demand multiplier
 
 **What:** Today every actor has the same baseline demand for grain (uniform `A_per_actor_daily`). Phase 3+ may want a `demand_multiplier: float = 1.0` on `GrainInterest` so big-eaters and small-eaters become distinguishable in trace.
@@ -129,18 +117,6 @@ Each item lists:
 
 ---
 
-### Hunger pressure reading from outstanding_demand
-
-**What:** `GrainInterest.outstanding_demand` exists, decays per-good-λ, accumulates unmet need. v0 trace prints it; nothing reads it.
-
-**Why deferred:** Hunger system is its own design pass.
-
-**Seam:** Field exists on `GrainInterest`. Decay applies. `record_clearing()` keeps it current.
-
-**Trigger:** Hunger elicitation session (planned post-coding-pass).
-
----
-
 ### Monopoly markup property (documentation)
 
 **What:** With grain at e_g=0.4 (inelastic), profit-maximizing markup for a monopoly merchant is unbounded except by affordability. Mary flagged this in her Section 4. Not a v0 concern (δ_retail is hand-set, not optimized), but should be documented when dynamic δ_retail lands.
@@ -150,18 +126,6 @@ Each item lists:
 **Seam:** None needed in v0.
 
 **Trigger:** When dynamic δ_retail logic is designed.
-
----
-
-## Aptitudes / skills / XP / hunger
-
-These are tracked separately as planned design sessions, not just backlog. See `project_thekingdontSee.md` resume point.
-
-- Aptitudes (ATH/CHA/INT) — static data layer
-- Skills/XP gain on activity
-- Hunger system (reads inventory, mutates hunger, affects `compute_slot_output` and `compute_demand_at_price`)
-
-These get full sessions when the prototype trace is stable.
 
 ---
 
@@ -185,16 +149,6 @@ Already tracked in project memory `project_market_tuning_tool.md`. Build after P
 
 ---
 
-### Labor strategies wired to lord archetypes
-
-**What:** `LaborMarket.ClearingStrategy.CHARISMA_PICK` and `PRODUCTIVITY_RANK` named in Section 1; bodies stubbed. Phase 3+ wires them to lord-archetype config so a "mercantile" lord picks productivity-rank candidates and a "corrupt" lord picks charisma-favored candidates.
-
-**Seam:** Enum entries exist. Match dispatch in `LaborMarket.clear()`.
-
-**Trigger:** When lord-archetype design lands and per-region-strategy-config is wanted (see `project_labor_strategy.md` memory).
-
----
-
 ### Employer-learning logic
 
 **What:** Phase 3+ employers reason about wage gradients, learn over time. If/when this lands, revisit Section 1's `MINIMUM_WAGE` floor (W1) — the floor was chosen partly because no employer-learning exists yet to make a smooth-formula version necessary (Cloud's preference at W1).
@@ -202,6 +156,18 @@ Already tracked in project memory `project_market_tuning_tool.md`. Build after P
 **Seam:** `WageCalculator.calculate_wage_per_slot()` is stateless. Employer learning would wrap or shadow it.
 
 **Trigger:** When employer-strategy / behavior session begins.
+
+---
+
+### Wage-policy: recomputed-at-settlement
+
+**What:** v0 locks `LaborContractActivity.wage_policy = LOCKED_AT_CONTRACT` — the wage rate is computed at strike-time using current scarcity and the worker's then-skill, and never revisited for the contract's life. A worker who grows skills mid-contract is paid at the strike-time rate. This is a deliberate design choice: it makes contracts a real tradable object and surfaces labor arbitrage as a dynamic.
+
+**Why deferred:** v0 keeps the policy single-valued so the trace is unambiguous about wage flow. Phase 3+ may want a sibling `RECOMPUTED_AT_SETTLEMENT` policy that re-reads the rate at each `WagePaymentActivity`, for negotiated contracts (e.g., guild apprenticeships) or short-term seasonal labor.
+
+**Seam:** `WagePolicy` enum on `LaborContractActivity`. Match dispatch in `on_close()` already gates which branch runs. Adding a sibling = one enum entry + one match arm + (likely) deferring contract field initialization until first WagePaymentActivity reads.
+
+**Trigger:** When a non-locked wage scenario is designed (e.g., apprenticeship rate-step on skill threshold, or seasonal renegotiation).
 
 ---
 

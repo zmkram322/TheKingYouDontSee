@@ -39,7 +39,7 @@ This document is the master plan that bridges Phase 2.5 (just shipped) to "proto
 
 | Stage | Name | Type | Output | Prerequisite |
 |---|---|---|---|---|
-| **0** | Cleanup pass (Phase 2.6) | Coding | Updated code + lean backlog | None — start now |
+| **0** | Cleanup pass (Phase 2.6) ✅ landed 2026-05-04 | Coding | Updated code + lean backlog | None — start now |
 | **1A** | Elicitation: Aptitudes + XP + Skills | Party-mode session | `elicitation-a-output.md` | Stage 0 |
 | **1B** | Elicitation: Hunger + Consumption + Vitals | Party-mode session | `elicitation-b-output.md` | Stage 0 |
 | **1C** | Elicitation: Multi-Good Economy + Multi-Plot Employers | Party-mode session | `elicitation-c-output.md` | Stage 0 |

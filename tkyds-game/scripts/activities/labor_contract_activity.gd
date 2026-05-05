@@ -4,13 +4,22 @@ extends Activity
 # Persistent (long-running). Records the moment a contract was struck. No
 # financial entries on creation; downstream WorkDayActivity / WagePaymentActivity
 # write the actual flow. The contract Resource is appended to both parties'
-# `accounts.contracts` at on_close; wage_per_slot is locked at that moment
-# using current scarcity.
+# `accounts.contracts` at on_close.
+#
+# Wage policy seam: v0 locks wage_per_slot at contract creation using the
+# scarcity-and-skill snapshot at that moment. A worker whose skills grow
+# during a multi-week contract is paid at the strike-time rate, which makes
+# the contract a real tradable object and surfaces labor arbitrage as a
+# deliberate dynamic. Phase 3+ may add RECOMPUTED_AT_SETTLEMENT as a sibling
+# policy where the rate is recomputed at each WagePaymentActivity.
+
+enum WagePolicy { LOCKED_AT_CONTRACT }
 
 var employer: Actor
 var worker: Actor
 @export var job_id: StringName = &"farming"
 @export var current_supply: int = 0     # labor scarcity at contract time
+@export var wage_policy: WagePolicy = WagePolicy.LOCKED_AT_CONTRACT
 
 # Created at on_close — the canonical contract reference.
 var contract: LaborContract
@@ -23,7 +32,13 @@ func on_close() -> bool:
 		return false
 
 	var job := Jobs.config_for(job_id)
-	var rate: float = WageCalculator.calculate_wage_per_slot(employer, worker, job, current_supply)
+	var rate: float
+	match wage_policy:
+		WagePolicy.LOCKED_AT_CONTRACT:
+			rate = WageCalculator.calculate_wage_per_slot(employer, worker, job, current_supply)
+		_:
+			push_error("LaborContractActivity: wage_policy %d not implemented" % wage_policy)
+			return false
 
 	contract = LaborContract.new()
 	contract.employer = employer.get_path()

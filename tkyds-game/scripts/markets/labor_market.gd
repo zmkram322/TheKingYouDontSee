@@ -57,7 +57,8 @@ func clear_market(tick: int) -> void:
 	var rankings: Dictionary = {}
 	for employer in _hiring_employers:
 		var ei := employer.find_interest(EmployerInterest) as EmployerInterest
-		var job: JobCategory = Jobs.config_for(ei.job_category) if ei != null else null
+		var pattern := ei.resolve_work_pattern() if ei != null else null
+		var job: JobCategory = Jobs.config_for(pattern.job_category) if pattern != null else null
 		var ranked: Array = []
 		for worker in _seeking_workers:
 			var asked_wage: float = WageCalculator.calculate_wage_per_slot(employer, worker, job, supply)
@@ -103,10 +104,11 @@ func clear_market(tick: int) -> void:
 
 func _strike_contract(employer: Actor, worker: Actor, supply: int, tick: int) -> void:
 	var ei := employer.find_interest(EmployerInterest) as EmployerInterest
+	var pattern := ei.resolve_work_pattern() if ei != null else null
 	var act := LaborContractActivity.new()
 	act.employer = employer
 	act.worker = worker
-	act.job_id = ei.job_category if ei != null else &"farming"
+	act.job_id = pattern.job_category if pattern != null else &"farming"
 	act.current_supply = supply
 	act.participants = [employer.get_path(), worker.get_path()]
 	act.begin(tick)

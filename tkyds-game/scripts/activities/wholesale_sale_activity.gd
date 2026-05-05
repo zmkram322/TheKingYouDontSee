@@ -4,11 +4,11 @@ extends Activity
 # Persistent. One sale match: producer transfers `quantity` of `good_id` to
 # merchant in exchange for `quantity * price` coin.
 #
-# v0 calibration: grain unit-price = 1.00 (AC#4), so qty (units) ==
-# total_revenue (coin). Inventory:grain is tracked in units (one entry =
-# one grain unit, which is also one coin of cost value at v0 prices).
-# When prices diverge from unit, Phase 3+ adds a Cost_of_Inventory account
-# pair so the merchant's books balance at the cost gap.
+# Inventory:grain is tracked in units (one entry = one unit). The merchant
+# carries any cost premium above $1/unit in `Cost_of_Inventory`, a
+# debit-natural asset-adjustment account, so the merchant's Tx balances at
+# any wholesale price. At v0 calibration (price=1.00) the premium leg is
+# zero and the Tx collapses to the unit-cost case.
 
 var producer: Actor
 var merchant: Actor
@@ -51,14 +51,14 @@ func on_close() -> bool:
 	if not fb_producer.commit_transaction(producer_receipt_tx):
 		return false
 
-	# Merchant side (v0 unit-cost = 1.00 → qty == total_revenue, single Tx balances):
-	#   Inventory:grain up = -qty;
-	#   Cash down = +total_revenue.
-	if abs(quantity - total_revenue) > 0.0001:
-		push_error("WholesaleSaleActivity: v0 assumes price=1.0; got qty=%.2f, revenue=%.2f. Phase 3+ needs Cost_of_Inventory split." % [quantity, total_revenue])
-		return false
+	# Merchant side — 3-leg balanced Tx:
+	#   Inventory:grain up = -qty (debit, units in);
+	#   Cost_of_Inventory up = -(total_revenue - qty) (debit, cost premium captured);
+	#   Cash down = +total_revenue (credit, cash out).
+	var cost_premium: float = total_revenue - quantity
 	var merchant_tx: Array[JournalEntry] = [
 		JournalEntry.make(inv_account, -quantity, closed_tick, &"WholesaleSaleActivity"),
+		JournalEntry.make(Accounts.A_COST_OF_INVENTORY, -cost_premium, closed_tick, &"WholesaleSaleActivity"),
 		JournalEntry.make(Accounts.A_CASH, total_revenue, closed_tick, &"WholesaleSaleActivity"),
 	]
 	if not fb_merchant.commit_transaction(merchant_tx):

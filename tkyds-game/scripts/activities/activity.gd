@@ -6,6 +6,16 @@ extends Resource
 # discard after close, contribute deltas to their parent's accumulator fields.
 #   - if parent_activity_ref == null → must be persistent
 #   - if parent_activity_ref != null → must be transient
+#
+# Ownership convention (v0): the actor whose Interest creates the activity
+# owns the canonical instance in accounts.activities. Other participants
+# find it via the activity tree from a known root. Concrete v0 ownership:
+#   FarmingDayActivity     → worker
+#   WagePaymentActivity    → employer
+#   WholesaleSaleActivity  → producer
+#   RetailPurchaseActivity → merchant
+#   LaborContractActivity  → employer
+# Phase 3+ may evolve this when multi-participant queries become first-class.
 
 @export var activity_type: StringName = &""
 @export var participants: Array[NodePath] = []
