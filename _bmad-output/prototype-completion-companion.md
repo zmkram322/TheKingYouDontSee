@@ -274,14 +274,15 @@ The `PYTHONIOENCODING=utf-8` is mandatory — agent icons (📊 etc.) crash cp12
 1. Read `prototype-completion-roadmap.md` (full file).
 2. Read this companion (§1 + §2 + §5).
 3. Read the elicitation's pre-read list (in roadmap §3.x).
-4. Confirm with user: which elicitation, any local context shifts since the roadmap was written.
-5. Spawn the elicitation's owner agents in parallel using the §2 template.
-6. Present each agent's response in full (no blending).
-7. Optionally add Orchestrator Note flagging disagreements.
-8. Iterate with the user — additional rounds, focused single-agent follow-ups, or "answer this directly."
-9. Capture output to `_bmad-output/elicitation-<letter>-output.md` per the §6.1 template below.
-10. Update `placeholders.md` with any placeholders this elicitation now schedules for resolution.
-11. Mark the elicitation complete in roadmap §1 table.
+4. Read `_bmad-output/placeholders.md` and identify entries gated on this elicitation (e.g., search for "Elicitation A" in the "Real version gated on" lines). These MUST be addressed in the output artifact — either resolved by a design directive or rescheduled with reasoning.
+5. Confirm with user: which elicitation, any local context shifts since the roadmap was written, any placeholder entries to flag explicitly.
+6. Spawn the elicitation's owner agents in parallel using the §2 template. Include the placeholder entries in the agents' prompt context so they reason about latent gaps, not just the abstract questions.
+7. Present each agent's response in full (no blending).
+8. Optionally add Orchestrator Note flagging disagreements.
+9. Iterate with the user — additional rounds, focused single-agent follow-ups, or "answer this directly."
+10. Capture output to `_bmad-output/elicitation-<letter>-output.md` per the §6.1 template below. The output's "Placeholders affected" section is mandatory, not optional.
+11. Update `placeholders.md`: strike resolved entries, schedule new ones surfaced during the session, update gating/trigger fields where the elicitation refined them.
+12. Mark the elicitation complete in roadmap §1 table.
 
 ### 4.2 Stage 0 cleanup pass
 

@@ -136,6 +136,7 @@ Hunger placement (4 vs. 5) is the one explicit ordering question this plan defer
 **Operating notes:**
 - Each elicitation is **independent**. Run them in any order; ordering for *implementation* (which phase first) gets settled in Stage 2 (Phase Plan write-up) after all six are answered.
 - Each elicitation has its own pre-read list. Loading those is the first action of the session.
+- **`_bmad-output/placeholders.md` is a standard pre-read for every elicitation.** Each session must scan the ledger for entries gated on its own letter (e.g., "Real version gated on: Elicitation C") and address them in the output — either resolve via a design directive, or explicitly reschedule with reasoning. This is how latent issues stay visible across sessions instead of slipping out of view.
 - If an elicitation surfaces a question better answered by another elicitation, defer cleanly — note it in the output artifact and let the next session catch it.
 
 **Recommended agent owners** (cited in each section below). All are spawned via `general-purpose` subagent_type with persona injection in the prompt — see §8 for the spawn template.

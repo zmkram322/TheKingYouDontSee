@@ -108,6 +108,12 @@ purpose: |
 - **Real version gated on:** Phase 5 (multi-good or multi-supplier with non-unit prices).
 - **Trigger to revisit:** Second supplier or second good lands and weighted-avg cost basis becomes load-bearing.
 
+### Inventory units/dollars conflation in COGS disposal Tx
+- **File:line:** `tkyds-game/scripts/activities/wholesale_sale_activity.gd:38-39` (producer Tx 1); `tkyds-game/scripts/activities/retail_purchase_activity.gd:38-41` (merchant disposal Tx 1)
+- **Current value/behavior:** Both disposal Txs ship inventory out of `Inventory:grain` while conflating units and dollars. The producer's Tx 1 disposes `quantity` units at $1/unit (assumes producer cost basis = 1.0). The merchant's retail Tx 1 disposes `total_cogs = quantity × unit_cost_basis` "units" out of `Inventory:grain` — but `Inventory:grain` is held in unit count, so when `unit_cost_basis ≠ 1.0` the wrong number of units leaves the ledger. At v0 calibration ($1/unit everywhere) both reconcile; the conflation is structurally latent, not surfaced.
+- **Real version gated on:** Elicitation C — choice of inventory-tracking convention (units-tracked + `Cost_of_Inventory` contra-account on disposal, OR dollar-tracked inventory). Stage 0 cleanup landed the acquisition-side `Cost_of_Inventory` for the merchant; the disposal side is the matching half.
+- **Trigger to revisit:** First non-unit producer cost basis OR first non-unit merchant unit_cost_basis. Likely surfaces as soon as a second good lands at a different price tier than grain, or when wages/output diverges from 1:1.
+
 ---
 
 ## UI / Diegetic vocabulary
