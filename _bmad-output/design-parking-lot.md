@@ -51,6 +51,26 @@ purpose: |
 
 ---
 
+## War (military system)
+
+**What:** A future system covering raised retinues, soldier wages, casualties, supply chains, sieges, raids. Touches every existing primitive: actors with `MilitaryInterest`, `RetinueContract` (cousin to LaborContract), `MarchActivity` / `BattleActivity` (persistent activities with transient slot-equivalents), book entries for casualties + readiness + supply, regional risk modulating travel/trade.
+
+**Why parked:** No v0 consumer; nowhere near prototype scope. But the architecture must remain compatible — the persistent-vs-transient activity rule, force-carrier book writes, and population API are general by design and should accommodate war as a sibling system without re-architecting.
+
+**Pickup candidate:** Far downstream — likely post-Phase-5 vertical-slice work or beyond. Recognized here to keep the foundation compatibility-checked. Elicitation E explicitly verifies its population API + inference layer don't preclude this.
+
+---
+
+## Export / Import (cross-region trade)
+
+**What:** Multi-region trade: caravans moving goods between markets at different prices, regional supply gluts feeding regional scarcity, traders earning on the spread. Touches: regional `LaborMarket` / `WholesaleMarket` / `RetailMarket` instancing (already partially scoped in `phase-3-backlog.md`), travel as activity primitive, region-pair book entries for cross-region transfers.
+
+**Why parked:** v0 has one region. Multi-region is on the architecture roadmap (regional `LaborMarket` is a backlog item) but cross-region trade as a player-meaningful system is beyond prototype scope.
+
+**Pickup candidate:** Likely after Phase 5 (multi-good economy) and after Phase 7+ (some legibility infrastructure). Recognized here so Elicitation C (multi-good) and E (legibility) verify their decisions don't preclude cross-region trade as a future sibling. The population API in particular should generalize from "actors at this employer" → "regions exporting this good."
+
+---
+
 ## Book-access gates by precision level
 
 **What:** When one actor reads another's books (or any aggregated population query), the precision returned should depend on the observer's investment / source / relationship. Player's own books = precise. A rumored claim from a tavern overhear = noisy float or coarse enum bucket. A bribed steward = mid-precision.

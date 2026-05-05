@@ -39,18 +39,33 @@ This document is the master plan that bridges Phase 2.5 (just shipped) to "proto
 
 | Stage | Name | Type | Output | Prerequisite |
 |---|---|---|---|---|
-| **0** | Cleanup pass (Phase 2.6) ✅ landed 2026-05-04 | Coding | Updated code + lean backlog | None — start now |
-| **1A** | Elicitation: Aptitudes + XP + Skills | Party-mode session | `elicitation-a-output.md` | Stage 0 |
-| **1B** | Elicitation: Hunger + Consumption + Vitals | Party-mode session | `elicitation-b-output.md` | Stage 0 |
-| **1C** | Elicitation: Multi-Good Economy + Multi-Plot Employers | Party-mode session | `elicitation-c-output.md` | Stage 0 |
-| **1D** | Elicitation: Lord Economy + Taxation | Party-mode session | `elicitation-d-output.md` | Stage 0 |
-| **1E** | Elicitation: Macro-Legibility Primitives | Party-mode session | `elicitation-e-output.md` | Stage 0 |
-| **1F** | Elicitation: Social + Morale + Reputation | Party-mode session | `elicitation-f-output.md` | Stage 0 |
-| **2** | Prototype Phase Plan write-up | Synthesis session | `prototype-phase-plan.md` | Stages 1A–1F |
-| **3** | Phase 3 implementation (likely Aptitudes+XP) | Coding directive + pass | `phase-3-directive.md` + code | Stage 2 |
+| **0** | Cleanup pass (Phase 2.6) ✅ landed 2026-05-04 | Coding | Updated code + lean backlog | None |
+| **0.5** | GDD ↔ Build Alignment Review ✅ landed 2026-05-04 | Party-mode session | `gdd-build-alignment-review.md` | Stage 0 |
+| **1E** | Elicitation: Macro-Legibility Primitives **(1st — locked, lens for the rest)** | Party-mode session | `elicitation-e-output.md` | Stage 0.5 |
+| **1E.1** | UI-pass follow-up (Sally + Paige) on E's seams | Party-mode session | `elicitation-e-ui-output.md` | 1E |
+| **1B** | Elicitation: Hunger + Consumption + Vitals **(before C — locked)** | Party-mode session | `elicitation-b-output.md` | 1E |
+| **1.5** | Disposal-side Cost_of_Inventory POC spike | Coding | Updated code + placeholders.md strike | 1E (and before 1C) |
+| **1C** | Elicitation: Multi-Good Economy + Multi-Plot Employers | Party-mode session | `elicitation-c-output.md` | 1B + 1.5 |
+| **1A** | Elicitation: Aptitudes + XP + Skills *(order flexible)* | Party-mode session | `elicitation-a-output.md` | Stage 0.5 |
+| **1D** | Elicitation: Lord Economy + Taxation *(order flexible)* | Party-mode session | `elicitation-d-output.md` | Stage 0.5 |
+| **1F** | Elicitation: Social + Morale + Reputation *(order flexible)* | Party-mode session | `elicitation-f-output.md` | Stage 0.5 |
+| **2** | Prototype Phase Plan write-up (locks A/D/F ordering; lifts famine cascade as named milestone) | Synthesis session | `prototype-phase-plan.md` | Stages 1A–1F |
+| **2.5** | Architecture diagram + seam map — **Pass 1 (draft)** | Synthesis + diagram | `architecture-diagram-v1.{md,png}` | Stage 2 |
+| **3** | Phase 3 implementation | Coding directive + pass | `phase-3-directive.md` + code | Stage 2.5 |
 | **4–7+** | Subsequent phases per phase plan | Coding directive + pass | per phase | prior phase |
-| **N** | Architecture diagram + seam map | Synthesis + diagram | `architecture-diagram.{md,png}` + seam map | Sufficient phase coverage |
-| **N+1** | First observation UI / debug HUD pass | Coding | UI scene | Diagram |
+| **post-Phase-5** | Architecture diagram — **Pass 2 (final)** + GDD reconciliation pass (surgical) | Synthesis + edits | `architecture-diagram-v2.*`, GDD diff | Phase 5 lands |
+| **N+1** | First observation UI / debug HUD pass | Coding | UI scene | Diagram v2 |
+
+**Locked decisions from Stage 0.5 alignment review:**
+1. E runs first (lens for the rest — Mary/Cloud/Samus consensus, Indie deferred).
+2. B before C locked (Indie carried).
+3. A/D/F order flexible until Stage 2 phase plan synthesis.
+4. Stage 1.5 POC spike for disposal-side Cost_of_Inventory pattern, before 1C runs.
+5. Architecture diagram in two passes (draft after elicitations, final after Phase 5).
+6. Famine cascade promoted to a named Stage 2 milestone (per Samus).
+7. GDD reconciliation pass scheduled post-Phase-5 — surgical, not rewrite. Macro-legibility section ADD may carve out earlier.
+8. Elicitation E's UI-layer questions split into a follow-up session (1E.1) so the main E session doesn't sprawl (per Indie).
+9. War + export/import recognized as future sibling systems; entries in `design-parking-lot.md`. E's pre-read includes a check that the population API + inference layer don't preclude these.
 
 **Provisional phase ordering** (subject to revision after elicitations):
 
@@ -343,16 +358,20 @@ The world model has lords in five archetypes (extractive, mercantile, military, 
 
 **Working title:** *"How does the player learn what's true without the game telling them?"*
 
-**Owner agents:** Samus Shepard (macro-legibility lens — the orientation she co-locked) + Sally (UX, reading-in-context) + Paige (information design — accessibility + visual precision) + Cloud Dragonborn (architecture seam authority)
+**Owner agents (narrowed per Stage 0.5):** Cloud Dragonborn (architecture seam authority) + Samus Shepard (macro-legibility lens — the orientation she co-locked) + Mary (analyst — load-bearing-vs-design-ideation triage). Sally (UX) and Paige (information design) split into the **1E.1 UI-pass follow-up session** once seams are named — keeps the main E session from sprawling per Indie's flag.
 
 **Pre-read:**
 - This document (§3.5)
 - `_bmad-output/phase-2.5-books-activity-architecture-directive.md` §1.1 (macro-legibility orientation), §5.2 (population queries v0.5), §5.3 (counterparty mystery seam), §6 (player-legibility framework — book access, vocabulary, gates)
+- `_bmad-output/gdd-build-alignment-review.md` (Stage 0.5 — surfaces the macro-legibility section as the most consequential GDD ADD)
+- `_bmad-output/design-parking-lot.md` — entries for **War** and **Export/Import** must be checked against E's seams (verify the population API + inference layer don't preclude them as future sibling systems)
 - `tkyds-game/scripts/books/book.gd` (period query primitives — `balance(account, start, end)`, `entries(...)`)
 - `tkyds-game/scripts/interests/employer_interest.gd` (`employees()` enumerable seam already present)
 - `tkyds-game/scripts/activities/activity.gd` (`display_name` field — exists, no consumer)
 - `tkyds-game/scripts/resources/accounts.gd` (universal chart of accounts — counterparty StringNames)
 - `memory/project_thekingdontSee.md` "Macro-Legibility Orientation", "Tail Events & Observability", "Tutorial & Onboarding" sections
+
+**Compatibility check (mandatory output for E):** the design directives must explicitly verify that the population API and inference layer accommodate future sibling systems — at minimum: war (book accounts for casualties / readiness / supply), cross-region trade (export/import flows across regional book boundaries), reputation (network-flavored book read with decay). If E's directives preclude any of these without good reason, flag for adjudication.
 
 **Project context capsule:**
 
