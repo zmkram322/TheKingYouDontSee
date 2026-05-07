@@ -119,10 +119,71 @@ purpose: |
 ## UI / Diegetic vocabulary
 
 ### `Activity.display_name` field never set
-- **File:line:** `tkyds-game/scripts/activities/activity.gd:15`
+- **File:line:** `tkyds-game/scripts/activities/activity.gd:25`
 - **Current value/behavior:** Field declared as `&""`. No concrete activity sets it; no consumer reads it.
-- **Real version gated on:** Elicitation E + Phase 7 (or first observation UI pass — Phase 8).
-- **Trigger to revisit:** When player-facing strings are needed.
+- **Real version gated on:** First UI consumer (Phase 7 or Phase 8 first-observation-UI). Per Elicitation E adjudication: stay as no-op overhead; do not set, do not delete, do not surface.
+- **Trigger to revisit:** First UI surface that needs to render a player-facing line for an Activity.
+- **History:** 2026-05-06 — Elicitation E hardened the gate. Mary's deferred-with-reasoning posture won; Cloud's "set in subclass `_init` now" was rejected because v0 has no UI consumer. Cost of leaving the field is near-zero; cost of removing then re-adding is real.
+
+### Diegetic vocabulary surfacing (tone, templating, per-Activity narration)
+- **File:line:** Not present in code; design seed only.
+- **Current value/behavior:** Headless trace prints engineering vocabulary (`Bob's WorkDay closed: 4 grain produced`). No diegetic surface.
+- **Real version gated on:** First UI consumer (Phase 7/8). Ties to `Activity.display_name` and a `closing_narration_template(book_delta)` method or equivalent.
+- **Trigger to revisit:** First UI surface that needs to render player-facing lines.
+- **Anticipated shape at consumer time:** Per-Activity-class `const`/`_init`-set strings (Cloud's resolution); registry deferred to Phase 12+ localization. **Or** per-Activity templates that read `book_delta` and produce time/population-aggregated lines (Samus's "Greenfield came in light this week — four sheaves where five were hoped for"). G's intent architecture may shift this if NPC-visible-intent becomes a UI surface.
+
+---
+
+## Inference / Precision / Observer-gated reads
+
+### `Book.balance(...)` and `Book.entries(...)` — `observer: Actor = null` parameter slot
+- **File:line:** `tkyds-game/scripts/books/book.gd:32, 44, 59` — to be added in next code pass after E lock (Phase 3 or earlier).
+- **Current value/behavior:** Methods take `(account, period_start, period_end)` only. No observer parameter.
+- **Real version gated on:** Not gated — adopted by Elicitation E directive 4. Parameter slot lands now; default behavior unchanged (`observer == null` = god-mode precise read, today's only mode).
+- **Trigger to revisit:** Phase 6+ first observer-gated reader. At that point, a precision-resolution wrapper layer materializes the observer into actual precision degradation.
+
+### Per-account precision shapes
+- **File:line:** Not present; design seed only.
+- **Current value/behavior:** All book reads return `float`. No per-account-type precision differentiation.
+- **Real version gated on:** Phase 6+ first observer-gated read consumer. Per Elicitation E directive 5: per-account-type adapter chosen at consumer site, NOT a global `Reading` union.
+- **Trigger to revisit:** First observer-gated reader — likely a UI surface that must show "appears prosperous" or "approximately 50 grain" for a non-self actor.
+- **Anticipated shape at consumer time (per-account, plural):**
+  - Vitals (food_satiation, fatigue) → small enum bucket (UNDERFED / FED / WELL_FED) or range pair
+  - Financial (cash, payable, revenue) → noisy magnitude (true_value × (1 ± noise)) or range pair
+  - Reputation (when it lands) → decayed scalar with confidence
+  - Skills/XP → coarse skill-level enum (NOVICE / JOURNEYMAN / MASTER) for outsiders; precise for steward-level access
+  Each consumer designs its own shape; no central type forces uniformity.
+
+---
+
+## Knowledge / Counterparty resolution
+
+### NPC knowledge representation
+- **File:line:** Not present; design seed only.
+- **Current value/behavior:** Counterparty IDs are opaque `StringName`s in book entries (`Payable:rival_lord_castellan`). No resolution layer. NPCs operate with full info on each other when their Interest loops fire.
+- **Real version gated on:** Elicitation G (perception → decision → action loop). G's intent architecture choice determines whether NPCs need a knowledge representation at all. Three candidate shapes (preserved as alternatives, not commitments):
+  - **(per-actor)** Every actor has `accounts.books[&"knowledge"]`. Substrate for "gossip = lossy book-leaks" (Samus).
+  - **(player-only)** A `PlayerKnowledge` Resource; NPCs use full-info gated by precision tier when they read others' books (Cloud).
+  - **(none in v0)** Counterparty IDs stay opaque; no resolution layer until first UI consumer (Mary).
+- **Trigger to revisit:** Elicitation G's adjudication of NPC intent representation + perception-decision coupling.
+
+### Gossip substrate (book-leak mechanics)
+- **File:line:** Not present; design seed only.
+- **Current value/behavior:** No gossip system. No way for an actor's book entry to propagate, with decay/noise, to another actor.
+- **Real version gated on:** Elicitation G + the phase that lands social/tavern mechanics (likely post-G, possibly Phase 9 social per Elicitation F). Author's D3 critique: programmatic path required, not just aesthetic — "how does imperfect information motivate actual NPC decisions?"
+- **Trigger to revisit:** G ships the perception-decision-action loop architecture; gossip becomes implementable as a propagation mechanism over book reads, with a clear path from "book entry" → "perceived event" → "decision input" → "observable behavior."
+- **Anticipated shape (preserved as design seed only — not commitment):** "Books are truth substrate; gossip is lossy book-leaks via tavern/social events with decay and noise" (Samus). Requires per-actor knowledge representation OR a propagation system that doesn't need actor-local memory.
+
+---
+
+## Cohort / Population caching
+
+### Godot-groups-as-cohort-cache
+- **File:line:** Not present; forward note only.
+- **Current value/behavior:** Cohort membership derives from truth substrate (`EmployerInterest.employees()` walks `accounts.contracts`). No cache layer. O(n) per aggregation.
+- **Real version gated on:** Either (a) cross-cutting cohort lands that doesn't derive from a single Interest (e.g., "hungry workers across all employers in this region" — needs a query that spans employers AND filters by VitalsBook state), OR (b) profiling shows population queries in the simulation hot path (>5% of frame time, or single-tick exceeds 33ms).
+- **Trigger to revisit:** Either trigger above. At that point, Godot's `Node.add_to_group("cohort_name")` becomes the natural index — engine-tracked, O(1) add/remove. Membership sync happens via the Activity that creates/destroys cohort participation (e.g., `LaborContractActivity` adds worker to employer's group on close; contract end removes). Force-carrier discipline keeps it from diverging from truth.
+- **Anticipated shape at consumer time:** `add_to_group(cohort_string)` / `remove_from_group(cohort_string)` calls inside relevant Activity `on_close` / `on_abort` hooks. Aggregator helpers (e.g., `PopulationOps.aggregate(cohort_string, account, op, period)`) walk the group instead of the contracts. Truth substrate (contracts) remains canonical; group is index/cache.
 
 ---
 

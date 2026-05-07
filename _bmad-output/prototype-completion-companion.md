@@ -185,16 +185,18 @@ Captured directly so sessions don't need to invoke `resolve_config.py` (which ha
 
 **Use when:** if Paige (gds) is unavailable or for non-game-specific docs. They overlap heavily; default to the gds variant for this project.
 
-### Spawning template (Claude Code reality)
+### Spawning template (Claude Code reality) — Socratic conduct, G onwards
 
-In this Claude Code build, BMAD agents are SKILLS, not subagent_types. The `Agent` tool's `subagent_type` accepts only built-in types (general-purpose, Explore, Plan, etc.). To spawn a BMAD agent, use `general-purpose` with persona injection:
+In this Claude Code build, BMAD agents are SKILLS, not subagent_types. The `Agent` tool's `subagent_type` accepts only built-in types (general-purpose, Explore, Plan, etc.). To spawn a BMAD agent, use `general-purpose` with persona injection.
+
+**The conduct shifted 2026-05-06.** Round 1 agents surface alternatives — they do NOT write design directives. The orchestrator synthesizes directives after author adjudication. The full Socratic prompt template is the authority in `prototype-completion-roadmap.md` §8.2; the abbreviated form here is for quick reference only.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   description: "<Agent name> on <topic>",
   prompt: `
-You are roleplaying as <Agent name>, the <Title>. You will respond ONLY in <Agent name>'s voice — do NOT break character. Do not use any tools.
+You are roleplaying as <Agent name>, the <Title>. You will respond ONLY in <Agent name>'s voice — do NOT break character. Do not use any tools. Return your full response as your final message — do NOT write any files.
 
 ## Your Persona
 <icon> **<Agent name> — <Title>**
@@ -204,21 +206,52 @@ You are roleplaying as <Agent name>, the <Title>. You will respond ONLY in <Agen
 <150–250 word capsule from the elicitation section>
 
 ## The User's Message
-<the elicitation's questions, system + experience halves, with placeholders section appended>
+<the elicitation's questions, system + experience halves, with placeholders entries gated on this elicitation appended; if the author has shared first-pass intent, include as "Author's pre-Round-1 intent" before the questions>
 
-## Guidelines
-- Respond authentically as <Agent name>.
-- Start your response with: <icon> **<Agent name>:**
-- Speak in English.
-- Scale your response to substance.
-- Disagree with other agents when warranted.
-- Do NOT use tools. Plain text only.
-- Stay in character throughout.
+## Your Job This Round (READ CAREFULLY)
+This is an ELICITATION, not a design pass. You are a Socratic thinking partner,
+NOT a competing designer. The orchestrator will synthesize directives from the
+author's adjudications + your surfaced alternatives — not from your paper.
+
+For each question:
+1. SHARPER QUESTION (reframe if useful)
+2. WHAT YOU'D WANT FROM THE AUTHOR FIRST — 2-4 narrow specific questions
+   (NEVER one broad open-ended ask; always branched sub-questions the author can
+   answer instantly or recognize the answer he wants)
+3. TRADEOFF SPACE — axes that matter
+4. ALTERNATIVES (2-3) — each with concrete code touch-point (class/file/method)
+   or flag if no current touch-point exists
+5. SOFT RECOMMENDATION (held loosely)
+
+DO NOT propose a "full architecture." DO NOT write a numbered "Design Directives"
+section. DO NOT design downstream consequences. DO NOT push preference hard
+enough that the author feels adjudicated-against. DO NOT propose aesthetic
+visions without code paths. DO NOT ask one wide-open question.
+
+After all questions: close with **"What I'd want author's gut on first"** —
+1-3 questions you think most need author input before downstream work makes sense.
+
+## Output Format (per question)
+**Q[#] — [paraphrased one-liner]**
+- *Sharper question:* [reframing if useful]
+- *What I'd want from the author first:* [2-4 narrow specific questions]
+- *Tradeoff space:* [the axes]
+- *Alternatives:*
+  - **(a)** [option] — [code touch-point] — [consequences]
+  - **(b)** [option] — [code touch-point] — [consequences]
+- *Soft recommendation:* [conditional on author intent]
+
+## Guidelines (style)
+- Embody the persona — voice and personality stay.
+- Start with: <icon> **<Agent name>:**
+- Plain text only. Stay in character.
 `
 })
 ```
 
 Spawn all owner agents in parallel (single message, multiple `Agent` tool uses).
+
+**Round 2 (reactive, optional)** — when author has adjudicated and orchestrator wants targeted refinement from a specific agent, see roadmap §8.2 Round 2 prompt template. Same conduct: react to specific decisions; surface implications; don't re-litigate.
 
 ---
 
@@ -269,20 +302,27 @@ The `PYTHONIOENCODING=utf-8` is mandatory — agent icons (📊 etc.) crash cp12
 
 ## 4. Per-Session-Type Checklists
 
-### 4.1 Elicitation session (one of A–F)
+### 4.1 Elicitation session (one of A–G — Socratic conduct, G onwards)
+
+**Conduct change effective 2026-05-06.** Round 1 agents surface alternatives; orchestrator synthesizes directives after author adjudication. Many small specific questions, never one open-ended ask.
 
 1. Read `prototype-completion-roadmap.md` (full file).
 2. Read this companion (§1 + §2 + §5).
 3. Read the elicitation's pre-read list (in roadmap §3.x).
-4. Read `_bmad-output/placeholders.md` and identify entries gated on this elicitation (e.g., search for "Elicitation A" in the "Real version gated on" lines). These MUST be addressed in the output artifact — either resolved by a design directive or rescheduled with reasoning.
+4. Read `_bmad-output/placeholders.md` and identify entries gated on this elicitation (e.g., search for "Elicitation G" in the "Real version gated on" lines). These MUST be addressed in the output artifact — either resolved by a synthesized directive or rescheduled with reasoning.
 5. Confirm with user: which elicitation, any local context shifts since the roadmap was written, any placeholder entries to flag explicitly.
-6. Spawn the elicitation's owner agents in parallel using the §2 template. Include the placeholder entries in the agents' prompt context so they reason about latent gaps, not just the abstract questions.
-7. Present each agent's response in full (no blending).
-8. Optionally add Orchestrator Note flagging disagreements.
-9. Iterate with the user — additional rounds, focused single-agent follow-ups, or "answer this directly."
-10. Capture output to `_bmad-output/elicitation-<letter>-output.md` per the §6.1 template below. The output's "Placeholders affected" section is mandatory, not optional.
-11. Update `placeholders.md`: strike resolved entries, schedule new ones surfaced during the session, update gating/trigger fields where the elicitation refined them.
-12. Mark the elicitation complete in roadmap §1 table.
+6. **(Optional, recommended) Pre-Round-1 author intent.** Ask the author to share his gut on the load-bearing axes for this elicitation (the roadmap §3.x section names them). Many small branched sub-questions, never one open-ended ask. Capture as the artifact's "Author Intent (pre-Round-1)" section. Skip if the author wants pure clean-slate Round 1.
+7. **Show the user each agent's exact spawn prompt before launching.** Let them refine the discussion-context capsule, sharpen the questions, or add framing. This is a checkpoint, not a formality.
+8. Spawn the elicitation's owner agents in parallel using the §2 Socratic template. Include the placeholder entries + (if used) author pre-intent in the agents' prompt context.
+9. Present each agent's response in full (no blending). Each agent's output is per-question alternatives, not a finished design.
+10. Optionally add **Orchestrator Note** flagging disagreements between alternatives across agents — this becomes the adjudication agenda.
+11. Drive the author through adjudication conversationally — many small specific questions per disagreement, alternatives + recommendation per question. Never a single "what do you want?" ask. Multi-question branched sub-questions per axis.
+12. (Optional) Round 2 reactive — if author adjudications surface implications worth a single agent's pushback, spawn a Round 2 reactive prompt (§2 template) to that agent only.
+13. **Orchestrator synthesizes design directives** from author adjudications + agent surfaced alternatives. NOT individual agents. Capture in artifact's "Synthesized Design Directives" section.
+14. Capture full output to `_bmad-output/elicitation-<letter>-output.md` per the §6.1 template below. The output's "Placeholders affected" section is mandatory, not optional.
+15. Update `placeholders.md`: strike resolved entries, schedule new ones surfaced during the session, update gating/trigger fields where the elicitation refined them.
+16. Mark the elicitation complete in roadmap §1 table.
+17. Update memory `project_thekingdontSee.md` resume point if the elicitation lands a major decision.
 
 ### 4.2 Stage 0 cleanup pass
 
@@ -405,59 +445,86 @@ authors:
 
 # Elicitation <X> Output — <Topic>
 
-## 1. Agent Responses
+## 0. Session Frame
+
+[Working title; owner agents per Round; mandatory compatibility checks; headline outcome.]
+
+## 1. Author Intent (pre-Round-1) — OPTIONAL
+
+[Skip this section if the author chose pure clean-slate Round 1.]
+
+[The author's first-pass intent on the load-bearing axes for this elicitation, captured
+before agents spawned. Round 1 agents reacted to this intent + surfaced alternatives
+the author may not have considered, rather than producing clean-slate design space.]
+
+## 2. Agent Responses (Round 1, verbatim)
 
 ### <icon> <Agent name>
-[verbatim full response]
+[verbatim full Round 1 response — per-question alternatives, what they'd want from
+author first, soft recommendations. NOT a "design directives" section.]
 
 ### <icon> <Agent name>
-[verbatim full response]
+[verbatim full Round 1 response]
 
-(...one section per agent spawned...)
+(...one section per agent spawned in Round 1...)
 
-## 2. Author Answers
+## 3. Mid-Round Author Drives — OPTIONAL
 
-[Zach's answers to the system + experience questions, structured as numbered responses
-matching the elicitation's question numbers. Can be sparse — answer only what was
-addressed in the session; defer the rest explicitly.]
+[Anything the author surfaced after Round 1 papers but before adjudication — gaps the
+agents missed, alternatives to add to the disagreement set, methodological critiques
+that reshape later sessions. E.g., E's Godot-groups question for D1, or the action-
+side gap that birthed elicitation G.]
 
-### System questions (answered)
-- **Q1:** ...
-- **Q2:** ...
+## 4. Author Adjudications
 
-### Experience questions (answered)
-- **Q1:** ...
+[Per disagreement / question, the author's call with rationale. Conversational —
+captures the multi-question Q&A flow that drove the call, not just the final pick.]
 
-### Questions deferred
-- Q5 (system) — defers to Elicitation E
-- Q3 (experience) — needs more thought; revisit before Stage 2
+### D1 — <Topic>: <Author's choice>
+- *Locked.* [What lands.]
+- *Author rationale:* [Why this over the alternatives.]
+- *Forward note:* [Trigger conditions for revisiting if applicable.]
 
-## 3. Design Directives
+(...one section per disagreement adjudicated...)
 
-[Numbered, load-bearing decisions reached. These feed the phase directive.]
+## 5. Round 2 Reactive Responses — OPTIONAL
+
+[If a Round 2 reactive prompt was used to specific agent(s) after author locks. Verbatim.]
+
+## 6. Synthesized Design Directives
+
+[Numbered, load-bearing decisions reached. **Written by orchestrator from author
+adjudications + agent surfaced alternatives** — NOT by individual agents in their
+papers. These feed the phase directive.]
 
 1. ...
 2. ...
 
-## 4. Open Questions
+## 7. Open Questions (handed forward)
 
 [Anything unresolved with which elicitation/phase will pick it up.]
 
-- ... → Elicitation Y
-- ... → Stage 2 phase plan synthesis
-- ... → Phase N implementation
+### Handed to Elicitation Y
+- ...
 
-## 5. Placeholders Affected
+### Handed to Phase N
+- ...
+
+### Handed to design-parking-lot.md
+- ...
+
+## 8. Placeholders Affected
 
 [Entries in placeholders.md this elicitation resolves, rewrites, or schedules.]
 
-- `FarmingSlotActivity.BASE_XP` — scheduled for Phase 3 (per directive 1)
-- `FarmingSlotActivity._aptitude_factor()` — formula locked (per directive 2)
+- `FarmingSlotActivity.BASE_XP` — scheduled for Phase N (per directive M)
+- NEW: <something> — gated on <event/phase>
 - ...
 
-## 6. Notes for Next Sessions
+## 9. Notes for Next Sessions
 
-[Anything operationally relevant — context shifts, agent observations worth carrying.]
+[Anything operationally relevant — context shifts, conduct-evolution notes, agent
+observations worth carrying.]
 ```
 
 ### 6.2 Phase plan (`prototype-phase-plan.md`)

@@ -41,15 +41,17 @@ This document is the master plan that bridges Phase 2.5 (just shipped) to "proto
 |---|---|---|---|---|
 | **0** | Cleanup pass (Phase 2.6) ✅ landed 2026-05-04 | Coding | Updated code + lean backlog | None |
 | **0.5** | GDD ↔ Build Alignment Review ✅ landed 2026-05-04 | Party-mode session | `gdd-build-alignment-review.md` | Stage 0 |
-| **1E** | Elicitation: Macro-Legibility Primitives **(1st — locked, lens for the rest)** | Party-mode session | `elicitation-e-output.md` | Stage 0.5 |
-| **1E.1** | UI-pass follow-up (Sally + Paige) on E's seams | Party-mode session | `elicitation-e-ui-output.md` | 1E |
-| **1B** | Elicitation: Hunger + Consumption + Vitals **(before C — locked)** | Party-mode session | `elicitation-b-output.md` | 1E |
+| **1E** | Elicitation: Macro-Legibility Primitives ✅ landed 2026-05-06 (may be re-scoped post-G as "Read-Side Primitives") | Party-mode session (legacy conduct) | `elicitation-e-output.md` | Stage 0.5 |
+| **1E.1** | UI-pass follow-up (Sally + Paige) on E's seams — **DEFERRED.** Likely re-folded into Phase 8 first-observation-UI work, or absorbed into 1G.1 if command-surface UX becomes load-bearing | (deferred) | (none) | 1E |
+| **1G** | Elicitation: **The Perception → Decision → Action Loop** (NEW — surfaced during 1E adjudication. Perception-side from E without action-side coupling = diorama. Covers NPC intent representation, player command surface, indirect action, disruption, action vocabulary extensibility, NPC use of imperfect information.) | Party-mode session (new Socratic conduct — see §8.2) | `elicitation-g-output.md` | 1E |
+| **1G.1** | UX-pass follow-up (Sally + Link Freeman) on command surface and Godot-implementation guidance — **conditional**, only if 1G surfaces UX or implementation gaps | Party-mode session | `elicitation-g-ux-output.md` | 1G |
+| **1B** | Elicitation: Hunger + Consumption + Vitals **(before C — locked)** | Party-mode session | `elicitation-b-output.md` | 1E + 1G (NPC decisions need intent architecture before "hungry workers behave differently" makes sense) |
 | **1.5** | Disposal-side Cost_of_Inventory POC spike | Coding | Updated code + placeholders.md strike | 1E (and before 1C) |
 | **1C** | Elicitation: Multi-Good Economy + Multi-Plot Employers | Party-mode session | `elicitation-c-output.md` | 1B + 1.5 |
-| **1A** | Elicitation: Aptitudes + XP + Skills *(order flexible)* | Party-mode session | `elicitation-a-output.md` | Stage 0.5 |
-| **1D** | Elicitation: Lord Economy + Taxation *(order flexible)* | Party-mode session | `elicitation-d-output.md` | Stage 0.5 |
-| **1F** | Elicitation: Social + Morale + Reputation *(order flexible)* | Party-mode session | `elicitation-f-output.md` | Stage 0.5 |
-| **2** | Prototype Phase Plan write-up (locks A/D/F ordering; lifts famine cascade as named milestone) | Synthesis session | `prototype-phase-plan.md` | Stages 1A–1F |
+| **1A** | Elicitation: Aptitudes + XP + Skills *(order flexible)* | Party-mode session | `elicitation-a-output.md` | 1G |
+| **1D** | Elicitation: Lord Economy + Taxation *(order flexible)* | Party-mode session | `elicitation-d-output.md` | 1G (lord-as-actor depends on intent architecture) |
+| **1F** | Elicitation: Social + Morale + Reputation *(order flexible)* | Party-mode session | `elicitation-f-output.md` | 1G (social actions depend on action vocabulary) |
+| **2** | Prototype Phase Plan write-up (locks A/D/F ordering; lifts famine cascade as named milestone) | Synthesis session | `prototype-phase-plan.md` | Stages 1A–1G |
 | **2.5** | Architecture diagram + seam map — **Pass 1 (draft)** | Synthesis + diagram | `architecture-diagram-v1.{md,png}` | Stage 2 |
 | **3** | Phase 3 implementation | Coding directive + pass | `phase-3-directive.md` + code | Stage 2.5 |
 | **4–7+** | Subsequent phases per phase plan | Coding directive + pass | per phase | prior phase |
@@ -57,7 +59,7 @@ This document is the master plan that bridges Phase 2.5 (just shipped) to "proto
 | **N+1** | First observation UI / debug HUD pass | Coding | UI scene | Diagram v2 |
 
 **Locked decisions from Stage 0.5 alignment review:**
-1. E runs first (lens for the rest — Mary/Cloud/Samus consensus, Indie deferred).
+1. E runs first (lens for the rest — Mary/Cloud/Samus consensus, Indie deferred). ✅ shipped 2026-05-06.
 2. B before C locked (Indie carried).
 3. A/D/F order flexible until Stage 2 phase plan synthesis.
 4. Stage 1.5 POC spike for disposal-side Cost_of_Inventory pattern, before 1C runs.
@@ -67,19 +69,29 @@ This document is the master plan that bridges Phase 2.5 (just shipped) to "proto
 8. Elicitation E's UI-layer questions split into a follow-up session (1E.1) so the main E session doesn't sprawl (per Indie).
 9. War + export/import recognized as future sibling systems; entries in `design-parking-lot.md`. E's pre-read includes a check that the population API + inference layer don't preclude these.
 
+**Locked decisions from Elicitation E adjudication (2026-05-06):**
+10. Population aggregation = methods on existing types (`EmployerInterest.aggregate`, `Region.aggregate_over`); no `Population` Resource until 2nd cohort earns it. Godot groups noted as candidate caching pattern for cross-cutting cohorts or hot-path triggers (placeholders.md).
+11. `Book.balance` / `Book.entries` gain `observer: Actor = null` parameter slot. No `Reading` union. Per-account precision shapes deferred to Phase 6+ first-consumer.
+12. Knowledge graph deferred entirely to G. Counterparty IDs stay opaque. Gossip-as-book-leaks captured as a design seed only.
+13. Pass 1 architecture diagram = current code post-Phase-3 + signature changes. Placeholders ledger holds committed-but-unbuilt items.
+14. New elicitation **G — The Perception → Decision → Action Loop** inserted into roadmap (between 1E.1 and 1B). All other elicitations (B/A/D/F) gated on G.
+15. Elicitation conduct shifts G onwards: agents surface alternatives (Socratic), do not write design directives; orchestrator synthesizes after author adjudication. Conversational interaction with many small specific questions. See §8.2.
+16. Samus held back from 1G Round 1 (aesthetic-led design without code paths is the failure mode); Round 2 reactive only.
+
 **Provisional phase ordering** (subject to revision after elicitations):
 
 | Phase | Working name | Anchored elicitation |
 |---|---|---|
-| 3 | Aptitudes + XP + skill-driven productivity | A |
-| 4 | Hunger + consumption + vitals readback | B |
-| 5 | Multi-good economy + multi-plot employers | C |
-| 6 | Lord economy + taxation | D |
-| 7 | Macro-legibility primitives | E |
-| 8 | Architecture diagram + first observation UI | (synthesis) |
+| 3 | Population aggregation methods + observer parameter slot (E's v0 directives) | E |
+| 3.5 | Perception–decision–action loop foundations (intent representation, command surface, action vocabulary recipe) | G |
+| 4 | Aptitudes + XP + skill-driven productivity | A |
+| 5 | Hunger + consumption + vitals readback | B |
+| 6 | Multi-good economy + multi-plot employers | C |
+| 7 | Lord economy + taxation | D |
+| 8 | First observation UI + diegetic vocabulary (E's deferred placeholders cash in) | (synthesis) |
 | 9+ | Social + morale + reputation, then vertical slice | F |
 
-Hunger placement (4 vs. 5) is the one explicit ordering question this plan defers to the elicitation phase. Group consensus from elicitation outputs decides.
+Hunger placement (5 vs. 6) is the one explicit ordering question this plan defers to the elicitation phase. Group consensus from elicitation outputs decides. G's foundations (Phase 3.5) are upstream of every phase that touches NPC behavior — A through D all depend on whether NPCs have explicit intent and how perception couples to decision. G may collapse into Phase 3 if its directives are small enough; or expand into multiple phases if its action-vocabulary surface needs an iterative landing.
 
 ---
 
@@ -459,6 +471,75 @@ Social, morale, and reputation are the third VitalsBook category (alongside hung
 
 ---
 
+### 3.7 Elicitation G — The Perception → Decision → Action Loop
+
+**Working title:** *"How does an actor (player or NPC) sense, decide, and intervene — and how does the architecture extend to anything we add later?"*
+
+**Origin.** Surfaced during 1E adjudication when the author flagged that all three E papers built read-side architecture (Books, Population aggregators, Reading precision, KnowledgeGraph, gossip-as-book-leaks) with no traceable code path for the write side. Reading the world without an action coupling reads like a diorama. G fills the asymmetry: perception, decision, and action as one architectural concern.
+
+**Why one elicitation, not three.** Action without decision = empty inputs. Decision without perception = unreadable behavior. Perception without action coupling = decorative noise (the author's D3 critique on E). Imperfect info only matters if a decision changes somewhere observable. Running them as separate elicitations would re-create the perception/action asymmetry we are explicitly fixing.
+
+**Owner agents (Round 1, Socratic conduct per §8.2):** Cloud Dragonborn (architectural shape — intent representation, action-as-Activity-initiator, command surface, extension recipe) + Indie (YAGNI on intent systems; ship-discipline; smallest version that demonstrates the loop) + Mary (load-bearing-vs-design-ideation triage).
+
+**Owner agents (Round 2, reactive — optional):** Samus Shepard (player-felt implications of locked architectural alternatives — verbs, COMPOSE arc, indirect action, DISRUPT feel). Held back from Round 1 deliberately because the D3 failure mode was aesthetic-led design without code paths.
+
+**Held for 1G.1 follow-up (conditional):** Sally (UX of command surface) + Link Freeman (Godot-specific implementation guidance).
+
+**Pre-read:**
+- This document (§3.7)
+- `_bmad-output/prototype-completion-companion.md` §1 (current code map) + §2 (personas inline; minus Samus for Round 1)
+- `_bmad-output/phase-2.5-books-activity-architecture-directive.md` §1 (foundational stance — three primitives), §3 (Activity primitive — persistent vs. transient + force carriers), §4 (force-carrier table — existing action vocabulary)
+- `_bmad-output/elicitation-e-output.md` (just-shipped read-side context)
+- `tkyds-game/scripts/interests/*.gd` — every existing Interest is the current pattern for "action initiator" (autonomous reaction to bus signals)
+- `tkyds-game/scripts/activities/*.gd` — the existing action vocabulary (5 persistent + 1 transient)
+- `tkyds-game/scripts/autoloads/window_orchestrator.gd` — the current trigger spine
+- GDD on **LISTEN → INFER → COMPOSE → DISRUPT** core loop
+- GDD on player progression (first wage contract → first land purchase → first market stall → first enterprise)
+- `_bmad-output/design-parking-lot.md` (war + export/import — compatibility check)
+- `_bmad-output/placeholders.md` (E-resolved entries gated on G — gossip substrate, NPC knowledge representation)
+
+**Project context capsule (will be in agent prompt):**
+
+> v0 has flat `Actor`s carrying `Interest`s. NPC behavior is autonomous: each Interest hooks into bus signals (`work_window_opened`, `weekly_burst`) and fires its loop. There is no goal/intent representation; Interests are *reactions*, not *plans*.
+>
+> Activities are the only way state mutates. The existing action vocabulary (5 persistent + 1 transient) is the entire universe of "things that happen": `FarmingDayActivity`, `FarmingSlotActivity`, `WagePaymentActivity`, `WholesaleSaleActivity`, `RetailPurchaseActivity`, `LaborContractActivity`. Every future action — meeting an NPC, hiring a factor, raising a retinue, brokering a deal, sabotage, suit, marriage — must land as some combination of new Activity, new Interest, new Contract, new Bus signal.
+>
+> There is no player Actor. There is no command surface. Headless trace runs autonomously.
+>
+> Phase 2.5 + E built **LISTEN/INFER**. G covers **COMPOSE/DISRUPT** and the perception-decision-action loop connecting them. Author's load-bearing critique (forwarded from E's D3): imperfect information is decorative unless it actually changes a decision somewhere the player can observe.
+
+**Compatibility check (mandatory in G's directives):** verify the perception-decision-action architecture doesn't preclude:
+- **War** (raised retinues, soldier wages, casualties, sieges)
+- **Export/Import** (caravans, regional traders, indirect action across regions)
+- **Reputation** (per-actor or per-pair; informs decision via perception of social state)
+
+**System questions (alternative-surfacing format per §8.2):**
+
+1. **What represents NPC intent?** Reactive Interests only (current pattern) / Goal Resource overlay (explicit plan with TTL) / Hybrid (short-term reactive + long-term goal).
+2. **How does perception couple to decision?** Pull (Interest queries books/markets directly during loop) / Push (events become percepts that trigger decision update) / Read-with-precision via E's observer-aware book API (decision branches on noisy read).
+3. **Player command surface.** Player as Actor with `PlayerInterest` (full first-class actor with books, contracts, etc.) / Player as command-bus issuer (creates Activities directly without being an Actor) / Player only commissions NPC actions (pure invisible-kingmaker mode — has Actor identity but takes no direct game-world Activities).
+4. **Indirect action — paying NPC X to do Y.** New `CommissionContract` type parameterized by target action / Goal-injection with price tag (player adds a goal to NPC's stack) / Generalize existing `LaborContract` (labor IS one kind of commission).
+5. **Disruption surface — interfering with another actor's intent.** At perception (poison their information / feed false percept) / At action (abort/sabotage Activities mid-execution) / At relationship (break contract, reputation hit, remove from cohort).
+6. **NPC use of imperfect info.** NPCs always read precise (info-asymmetry is player-only) / NPCs read with precision and decision branches on noisy read (observable behavior is how player sees the noise) / NPCs have perception scopes (events outside scope don't reach decision input).
+7. **Action vocabulary extensibility recipe.** Subclass-and-ship (current — every new action is a new Activity subclass + new Interest if not handled by existing) / Activity factory + data-driven action vocabulary (Activities as `.tres` resources) / Goal-language with Activity selection (decision specifies "outcome state"; an executor picks Activities to achieve it).
+
+**Experience questions:**
+
+1. The verbs at minimum — what does the player have on day one of a runnable build?
+2. The COMPOSE arc — when does a sequence of clicks become a strategy?
+3. Indirect action — how does "invisible kingmaker" actually feel?
+4. DISRUPT — does the player feel agency over things that aren't theirs?
+5. NPC visible intent — does the world feel intentional or billiard-tabular?
+
+**Operating notes for G:**
+
+- **You-drive-intent-first option (recommended).** Before Round 1 spawns, the author shares his gut on the load-bearing axes (Q1 intent representation + Q3 player command surface). Agents react to author intent + surface alternatives author may not have considered, rather than producing clean-slate design space. Optional. If skipped, default = parallel Round 1 under §8.2 Socratic conduct.
+- **Prompt review before spawn.** Orchestrator shows each agent's exact spawn prompt before launching, so the author can refine the discussion-context capsule, sharpen the questions, or add framing.
+- **Round 2 with Samus** runs only if Round 1 + author adjudications leave player-feel implications unresolved.
+- **Output artifact:** `_bmad-output/elicitation-g-output.md`. Optional "Author Intent (pre-Round-1)" section at top.
+
+---
+
 ## 4. Stage 2 — Prototype Phase Plan Write-Up
 
 After all six elicitations are complete, run a synthesis session.
@@ -562,42 +643,132 @@ A clean session running an elicitation should follow this protocol.
 
 ```
 1. Read this file (`_bmad-output/prototype-completion-roadmap.md`).
-2. Identify the elicitation by letter (A–F).
+2. Identify the elicitation by letter (A–G).
 3. Read the section's pre-read files.
 4. Confirm with the user which elicitation is running and check for any local context shifts.
+5. (Optional, recommended) Ask the user for first-pass intent on the load-bearing axes
+   before spawning Round 1. Agents react to author intent + surface alternatives,
+   rather than producing clean-slate design space.
+6. SHOW THE USER THE EXACT SPAWN PROMPTS BEFORE LAUNCHING. Let them refine the
+   discussion-context capsule, sharpen questions, or add framing.
 ```
 
-### 8.2 Spawning agents
+### 8.2 Spawning agents — Socratic Conduct (G onwards)
 
-Agents are NOT real BMAD subagent_types in this Claude Code build — they are spawned via `general-purpose` subagent_type with persona injection. Use this spawn pattern:
+**Conduct change effective 2026-05-06.** Agents are NOT real BMAD subagent_types in this Claude Code build — they are spawned via `general-purpose` subagent_type with persona injection. The legacy "papers with directives" prompt structure is replaced by the Socratic alternative-surfacing template below. Final design directives are written by orchestrator AFTER author adjudication, not by each agent.
+
+Use this spawn pattern:
 
 ```
 Agent({
   subagent_type: "general-purpose",
   description: "<Agent name> on <topic>",
   prompt: `
-You are roleplaying as <Agent name>, the <Title>. You will respond ONLY in <Agent name>'s voice — do NOT break character. Do not use any tools.
+You are roleplaying as <Agent name>, the <Title>. You will respond ONLY in <Agent name>'s voice — do NOT break character. Do not use any tools. Return your full response as your final message — do NOT write any files.
 
 ## Your Persona
 <icon> **<Agent name> — <Title>**
-<full description from agent manifest>
+<full description from agent manifest, copied inline from companion §2>
 
 ## Discussion Context
 <150–250 word capsule from the elicitation section's "Project context capsule">
 
 ## The User's Message
-<the elicitation's questions, both system and experience halves, with the placeholders section appended>
+<the elicitation's questions, system + experience halves, with placeholders entries
+gated on this elicitation appended; if the author has shared first-pass intent on
+any load-bearing axis, include it as "Author's pre-Round-1 intent" before the
+questions, so you can react to it rather than design from scratch>
 
-## Guidelines
-- Respond authentically as <Agent name>. Embody the persona fully.
+## Your Job This Round (READ CAREFULLY)
+
+This is an ELICITATION, not a design pass. The author (Zach) has design intent
+that this session is meant to draw out. You are a Socratic thinking partner, NOT
+a competing designer. The orchestrator will synthesize directives from the
+author's adjudications + your surfaced alternatives — not from your paper.
+
+For each question in the brief below, your output should:
+
+1. SHARPER QUESTION — reframe what's actually being decided, if useful.
+2. WHAT YOU'D WANT FROM THE AUTHOR FIRST — 2-4 narrow, specific questions back
+   to him to surface his intent before you can usefully recommend.
+   NEVER ONE BIG OPEN-ENDED ASK ("so what verbs?") — always multiple branched
+   sub-questions ("do NPCs have explicit goals or just react? if goals, do they
+   expire / replace / accumulate? if reactive, what changes their reactions over
+   time?"). The author should be able to answer each sub-question instantly or
+   recognize the answer he wants.
+3. TRADEOFF SPACE — what axes matter; what's gained/lost on each.
+4. ALTERNATIVES (2-3) — concrete options the author could pick.
+   Include alternatives OTHER agents might prefer.
+   For each alternative: name the concrete code touch-point.
+   Which class/file/method changes? What's the integration point with existing
+   primitives (Books, Activities, Interests, Markets, Bus, Contracts)? If you
+   can't trace it to current-code touch-points, FLAG that — design ideation
+   without a code path is exactly the failure mode this conduct exists to prevent.
+5. SOFT RECOMMENDATION — held loosely; conditional on author intent; the author
+   may pick differently and you should let them.
+
+What you should NOT do:
+
+- Do NOT propose a "full architecture" or "system design." That's orchestrator + author.
+- Do NOT write a numbered "Design Directives" section. Not your job this round.
+- Do NOT design downstream consequences ("if X then also Y, Z, W"). Stay close
+  to the question being asked.
+- Do NOT push your preference hard enough that the author feels adjudicated-
+  against. Disagreement shows up as alternatives, not edicts.
+- Do NOT propose aesthetic visions without code paths. Beautiful ideas without
+  traceable implementation are exactly what this conduct is designed to filter.
+- Do NOT ask the author one wide-open question — branch into multiple specific
+  sub-questions every time.
+
+If a question is mis-scoped or premature, say so — that's valid surfacing.
+If you have an opinion about how OTHER agents should answer, voice it as a
+tradeoff, not as a critique.
+
+## Output Format (per question)
+
+**Q[#] — [paraphrased one-liner]**
+- *Sharper question:* [reframing if useful]
+- *What I'd want from the author first:* [2-4 narrow specific questions]
+- *Tradeoff space:* [the axes that matter]
+- *Alternatives:*
+  - **(a)** [option] — [code touch-point] — [consequences]
+  - **(b)** [option] — [code touch-point] — [consequences]
+  - **(c)** [option, if needed] — [code touch-point] — [consequences]
+- *Soft recommendation:* [conditional on what you'd want from author]
+
+After working all questions, close with **"What I'd want author's gut on first"** —
+1-3 questions you think most need author input before downstream work makes sense.
+
+## Guidelines (style)
+
+- Respond authentically as <Agent name>. Embody the persona — voice and personality stay.
 - Start your response with: <icon> **<Agent name>:**
 - Speak in English.
-- Scale your response to the substance.
-- Disagree with other agents when your perspective tells you to.
-- Do NOT use tools. Just respond with your perspective in plain text.
+- Scale your response to substance — but stay focused; per-question structure helps.
+- Do NOT use tools. Plain text only.
 - Stay in character throughout.
 `
 })
+```
+
+**Round 2 (reactive, optional)** — when the author has adjudicated Round 1's questions and the orchestrator wants targeted refinement from a specific agent, use this prompt:
+
+```
+This is Round 2 — REACTION ROUND. The author has now adjudicated Round 1's
+questions. Your job: react to specific decisions where you have substantive
+feedback. You may:
+
+- Push back on a decision with new reasoning (with concrete code touch-points)
+- Surface a downstream implication the author may not have weighed
+- Refine an answer where the author's intent points at a sharper version of
+  the alternative they picked
+- Endorse silently (don't restate; just say "no notes on Q[N]")
+
+Author's adjudications:
+<insert>
+
+What you should NOT do: re-litigate the round. The author's call stands unless
+your reaction reveals a load-bearing issue.
 ```
 
 Spawn all agents named in the elicitation's "Owner agents" line **in parallel** (single message, multiple Agent tool calls). Agent identity references:
@@ -627,11 +798,15 @@ Each agent's response gets its own unabridged section in the chat output. Never 
 ### 8.4 Capturing the output
 
 The session output goes into `_bmad-output/elicitation-<letter>-output.md`. The output file should contain:
-- Each agent's full response (verbatim)
-- Zach's answers (interactive — possibly multi-round)
-- A **Design directives** section: load-bearing decisions reached, explicitly numbered
+- (Optional) **Author Intent (pre-Round-1)** section if author shared first-pass intent before agents spawned
+- Each agent's full Round 1 response (verbatim — surfaced alternatives, what they'd want from author first, soft recommendations; NOT "design directives" — those are orchestrator-synthesized)
+- (Optional) **Mid-round author drives** — gaps the author flagged before adjudication; alternatives they surfaced (e.g., E's Godot-groups question for D1)
+- Author adjudications — explicitly enumerated per question with rationale
+- Round 2 reactive responses (verbatim, if used) — pushback / refinements from agents on author locks
+- A **Synthesized Design Directives** section: load-bearing decisions reached, explicitly numbered, **written by orchestrator from author adjudications + agent surfaced alternatives**. Not by individual agents.
 - An **Open questions** section: anything unresolved, with which elicitation/phase will pick it up
-- A **Placeholders affected** section: which entries in `placeholders.md` this elicitation resolves or rewrites
+- A **Placeholders affected** section: which entries in `placeholders.md` this elicitation resolves, rewrites, or schedules
+- A **Notes for Next Sessions** section: operationally relevant context
 
 ### 8.5 Ending the session
 
