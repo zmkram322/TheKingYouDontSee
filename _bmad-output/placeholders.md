@@ -79,8 +79,8 @@ purpose: |
 ### `GrainInterest.outstanding_demand` not read as hunger pressure
 - **File:line:** `tkyds-game/scripts/interests/grain_interest.gd:5`
 - **Current value/behavior:** Field accumulates and decays correctly. `record_clearing()` keeps it current. Trace prints it. No code reads it as hunger pressure (no productivity modulation, no wants-curve shift).
-- **Real version gated on:** Phase 4.
-- **Trigger to revisit:** EatGrainActivity lands; hunger-feedback design locks.
+- **Real version gated on:** Phase 3.5 (G9 — field moves OFF the Interest, accumulates as journal entries on a `Demand_Carry:grain` Book account) + Phase 4 (read as hunger pressure).
+- **Trigger to revisit:** Phase 3.5 directive author pass relocates the state to Books per G9 discipline; Phase 4 wires hunger-feedback.
 
 ---
 

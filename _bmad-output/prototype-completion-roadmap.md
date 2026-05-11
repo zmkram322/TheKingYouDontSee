@@ -43,7 +43,7 @@ This document is the master plan that bridges Phase 2.5 (just shipped) to "proto
 | **0.5** | GDD ↔ Build Alignment Review ✅ landed 2026-05-04 | Party-mode session | `gdd-build-alignment-review.md` | Stage 0 |
 | **1E** | Elicitation: Macro-Legibility Primitives ✅ landed 2026-05-06 (may be re-scoped post-G as "Read-Side Primitives") | Party-mode session (legacy conduct) | `elicitation-e-output.md` | Stage 0.5 |
 | **1E.1** | UI-pass follow-up (Sally + Paige) on E's seams — **DEFERRED.** Likely re-folded into Phase 8 first-observation-UI work, or absorbed into 1G.1 if command-surface UX becomes load-bearing | (deferred) | (none) | 1E |
-| **1G** | Elicitation: **The Perception → Decision → Action Loop** (NEW — surfaced during 1E adjudication. Perception-side from E without action-side coupling = diorama. Covers NPC intent representation, player command surface, indirect action, disruption, action vocabulary extensibility, NPC use of imperfect information.) | Party-mode session (new Socratic conduct — see §8.2) | `elicitation-g-output.md` | 1E |
+| **1G** | Elicitation: **The Perception → Decision → Action Loop** ✅ landed 2026-05-11. Round 1 (Cloud + Indie + Mary) ran as integrated architecture task; G1–G14 directives locked. Conduct evolved mid-elicitation from Socratic to integrated-task. | Party-mode session (Socratic → integrated-task) | `elicitation-g-output.md` (+ round-1-{cloud,indie,mary}.md) | 1E |
 | **1G.1** | UX-pass follow-up (Sally + Link Freeman) on command surface and Godot-implementation guidance — **conditional**, only if 1G surfaces UX or implementation gaps | Party-mode session | `elicitation-g-ux-output.md` | 1G |
 | **1B** | Elicitation: Hunger + Consumption + Vitals **(before C — locked)** | Party-mode session | `elicitation-b-output.md` | 1E + 1G (NPC decisions need intent architecture before "hungry workers behave differently" makes sense) |
 | **1.5** | Disposal-side Cost_of_Inventory POC spike | Coding | Updated code + placeholders.md strike | 1E (and before 1C) |
@@ -77,6 +77,19 @@ This document is the master plan that bridges Phase 2.5 (just shipped) to "proto
 14. New elicitation **G — The Perception → Decision → Action Loop** inserted into roadmap (between 1E.1 and 1B). All other elicitations (B/A/D/F) gated on G.
 15. Elicitation conduct shifts G onwards: agents surface alternatives (Socratic), do not write design directives; orchestrator synthesizes after author adjudication. Conversational interaction with many small specific questions. See §8.2.
 16. Samus held back from 1G Round 1 (aesthetic-led design without code paths is the failure mode); Round 2 reactive only.
+
+**Locked decisions from Elicitation G adjudication (2026-05-11):**
+17. `Goal` Resource as substrate with enum-discriminated `outcome_kind`. v0 ships `ACCOUNT_TARGET` + `PREDICATE`; `RELATIONAL_STATE` etc. as enum slots. No outcome-subclass hierarchy.
+18. No separate `Plan` Resource — Goal carries `picked_recipe` + `step_index` + `child_goals` directly. Plan revision = decider re-runs.
+19. `Recipe` Resource as static `.tres` data with `RecipeStep` union (`SubGoalStep` | `ActionStep`). Standing recipes via `recipe.repeating: bool` flag (no separate behavior type).
+20. `Decider` Resource + pluggable `RecipeScorer` (v0 = `SingleAxisCostScorer`; graduation = `MultiAxisArchetypeScorer`). Same call site across implementations (L8 discipline).
+21. Directive propagation = direct write to `accounts.directives_received: Array[Goal]` (NOT via Contract). Reference semantics on Goal Resource.
+22. Directive lifecycle journaled via `DirectiveAssignmentActivity` + `DirectiveOutcomeActivity` writing to `Directive_Outcomes:{counterparty}` accounts — earns "steward track record" via existing `book.balance()`; seeds reputation substrate.
+23. Interest classes re-purposed (decision logic gutted; bus subs + atomic-verb methods only). Discipline: any field shaped like "what the actor is currently trying to do" moves to Goal state or Books. `GrainInterest.outstanding_demand` → `Demand_Carry:grain` Book account. Rename of `*Interest` → `*Role` is Phase 3.5 directive's call.
+24. Leaves of decomposition = `ActionStep` invokes named verb on actor (`actor.do_action(action_id, payload)`). NOT Activity instances; NOT a Task class hierarchy. Discipline: no verb without a force-carrier.
+25. Satisfaction check is polling (`Goal.is_satisfied(actor)` on every `advance_goals` tick). No event-driven goal-completion in v0.
+26. Author's design discipline (paired with G4): *every behavior must be pursuant to a Goal (or defiance thereof).* Locked through Phase 3.5.
+27. Round 1 conduct evolution: integrated architecture task superseded per-question Socratic alternative-surfacing for G. Each agent wrote one integrated paper with refactor-vs-rebuild verdict. Pattern available for future elicitations where the surface is mapped.
 
 **Provisional phase ordering** (subject to revision after elicitations):
 
