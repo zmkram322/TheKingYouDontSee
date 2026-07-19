@@ -20,6 +20,13 @@ var hunger: float = 0.0          # 0 = full, 100 = starving
 # Anyone can hold food (consumer eats it, merchant resells it, producer makes it)
 var food: int = 0
 
+# Money. Food costs coin; workers earn wages.
+var coin: int = 0
+
+# Willingness to keep working (farm workers). Hunger erodes it, pay restores it.
+# No hard floor — enough pay keeps a worker going at any hunger.
+var willingness: float = 100.0
+
 # Producer stuff
 var producing_ticks_left: int = 0
 var workers: Array[Actor] = []   # farm workers a producer has hired (needed to produce)

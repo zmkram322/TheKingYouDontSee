@@ -133,6 +133,14 @@ func _render_actors() -> void:
 			bar.show_percentage = false
 			bar.custom_minimum_size = Vector2(0, 10)
 			row.add_child(bar)
+		if a.role == Actor.ROLE_FARM_WORKER:
+			# Second bar = willingness to keep working (green = happy, red = about to quit).
+			var wbar := ProgressBar.new()
+			wbar.max_value = Simulation.WILLINGNESS_MAX
+			wbar.value = a.willingness
+			wbar.show_percentage = false
+			wbar.custom_minimum_size = Vector2(0, 6)
+			row.add_child(wbar)
 		_actors_box.add_child(row)
 
 

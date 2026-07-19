@@ -14,7 +14,16 @@ const HUNGER_MAX := 100.0
 const EAT_REDUCES_HUNGER := 70.0  # a meal actually fills you up (drops below threshold)
 const PRODUCE_TICKS := 2          # ticks a producer spends on a batch
 const FOOD_PER_PRODUCTION := 2    # batch size — leaves buffer stock so one producer feeds several
-const WORKER_EXHAUSTION := 90.0   # a worker this hungry is too weak to work — production halts
+
+# --- Money & willingness (slice 3) ---
+const FOOD_RETAIL_PRICE := 3      # what an eater pays the merchant for 1 food
+const FOOD_WHOLESALE_PRICE := 2   # what the merchant pays the producer for 1 food
+const WAGE_PER_BATCH := 3         # what a producer pays each worker when a batch lands
+const CONSUMER_STIPEND := 1       # PLACEHOLDER income for consumers (real employment = slice 3b)
+const WILLINGNESS_MAX := 100.0
+const QUIT_THRESHOLD := 20.0            # below this, a worker refuses to work
+const WILLINGNESS_HUNGER_DRAIN := 0.03  # per tick × current hunger — hunger erodes willingness
+const WAGE_WILLINGNESS_BOOST := 25.0    # a paycheck restores willingness — "everyone has a price"
 # ----------------------------------------------------------------------------
 
 var tick: int = 0
@@ -33,17 +42,23 @@ func reset() -> void:
 	_next_demand_id = 1
 
 	# Two consumers, staggered so they don't all get hungry on the same tick.
+	# They hold the starting money supply (spent on food, topped up by a stipend).
 	var bram := Actor.new("Bram", Actor.ROLE_CONSUMER)
 	bram.hunger = 42.0
+	bram.coin = 40
 	var cora := Actor.new("Cora", Actor.ROLE_CONSUMER)
 	cora.hunger = 18.0
+	cora.coin = 40
 	actors.append(bram)
 	actors.append(cora)
 
 	# A pool of idle people. The cascade pulls them into roles as it needs them:
 	# merchant + producer + at least one farm worker all get drawn from here.
+	# A little starting coin lets a fresh merchant/producer bootstrap trade.
 	for i in range(4):
-		actors.append(Actor.new("Idle-%d" % (i + 1)))
+		var idle := Actor.new("Idle-%d" % (i + 1))
+		idle.coin = 10
+		actors.append(idle)
 
 	_log("World seeded: 2 consumers, 4 idle. No merchant, producer, or workers yet.")
 	_refresh_all_state_text()
@@ -56,9 +71,26 @@ func advance_one_tick() -> void:
 	_log("──────── Tick %d ────────" % tick)
 
 	_accumulate_hunger_and_emit()
-	_advance_production()
+	_pay_stipends()
+	_drain_willingness()
+	_advance_production()   # completing a batch pays wages, which restores willingness
 	_step_all_demands_one_hop()
 	_refresh_all_state_text()
+
+
+func _pay_stipends() -> void:
+	# PLACEHOLDER income so consumers keep buying while we isolate the wage
+	# mechanic. Real income (employment) replaces this in a later slice.
+	for a in actors:
+		if a.role == Actor.ROLE_CONSUMER:
+			a.coin += CONSUMER_STIPEND
+
+
+func _drain_willingness() -> void:
+	# The hungrier a worker is, the faster their will to keep working erodes.
+	for a in actors:
+		if a.role == Actor.ROLE_FARM_WORKER:
+			a.willingness = max(0.0, a.willingness - a.hunger * WILLINGNESS_HUNGER_DRAIN)
 
 
 func _accumulate_hunger_and_emit() -> void:
@@ -82,26 +114,39 @@ func _advance_production() -> void:
 	for a in actors:
 		if a.role != Actor.ROLE_PRODUCER or a.producing_ticks_left <= 0:
 			continue
-		# Teeth: a batch only makes progress while at least one worker can still work.
+		# Teeth: a batch only makes progress while a worker is still willing.
+		# Willingness is held up by pay, so a well-paid worker labours on despite hunger.
 		if not _producer_can_work(a):
 			if not a.stalled:
 				a.stalled = true
-				_log("%s STALLS — its workers are too hungry to work" % a.person_name)
+				_log("%s STALLS — its workers refuse to work (demoralised)" % a.person_name)
 			continue
 		if a.stalled:
 			a.stalled = false
-			_log("%s's workers are fed enough again → production resumes" % a.person_name)
+			_log("%s's workers are willing again → production resumes" % a.person_name)
 		a.producing_ticks_left -= 1
 		if a.producing_ticks_left == 0:
 			a.food += FOOD_PER_PRODUCTION
 			_log("%s finished a batch (+%d) → now holds %d food" % [a.person_name, FOOD_PER_PRODUCTION, a.food])
+			_pay_wages(a)
 
 
 func _producer_can_work(p: Actor) -> bool:
 	for w in p.workers:
-		if w.hunger < WORKER_EXHAUSTION:
+		if w.willingness > QUIT_THRESHOLD:
 			return true
 	return false
+
+
+func _pay_wages(producer: Actor) -> void:
+	for w in producer.workers:
+		if producer.coin >= WAGE_PER_BATCH:
+			producer.coin -= WAGE_PER_BATCH
+			w.coin += WAGE_PER_BATCH
+			w.willingness = min(WILLINGNESS_MAX, w.willingness + WAGE_WILLINGNESS_BOOST)
+			_log("  %s pays %s %dc in wages → willingness up to %d" % [producer.person_name, w.person_name, WAGE_PER_BATCH, int(w.willingness)])
+		else:
+			_log("  %s can't make payroll for %s (no coin)" % [producer.person_name, w.person_name])
 
 
 func _step_all_demands_one_hop() -> void:
@@ -152,15 +197,21 @@ func _step_food(d: Demand) -> void:
 
 		&"request_good":
 			var merchant := d.provider
-			if merchant.food > 0:
-				merchant.food -= 1
-				consumer.food += 1
-				d.phase = &"eat"
-				_log("  #%d: %s buys food from %s" % [d.id, consumer.person_name, merchant.person_name])
-			else:
+			if merchant.food <= 0:
 				d.child = _need_restock(merchant, d)
 				d.phase = &"await_good"
 				_log("  #%d: %s is out of stock → emits demand #%d to restock" % [d.id, merchant.person_name, d.child.id])
+			elif consumer.coin >= FOOD_RETAIL_PRICE:
+				merchant.food -= 1
+				consumer.food += 1
+				consumer.coin -= FOOD_RETAIL_PRICE
+				merchant.coin += FOOD_RETAIL_PRICE
+				d.phase = &"eat"
+				_log("  #%d: %s buys food from %s for %dc" % [d.id, consumer.person_name, merchant.person_name, FOOD_RETAIL_PRICE])
+			else:
+				# Broke and hungry — for now they go without; a later slice turns
+				# this into a demand for employment.
+				_log("  #%d: %s can't afford food (%dc < %dc) — goes without" % [d.id, consumer.person_name, consumer.coin, FOOD_RETAIL_PRICE])
 
 		&"await_good":
 			if d.child != null and d.child.satisfied:
@@ -212,11 +263,13 @@ func _step_buy(d: Demand) -> void:
 
 		&"request_produce":
 			var producer := d.provider
-			if producer.food > 0:
+			if producer.food > 0 and merchant.coin >= FOOD_WHOLESALE_PRICE:
 				producer.food -= 1
 				merchant.food += 1
+				merchant.coin -= FOOD_WHOLESALE_PRICE
+				producer.coin += FOOD_WHOLESALE_PRICE
 				d.satisfied = true
-				_log("  #%d: %s buys food from %s. ✓ satisfied" % [d.id, merchant.person_name, producer.person_name])
+				_log("  #%d: %s buys food from %s for %dc. ✓ satisfied" % [d.id, merchant.person_name, producer.person_name, FOOD_WHOLESALE_PRICE])
 			elif producer.workers.is_empty():
 				# Can't grow food without hands — a missing worker is just another demand.
 				d.child = _need_role(Actor.ROLE_FARM_WORKER, producer)
@@ -235,11 +288,13 @@ func _step_buy(d: Demand) -> void:
 
 		&"await_produce":
 			var producer := d.provider
-			if producer.food > 0:
+			if producer.food > 0 and merchant.coin >= FOOD_WHOLESALE_PRICE:
 				producer.food -= 1
 				merchant.food += 1
+				merchant.coin -= FOOD_WHOLESALE_PRICE
+				producer.coin += FOOD_WHOLESALE_PRICE
 				d.satisfied = true
-				_log("  #%d: %s buys freshly-made food from %s. ✓ satisfied" % [d.id, merchant.person_name, producer.person_name])
+				_log("  #%d: %s buys freshly-made food from %s for %dc. ✓ satisfied" % [d.id, merchant.person_name, producer.person_name, FOOD_WHOLESALE_PRICE])
 
 
 # --- Small helpers ----------------------------------------------------------
@@ -299,20 +354,20 @@ func _refresh_all_state_text() -> void:
 func _describe(a: Actor) -> String:
 	match a.role:
 		Actor.ROLE_CONSUMER:
-			return _hunger_word(a)
+			return "%s · %dc" % [_hunger_word(a), a.coin]
 		Actor.ROLE_FARM_WORKER:
-			if a.hunger >= WORKER_EXHAUSTION:
-				return "farm worker · EXHAUSTED (can't work)"
-			return "farm worker · %s" % _hunger_word(a)
+			if a.willingness <= QUIT_THRESHOLD:
+				return "farm worker · QUIT (demoralised) · %dc" % a.coin
+			return "farm worker · %s · will %d · %dc" % [_hunger_word(a), int(a.willingness), a.coin]
 		Actor.ROLE_MERCHANT:
-			return "merchant · %d food" % a.food
+			return "merchant · %d food · %dc" % [a.food, a.coin]
 		Actor.ROLE_PRODUCER:
 			var hands := "%d worker(s)" % a.workers.size()
 			if a.producing_ticks_left > 0 and not _producer_can_work(a):
-				return "STALLED — workers too hungry · %d food · %s" % [a.food, hands]
+				return "STALLED — workers quit · %d food · %dc · %s" % [a.food, a.coin, hands]
 			if a.producing_ticks_left > 0:
-				return "producing (%d left) · %d food · %s" % [a.producing_ticks_left, a.food, hands]
-			return "producer · %d food · %s" % [a.food, hands]
+				return "producing (%d left) · %d food · %dc · %s" % [a.producing_ticks_left, a.food, a.coin, hands]
+			return "producer · %d food · %dc · %s" % [a.food, a.coin, hands]
 		_:
 			return "idle"
 
