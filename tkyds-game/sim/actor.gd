@@ -9,6 +9,7 @@ const ROLE_IDLE := &"idle"
 const ROLE_CONSUMER := &"consumer"
 const ROLE_MERCHANT := &"merchant"
 const ROLE_PRODUCER := &"producer"
+const ROLE_FARM_WORKER := &"farm_worker"
 
 var person_name: String
 var role: StringName = ROLE_IDLE
@@ -21,6 +22,7 @@ var food: int = 0
 
 # Producer stuff
 var producing_ticks_left: int = 0
+var workers: Array[Actor] = []   # farm workers a producer has hired (needed to produce)
 
 # Short human-readable line describing what this person is doing right now.
 var state_text: String = "idle"

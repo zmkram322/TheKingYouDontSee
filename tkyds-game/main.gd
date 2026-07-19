@@ -126,7 +126,7 @@ func _render_actors() -> void:
 		line.text = "%s — %s" % [a.person_name, a.state_text]
 		line.add_theme_color_override("font_color", _state_color(a))
 		row.add_child(line)
-		if a.role == Actor.ROLE_CONSUMER:
+		if _eats(a):
 			var bar := ProgressBar.new()
 			bar.max_value = Simulation.HUNGER_MAX
 			bar.value = a.hunger
@@ -152,8 +152,12 @@ func _render_demands() -> void:
 		_demands_box.add_child(lbl)
 
 
+func _eats(a: Actor) -> bool:
+	return a.role == Actor.ROLE_CONSUMER or a.role == Actor.ROLE_FARM_WORKER
+
+
 func _state_color(a: Actor) -> Color:
-	if a.role == Actor.ROLE_CONSUMER:
+	if _eats(a):
 		if a.hunger >= Simulation.HUNGER_MAX:
 			return Color(1.0, 0.3, 0.3)
 		if a.hunger >= Simulation.HUNGER_NEED_THRESHOLD:

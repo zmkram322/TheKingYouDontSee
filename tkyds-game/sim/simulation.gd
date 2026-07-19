@@ -39,11 +39,12 @@ func reset() -> void:
 	actors.append(bram)
 	actors.append(cora)
 
-	# A pool of idle people. The cascade pulls them into roles as it needs them.
-	for i in range(3):
+	# A pool of idle people. The cascade pulls them into roles as it needs them:
+	# merchant + producer + at least one farm worker all get drawn from here.
+	for i in range(4):
 		actors.append(Actor.new("Idle-%d" % (i + 1)))
 
-	_log("World seeded: 2 consumers, 3 idle. Nobody is a merchant or producer yet.")
+	_log("World seeded: 2 consumers, 4 idle. No merchant, producer, or workers yet.")
 	_refresh_all_state_text()
 
 
@@ -60,14 +61,20 @@ func advance_one_tick() -> void:
 
 
 func _accumulate_hunger_and_emit() -> void:
+	# Everyone who eats gets hungry — including the farm workers we hire. That's
+	# the feedback loop: every worker added to grow food is another mouth to feed.
 	for a in actors:
-		if a.role != Actor.ROLE_CONSUMER:
+		if not _is_eater(a):
 			continue
 		a.hunger = min(HUNGER_MAX, a.hunger + HUNGER_PER_TICK)
 		if a.hunger >= HUNGER_NEED_THRESHOLD and not _has_open_food_demand(a):
 			var d := _new_demand(Demand.FOOD, a)
 			d.phase = &"check_pantry"
 			_log("%s is hungry (%d) → emits demand #%d for food" % [a.person_name, int(a.hunger), d.id])
+
+
+func _is_eater(a: Actor) -> bool:
+	return a.role == Actor.ROLE_CONSUMER or a.role == Actor.ROLE_FARM_WORKER
 
 
 func _advance_production() -> void:
@@ -116,7 +123,7 @@ func _step_food(d: Demand) -> void:
 				d.phase = &"request_good"
 				_log("  #%d: found merchant %s → asks for food" % [d.id, merchant.person_name])
 			else:
-				d.child = _need_role(Actor.ROLE_MERCHANT, d)
+				d.child = _need_role(Actor.ROLE_MERCHANT, d.requester)
 				d.phase = &"await_merchant"
 				_log("  #%d: no merchant exists → emits demand #%d for a merchant" % [d.id, d.child.id])
 
@@ -157,7 +164,11 @@ func _step_role(d: Demand) -> void:
 		idle.role = d.role_wanted
 		d.provider = idle
 		d.satisfied = true
-		_log("  #%d: assigned %s as %s. ✓ satisfied" % [d.id, idle.person_name, String(d.role_wanted)])
+		if d.role_wanted == Actor.ROLE_FARM_WORKER and d.requester != null:
+			d.requester.workers.append(idle)
+			_log("  #%d: hired %s as a farm worker for %s. ✓ satisfied" % [d.id, idle.person_name, d.requester.person_name])
+		else:
+			_log("  #%d: assigned %s as %s. ✓ satisfied" % [d.id, idle.person_name, String(d.role_wanted)])
 	else:
 		_log("  #%d: no idle person free to become %s — waiting" % [d.id, String(d.role_wanted)])
 
@@ -172,7 +183,7 @@ func _step_buy(d: Demand) -> void:
 				d.phase = &"request_produce"
 				_log("  #%d: found producer %s → asks for food" % [d.id, producer.person_name])
 			else:
-				d.child = _need_role(Actor.ROLE_PRODUCER, d)
+				d.child = _need_role(Actor.ROLE_PRODUCER, d.requester)
 				d.phase = &"await_producer"
 				_log("  #%d: no producer exists → emits demand #%d for a producer" % [d.id, d.child.id])
 
@@ -188,11 +199,21 @@ func _step_buy(d: Demand) -> void:
 				merchant.food += 1
 				d.satisfied = true
 				_log("  #%d: %s buys food from %s. ✓ satisfied" % [d.id, merchant.person_name, producer.person_name])
+			elif producer.workers.is_empty():
+				# Can't grow food without hands — a missing worker is just another demand.
+				d.child = _need_role(Actor.ROLE_FARM_WORKER, producer)
+				d.phase = &"await_worker"
+				_log("  #%d: %s has no farm workers → emits demand #%d to hire one" % [d.id, producer.person_name, d.child.id])
 			else:
 				if producer.producing_ticks_left == 0:
 					producer.producing_ticks_left = PRODUCE_TICKS
-					_log("  #%d: %s has no stock → starts producing (%d ticks)" % [d.id, producer.person_name, PRODUCE_TICKS])
+					_log("  #%d: %s puts its worker to producing (%d ticks)" % [d.id, producer.person_name, PRODUCE_TICKS])
 				d.phase = &"await_produce"
+
+		&"await_worker":
+			if d.child != null and d.child.satisfied:
+				d.phase = &"request_produce"
+				_log("  #%d: %s now has a worker → resuming" % [d.id, d.provider.person_name])
 
 		&"await_produce":
 			var producer := d.provider
@@ -214,11 +235,11 @@ func _new_demand(kind: StringName, who: Actor) -> Demand:
 
 # Reuse an already-open role demand if one exists, so we never assign two
 # merchants when one will do. Missing-role demands are shared.
-func _need_role(role: StringName, parent: Demand) -> Demand:
+func _need_role(role: StringName, requester: Actor) -> Demand:
 	for d in demands:
 		if d.kind == Demand.ROLE and d.role_wanted == role and not d.satisfied:
 			return d
-	var nd := _new_demand(Demand.ROLE, parent.requester)
+	var nd := _new_demand(Demand.ROLE, requester)
 	nd.role_wanted = role
 	nd.phase = &"find_idle"
 	return nd
@@ -260,16 +281,23 @@ func _refresh_all_state_text() -> void:
 func _describe(a: Actor) -> String:
 	match a.role:
 		Actor.ROLE_CONSUMER:
-			if a.hunger >= HUNGER_MAX:
-				return "STARVING"
-			if _has_open_food_demand(a):
-				return "seeking food"
-			return "fed" if a.hunger < HUNGER_NEED_THRESHOLD else "hungry"
+			return _hunger_word(a)
+		Actor.ROLE_FARM_WORKER:
+			return "farm worker · %s" % _hunger_word(a)
 		Actor.ROLE_MERCHANT:
 			return "merchant · %d food" % a.food
 		Actor.ROLE_PRODUCER:
+			var hands := "%d worker(s)" % a.workers.size()
 			if a.producing_ticks_left > 0:
-				return "producing (%d left) · %d food" % [a.producing_ticks_left, a.food]
-			return "producer · %d food" % a.food
+				return "producing (%d left) · %d food · %s" % [a.producing_ticks_left, a.food, hands]
+			return "producer · %d food · %s" % [a.food, hands]
 		_:
 			return "idle"
+
+
+func _hunger_word(a: Actor) -> String:
+	if a.hunger >= HUNGER_MAX:
+		return "STARVING"
+	if _has_open_food_demand(a):
+		return "seeking food"
+	return "fed" if a.hunger < HUNGER_NEED_THRESHOLD else "hungry"
