@@ -9,6 +9,7 @@ extends RefCounted
 const FOOD := &"food"        # a hungry consumer wants to eat
 const ROLE := &"role"        # a missing role needs a body assigned to it
 const BUY_GOOD := &"buy"     # a merchant wants to restock from a producer
+const EMPLOYMENT := &"job"   # a broke person wants a wage — matched to a producer's need for hands
 
 var id: int
 var kind: StringName

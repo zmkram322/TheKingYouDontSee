@@ -19,7 +19,8 @@ const FOOD_PER_PRODUCTION := 2    # batch size — leaves buffer stock so one pr
 const FOOD_RETAIL_PRICE := 3      # what an eater pays the merchant for 1 food
 const FOOD_WHOLESALE_PRICE := 2   # what the merchant pays the producer for 1 food
 const WAGE_PER_BATCH := 3         # what a producer pays each worker when a batch lands
-const CONSUMER_STIPEND := 1       # PLACEHOLDER income for consumers (real employment = slice 3b)
+const EMPLOYMENT_COIN_THRESHOLD := 20   # a consumer this broke goes looking for a job
+const PRODUCER_STARTING_EQUITY := 250   # a producer's capital — must outlast its payroll
 const WILLINGNESS_MAX := 100.0
 const QUIT_THRESHOLD := 20.0            # below this, a worker refuses to work
 const WILLINGNESS_HUNGER_DRAIN := 0.03  # per tick × current hunger — hunger erodes willingness
@@ -71,19 +72,28 @@ func advance_one_tick() -> void:
 	_log("──────── Tick %d ────────" % tick)
 
 	_accumulate_hunger_and_emit()
-	_pay_stipends()
+	_seek_employment()
 	_drain_willingness()
 	_advance_production()   # completing a batch pays wages, which restores willingness
 	_step_all_demands_one_hop()
 	_refresh_all_state_text()
 
 
-func _pay_stipends() -> void:
-	# PLACEHOLDER income so consumers keep buying while we isolate the wage
-	# mechanic. Real income (employment) replaces this in a later slice.
+func _seek_employment() -> void:
+	# A consumer who's running low on coin goes looking for work — the person
+	# side of a two-sided match (they want a wage; a producer wants hands).
 	for a in actors:
-		if a.role == Actor.ROLE_CONSUMER:
-			a.coin += CONSUMER_STIPEND
+		if a.role == Actor.ROLE_CONSUMER and a.coin < EMPLOYMENT_COIN_THRESHOLD and not _has_open_employment_demand(a):
+			var d := _new_demand(Demand.EMPLOYMENT, a)
+			d.phase = &"find_employer"
+			_log("%s is low on coin (%dc) → looks for work (demand #%d)" % [a.person_name, a.coin, d.id])
+
+
+func _has_open_employment_demand(a: Actor) -> bool:
+	for d in demands:
+		if d.kind == Demand.EMPLOYMENT and d.requester == a and not d.satisfied:
+			return true
+	return false
 
 
 func _drain_willingness() -> void:
@@ -163,6 +173,8 @@ func _step_all_demands_one_hop() -> void:
 				_step_role(d)
 			Demand.BUY_GOOD:
 				_step_buy(d)
+			Demand.EMPLOYMENT:
+				_step_employment(d)
 	# Drop everything that got satisfied this tick.
 	demands = demands.filter(func(d: Demand) -> bool: return not d.satisfied)
 
@@ -231,6 +243,8 @@ func _step_role(d: Demand) -> void:
 	var idle := _find_actor_with_role(Actor.ROLE_IDLE)
 	if idle != null:
 		idle.role = d.role_wanted
+		if d.role_wanted == Actor.ROLE_PRODUCER:
+			idle.coin = PRODUCER_STARTING_EQUITY
 		d.provider = idle
 		d.satisfied = true
 		if d.role_wanted == Actor.ROLE_FARM_WORKER and d.requester != null:
@@ -297,6 +311,23 @@ func _step_buy(d: Demand) -> void:
 				_log("  #%d: %s buys freshly-made food from %s for %dc. ✓ satisfied" % [d.id, merchant.person_name, producer.person_name, FOOD_WHOLESALE_PRICE])
 
 
+func _step_employment(d: Demand) -> void:
+	# A broke consumer joins a producer's workforce and starts earning wages.
+	var seeker := d.requester
+	if seeker.role != Actor.ROLE_CONSUMER:
+		d.satisfied = true
+		return
+	var producer := _find_actor_with_role(Actor.ROLE_PRODUCER)
+	if producer == null:
+		_log("  #%d: %s wants work but there's no employer yet — waiting" % [d.id, seeker.person_name])
+		return
+	seeker.role = Actor.ROLE_FARM_WORKER
+	seeker.willingness = WILLINGNESS_MAX
+	producer.workers.append(seeker)
+	d.satisfied = true
+	_log("  #%d: %s is hired by %s → now a farm worker earning wages. ✓ satisfied" % [d.id, seeker.person_name, producer.person_name])
+
+
 # --- Small helpers ----------------------------------------------------------
 
 func _new_demand(kind: StringName, who: Actor) -> Demand:
@@ -354,7 +385,8 @@ func _refresh_all_state_text() -> void:
 func _describe(a: Actor) -> String:
 	match a.role:
 		Actor.ROLE_CONSUMER:
-			return "%s · %dc" % [_hunger_word(a), a.coin]
+			var tag := "seeking work" if _has_open_employment_demand(a) else _hunger_word(a)
+			return "%s · %dc" % [tag, a.coin]
 		Actor.ROLE_FARM_WORKER:
 			if a.willingness <= QUIT_THRESHOLD:
 				return "farm worker · QUIT (demoralised) · %dc" % a.coin
