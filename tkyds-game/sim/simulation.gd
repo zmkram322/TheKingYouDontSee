@@ -14,6 +14,7 @@ const HUNGER_MAX := 100.0
 const EAT_REDUCES_HUNGER := 70.0  # a meal actually fills you up (drops below threshold)
 const PRODUCE_TICKS := 2          # ticks a producer spends on a batch
 const FOOD_PER_PRODUCTION := 2    # batch size — leaves buffer stock so one producer feeds several
+const WORKER_EXHAUSTION := 90.0   # a worker this hungry is too weak to work — production halts
 # ----------------------------------------------------------------------------
 
 var tick: int = 0
@@ -79,11 +80,28 @@ func _is_eater(a: Actor) -> bool:
 
 func _advance_production() -> void:
 	for a in actors:
-		if a.role == Actor.ROLE_PRODUCER and a.producing_ticks_left > 0:
-			a.producing_ticks_left -= 1
-			if a.producing_ticks_left == 0:
-				a.food += FOOD_PER_PRODUCTION
-				_log("%s finished a batch (+%d) → now holds %d food" % [a.person_name, FOOD_PER_PRODUCTION, a.food])
+		if a.role != Actor.ROLE_PRODUCER or a.producing_ticks_left <= 0:
+			continue
+		# Teeth: a batch only makes progress while at least one worker can still work.
+		if not _producer_can_work(a):
+			if not a.stalled:
+				a.stalled = true
+				_log("%s STALLS — its workers are too hungry to work" % a.person_name)
+			continue
+		if a.stalled:
+			a.stalled = false
+			_log("%s's workers are fed enough again → production resumes" % a.person_name)
+		a.producing_ticks_left -= 1
+		if a.producing_ticks_left == 0:
+			a.food += FOOD_PER_PRODUCTION
+			_log("%s finished a batch (+%d) → now holds %d food" % [a.person_name, FOOD_PER_PRODUCTION, a.food])
+
+
+func _producer_can_work(p: Actor) -> bool:
+	for w in p.workers:
+		if w.hunger < WORKER_EXHAUSTION:
+			return true
+	return false
 
 
 func _step_all_demands_one_hop() -> void:
@@ -283,11 +301,15 @@ func _describe(a: Actor) -> String:
 		Actor.ROLE_CONSUMER:
 			return _hunger_word(a)
 		Actor.ROLE_FARM_WORKER:
+			if a.hunger >= WORKER_EXHAUSTION:
+				return "farm worker · EXHAUSTED (can't work)"
 			return "farm worker · %s" % _hunger_word(a)
 		Actor.ROLE_MERCHANT:
 			return "merchant · %d food" % a.food
 		Actor.ROLE_PRODUCER:
 			var hands := "%d worker(s)" % a.workers.size()
+			if a.producing_ticks_left > 0 and not _producer_can_work(a):
+				return "STALLED — workers too hungry · %d food · %s" % [a.food, hands]
 			if a.producing_ticks_left > 0:
 				return "producing (%d left) · %d food · %s" % [a.producing_ticks_left, a.food, hands]
 			return "producer · %d food · %s" % [a.food, hands]

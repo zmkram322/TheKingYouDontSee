@@ -23,6 +23,7 @@ var food: int = 0
 # Producer stuff
 var producing_ticks_left: int = 0
 var workers: Array[Actor] = []   # farm workers a producer has hired (needed to produce)
+var stalled: bool = false        # true when a producer's workers are too hungry to work
 
 # Short human-readable line describing what this person is doing right now.
 var state_text: String = "idle"
