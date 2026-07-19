@@ -1,0 +1,12 @@
+; Engine configuration file.
+; The King You Don't See — POC v2 (blank slate).
+; Intentionally minimal: no autoloads, no economy sim.
+; The smallest playable loop gets re-derived from the health-triangle seed.
+
+config_version=5
+
+[application]
+
+config/name="The King You Don't See — POC v2"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.4", "Forward Plus")
