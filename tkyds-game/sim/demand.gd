@@ -10,12 +10,17 @@ const FOOD := &"food"        # a hungry consumer wants to eat
 const ROLE := &"role"        # a missing role needs a body assigned to it
 const BUY_GOOD := &"buy"     # a merchant wants to restock from a producer
 const EMPLOYMENT := &"job"   # a broke person wants a wage — matched to a producer's need for hands
+const PRESS := &"press"      # an actor moves on a weaker target to take standing
+const AID := &"aid"          # a pressed actor needs someone to step in — emitted by the sim, never commanded
 
 var id: int
 var kind: StringName
 var requester: Actor            # who needs this filled
 var provider: Actor = null      # who got assigned to fill it (once known)
 var role_wanted: StringName     # only for ROLE demands
+var target: Actor = null        # only for PRESS demands: who is being pressed
+var regarding: Demand = null    # only for AID demands: the press this aid answers
+var backers: Array[Actor] = []  # who has committed themselves behind the pressed party
 var phase: StringName           # where we are in this demand's little state machine
 var child: Demand = null        # the sub-demand we're currently waiting on
 var satisfied: bool = false

@@ -54,6 +54,20 @@ func _build_ui() -> void:
 		_render())
 	bar.add_child(reset_btn)
 
+	# Player verb buttons: intents queue and take effect on the next Step —
+	# same clock as everyone else, no instant world writes from here.
+	var go_pub_btn := Button.new()
+	go_pub_btn.text = "Go to pub"
+	go_pub_btn.pressed.connect(func() -> void:
+		sim.queue_intent(&"go_to", &"pub"))
+	bar.add_child(go_pub_btn)
+
+	var go_town_btn := Button.new()
+	go_town_btn.text = "Go to town"
+	go_town_btn.pressed.connect(func() -> void:
+		sim.queue_intent(&"go_to", &"town"))
+	bar.add_child(go_town_btn)
+
 	# --- Three panels ---
 	var panels := HBoxContainer.new()
 	panels.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -122,26 +136,77 @@ func _render_actors() -> void:
 	for a in sim.actors:
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 1)
+
+		var place: StringName = sim.stats.get_primary(a, Stat.PLACE)
+		var display_name := "%s (you)" % a.person_name if a == sim.player else a.person_name
 		var line := Label.new()
-		line.text = "%s — %s" % [a.person_name, a.state_text]
+		line.text = "%s — [%s] %s" % [display_name, place, a.state_text]
 		line.add_theme_color_override("font_color", _state_color(a))
 		row.add_child(line)
+
+		var social_label := Label.new()
+		social_label.text = _social_line(a)
+		social_label.add_theme_font_size_override("font_size", 12)
+		social_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		row.add_child(social_label)
+
+		var poise: float = sim.stats.get_primary(a, Stat.POISE)
+		if poise < Tune.POISE_DEFAULT:
+			var poise_bar := ProgressBar.new()
+			poise_bar.max_value = Tune.POISE_DEFAULT
+			poise_bar.value = poise
+			poise_bar.show_percentage = false
+			poise_bar.custom_minimum_size = Vector2(0, 6)
+			row.add_child(poise_bar)
+
 		if _eats(a):
 			var bar := ProgressBar.new()
-			bar.max_value = Simulation.HUNGER_MAX
-			bar.value = a.hunger
+			bar.max_value = Tune.HUNGER_MAX
+			bar.value = sim.stats.get_primary(a, Stat.HUNGER)
 			bar.show_percentage = false
 			bar.custom_minimum_size = Vector2(0, 10)
 			row.add_child(bar)
-		if a.role == Actor.ROLE_FARM_WORKER:
+		if sim.stats.get_primary(a, Stat.ROLE) == Actor.ROLE_FARM_WORKER:
 			# Second bar = willingness to keep working (green = happy, red = about to quit).
 			var wbar := ProgressBar.new()
-			wbar.max_value = Simulation.WILLINGNESS_MAX
-			wbar.value = a.willingness
+			wbar.max_value = Tune.WILLINGNESS_MAX
+			wbar.value = sim.stats.get_primary(a, Stat.WILLINGNESS)
 			wbar.show_percentage = false
 			wbar.custom_minimum_size = Vector2(0, 6)
 			row.add_child(wbar)
+
+		if a != sim.player:
+			var actions := HBoxContainer.new()
+			actions.add_theme_constant_override("separation", 4)
+			var look_btn := Button.new()
+			look_btn.text = "Look"
+			look_btn.pressed.connect(func() -> void:
+				sim.look(a)
+				_render())
+			actions.add_child(look_btn)
+			var greet_btn := Button.new()
+			greet_btn.text = "Greet"
+			greet_btn.pressed.connect(func() -> void:
+				sim.greet(a)
+				_render())
+			actions.add_child(greet_btn)
+			var round_btn := Button.new()
+			round_btn.text = "Round"
+			round_btn.pressed.connect(func() -> void:
+				sim.queue_intent(&"share_drink", a))
+			actions.add_child(round_btn)
+			row.add_child(actions)
+
 		_actors_box.add_child(row)
+
+
+func _social_line(a: Actor) -> String:
+	var standing: float = sim.stats.get_primary(a, Stat.STANDING)
+	var text := "standing %d" % int(standing)
+	var seen: StringName = sim.stats.get_primary(sim.player, Stat.SEEN_RUNG, a)
+	if seen != &"":
+		text += "  ·  seen: %s" % seen
+	return text
 
 
 func _render_demands() -> void:
@@ -161,16 +226,27 @@ func _render_demands() -> void:
 
 
 func _eats(a: Actor) -> bool:
-	return a.role == Actor.ROLE_CONSUMER or a.role == Actor.ROLE_FARM_WORKER
+	var role: StringName = sim.stats.get_primary(a, Stat.ROLE)
+	return role == Actor.ROLE_CONSUMER or role == Actor.ROLE_FARM_WORKER
 
 
 func _state_color(a: Actor) -> Color:
+	if _is_press_target(a):
+		return Color(1.0, 0.3, 0.3)
 	if _eats(a):
-		if a.hunger >= Simulation.HUNGER_MAX:
+		var hunger: float = sim.stats.get_primary(a, Stat.HUNGER)
+		if hunger >= Tune.HUNGER_MAX:
 			return Color(1.0, 0.3, 0.3)
-		if a.hunger >= Simulation.HUNGER_NEED_THRESHOLD:
+		if hunger >= Tune.HUNGER_NEED_THRESHOLD:
 			return Color(1.0, 0.7, 0.3)
 		return Color(0.5, 1.0, 0.5)
-	if a.role == Actor.ROLE_IDLE:
+	if sim.stats.get_primary(a, Stat.ROLE) == Actor.ROLE_IDLE:
 		return Color(0.6, 0.6, 0.6)
 	return Color(0.8, 0.85, 1.0)
+
+
+func _is_press_target(a: Actor) -> bool:
+	for d in sim.demands:
+		if d.kind == Demand.PRESS and d.target == a and not d.satisfied:
+			return true
+	return false

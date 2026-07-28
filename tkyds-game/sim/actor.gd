@@ -4,39 +4,24 @@ extends RefCounted
 # A person in the world. Just data + a bit of display state.
 # Role is assigned on demand — everyone can start idle and get pulled into
 # whatever role the cascade needs (merchant, producer, ...).
+# All stat data (hunger, food, coin, willingness, role, ...) lives in
+# Simulation's StatStore — this is just identity + structural/display state.
 
 const ROLE_IDLE := &"idle"
 const ROLE_CONSUMER := &"consumer"
 const ROLE_MERCHANT := &"merchant"
 const ROLE_PRODUCER := &"producer"
 const ROLE_FARM_WORKER := &"farm_worker"
+const ROLE_KEEPER := &"keeper"   # runs a public house; receives what drinkers spend there
+
+var id: int = 0  # assigned by StatStore.register
 
 var person_name: String
-var role: StringName = ROLE_IDLE
-
-# Consumer stuff
-var hunger: float = 0.0          # 0 = full, 100 = starving
-
-# Anyone can hold food (consumer eats it, merchant resells it, producer makes it)
-var food: int = 0
-
-# Money. Food costs coin; workers earn wages.
-var coin: int = 0
-
-# Willingness to keep working (farm workers). Hunger erodes it, pay restores it.
-# No hard floor — enough pay keeps a worker going at any hunger.
-var willingness: float = 100.0
-
-# Producer stuff
-var producing_ticks_left: int = 0
 var workers: Array[Actor] = []   # farm workers a producer has hired (needed to produce)
-var stalled: bool = false        # true when a producer's workers are too hungry to work
 
 # Short human-readable line describing what this person is doing right now.
 var state_text: String = "idle"
 
 
-func _init(name: String, starting_role: StringName = ROLE_IDLE) -> void:
+func _init(name: String) -> void:
 	person_name = name
-	role = starting_role
-	state_text = String(starting_role)
