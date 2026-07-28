@@ -3,8 +3,8 @@ stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-0
 workflowType: 'prd'
 workflow: 'edit'
 releaseMode: 'phased'
-lastEdited: '2026-07-25'
-draftNote: 'Steps 4-12 were drafted by the PM facilitator in a single pass on 2026-07-24. The 2026-07-25 edit session revised the load-bearing sections against a direct author elicitation: added the Core Mechanical Model (new), rewrote Product Scope around the proving scene, rebuilt the Functional Requirements contract, and added Explicit Non-Goals. Sections still carrying unreviewed 2026-07-24 draft content are marked inline. See "Open Questions" at the end.'
+lastEdited: '2026-07-27'
+draftNote: 'Steps 4-12 were drafted by the PM facilitator in a single pass on 2026-07-24. The 2026-07-25 edit session revised the load-bearing sections against a direct author elicitation: added the Core Mechanical Model (new), rewrote Product Scope around the proving scene, rebuilt the Functional Requirements contract, and added Explicit Non-Goals. The 2026-07-27 edit session rewrote FR1 and the decision-model portions of the Core Mechanical Model against fable-spike findings and a party-mode roundtable (see Open Questions → "Resolved in the 2026-07-27 party-mode roundtable"). Sections still carrying unreviewed 2026-07-24 draft content are marked inline. See "Open Questions" at the end.'
 classification:
   projectType: 'single-player-pc-game (emergent-simulation systemic RPG, Godot 4, PC/Steam)'
   domain: 'systems-driven simulation game (social/political immersive-sim adjacent)'
@@ -31,6 +31,10 @@ inputDocuments:
   - path: '_bmad-output/poc-v2-refactor-plan.md'
     role: 'reference'
     binding: false
+  - path: '_bmad-output/fable-spike-decisions.md'
+    role: 'validation-evidence'
+    binding: true
+    note: 'Spike build against the proving scene; §9 findings drove the 2026-07-27 FR1 rewrite and the eligibility/candidate-pool FRs (FR84-87).'
 documentCounts:
   gdd: 0
   brief: 0
@@ -42,6 +46,8 @@ editHistory:
     changes: 'Added Core Mechanical Model and Explicit Non-Goals sections. Rewrote Product Scope around the proving scene. Rebuilt and renumbered Functional Requirements (FR1-FR76; prior FR1-FR45 superseded) against the mechanical model. Phased Success Criteria. Made NFRs measurable. Updated frontmatter traceability: added two authoritative-framing design docs, re-roled the tabled pub-slice seed.'
   - date: '2026-07-27'
     changes: 'Rewrote Journey 1 against the proving scene, with FR-level traceability; added the Corwin/Bram comparative read and the fail branch. Marked Journey 1 and the MVP scene as placeholders: the FR structure binds, the fiction does not, and concrete details are expected to be tuned once the systems are playable. Added trust and promotion to the Core Mechanical Model and as FR77-FR83. Trust is the Player estimate that an actor delivers, inferred from observed goal outcomes and distinct from a held channel; promotion grants an authority channel as an edge operation (explicit positions deferred until roles matter). Added both to Growth, dependency-ordered after installed goals. Established append-only FR numbering policy so identifiers stay stable.'
+  - date: '2026-07-27 (session 2)'
+    changes: 'Rewrote FR1 and the Core Mechanical Model decision-model sections against fable-spike-decisions.md findings and a two-round party-mode roundtable. Demands are now specified as re-derived reads over persistent stats, not persistent memory objects. Survival arbitration confirmed as weighting, never a checked-first gate, with hysteresis as the data-driven fix for flicker. Added a new Eligibility subsection to the Core Mechanical Model and FR84-FR87 to bound per-actor scoring cost by eligibility rather than by goals, protecting a universal core action set from identity-based pruning. Added a matching Performance NFR line and two architecture notes (eligibility as a data seam now, full tagging deferred). Added fable-spike-decisions.md as a binding input document. Logged resolution in Open Questions.'
 ---
 
 # Product Requirements Document - TheKingYouDontSee
@@ -194,6 +200,8 @@ Ordered by dependency:
 
 A demand hits a resolver each tick. The resolver either satisfies the demand or emits the child demand it requires and waits on it. Actors generate demands from needs; demands find providers. No world-state triggers. This is **shipped and proven** for a material economy that bootstraps its entire supply chain from an all-idle start with **zero authored goals**.
 
+**A demand is not a persistent object with its own memory.** It is a derived read: whenever a need's underlying stat crosses its threshold, the Simulation reports an open demand from that stat, recomputed at each check exactly like any other lazy-with-version derived value. The stat is the only thing that persists — hunger keeps decaying whether or not anything is currently addressing it. What other actors discover and pick up is a live index of which actors currently read as having an open demand, not a queue of remembered intentions.
+
 The social/political layer adds **no second engine**. It adds drivers (safety, standing, belonging), derived stats over the social graph, and a filter on **who gets matched to a demand**.
 
 ### Behaviour — needs by default, goals by exception
@@ -203,11 +211,20 @@ The social/political layer adds **no second engine**. It adds drivers (safety, s
 - **Goals are sparse.** Actors inherit faction-level defaults; only *deviating* individuals store an explicit goal — the same sparse-plus-inheritance pattern as the social graph.
 - **Consequence:** because goals are rare, installing one in someone is a visible act of authorship. Goal scarcity is what makes goal-setting a power fantasy rather than noise.
 
+### Eligibility — what an actor can even attempt
+
+- Before anything is scored, the Simulation filters which actions an actor is even eligible to attempt. Eligibility is a cheap precondition check (role, faction, possession, position) evaluated against actor state — not a scoring judgement, not a memory, and not gated by goals.
+- **A protected universal set is eligible to every actor, always.** Survival responses and direct interpersonal actions (eat, flee, confront, beg, steal, hold ground) carry no eligibility predicate and compete in every actor's scoring pass regardless of role. This is the same guarantee that lets a sufficiently-held actor hold his post while starving: nothing may be pruned from this set by identity, only by weight.
+- **Specialised actions declare their own eligibility as data** — a throne claim requires holding a claim; a guild vote requires guild membership; a smuggling run requires contraband in hand. A new action ships with its own precondition; no actor-side code changes.
+- **Goals never determine eligibility.** Goals are sparse (most actors carry none) and only bias weight within whatever pool eligibility already produced — gating the pool by goal would leave the goal-less majority with no pool at all. This sharpens FR9: the "hand-authored action set" a goal biases is the actor's eligible pool, never the full action registry.
+- **Why this exists:** without it, per-actor scoring cost grows with the size of the entire action library, not with what that actor could plausibly do — and a peasant's decision loop would score "seize the throne" every tick alongside "eat bread." Eligibility keeps both the frame budget and the fiction honest, using the same mechanism for both.
+
 ### Arbitration — everything outbids, nothing overrides
 
 - Motivation is a **composite scalar** fed by competing drives. No categorical overrides, no hard-fail states.
 - **Survival outbids.** Hunger and exhaustion are weighted steeply enough to dominate in the common case: an actor whose survival drive is unmet abandons an installed goal and resumes it when the drive normalises. This happens **by outbidding, not by rule**.
 - **Why not a rule:** a hard survival override was built and deadlocked the sim (the build that hard-failed on hunger never recovered). It also creates actors who cannot be moved, contradicting the premise that everyone has a price.
+- **Weighting, never a checked-first gate.** All competing drives — survival included — score in the same pass; nothing is evaluated only after another drive has already been ruled out. If flicker appears at a threshold boundary, the fix is a two-threshold hysteresis band on that stat (enter at one value, don't clear until a higher one), authored as data — never a special-cased priority check.
 - **Consequence:** a sufficiently-held actor holds his post while starving. That scene is emergent, not authored.
 
 ### Influence — one slot, filled by the channel you hold
@@ -412,6 +429,8 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - **Derived stats: lazy-with-version**, recomputed per-(actor,target) on read against a primaries dirty-stamp — not recomputed-every-tick, not stale.
 - **Social graph: sparse + inheritance** — store only *deviating* per-target relationships as explicit edges; all other pairs inherit a faction-level default. Player may be a high-degree hub (O(N)); dense mesh (O(N²)) is prevented.
 - **Playstyle = data bundle**, never code: `{ primary_derived_lever, curve_set, unlocked_action_ids }` over one universal action set. **No class, function, branch, or file may name a playstyle.** Goals bias a *hand-authored* set of action tags.
+- **Eligibility as a data seam, not a system yet.** Every action definition carries an optional eligibility predicate (role/faction/possession/position tags), defaulting to universally-eligible. Ship the field now; defer the full tag-resolution/pool-caching system until a second action's fiction actually requires gating — the current action set needs none of it yet.
+- **Demands have no bespoke persistence layer.** "Still wanting X" is a re-derived read of a persistent stat, not a stored record — consistent with the lazy-with-version derived-stat rule above; the existing demand-tracking data structures are the internal implementation of that read, not a parallel authority.
 - **Progression = per-channel reach vector** `{coercive, economic, authority, loyalty, informational}`, each a slow-tick rollup over the social graph; a single gate-evaluator filters a requirement-tagged unlock table (new unlock = new data row).
 - **Power = eigenvector centrality (PageRank-style)** over the leverage graph, computed on the slow tick with a damping factor — never in the hot loop.
 - **Two-tier world: events are the sole cross-tier channel** — the far world is night-ticked and emits idempotent, authoritative headlines; no continuous floats leak across the seam. Shared totals (coin, food) are conserved across the instantiate/collapse boundary, not made pixel-identical.
@@ -457,7 +476,7 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 
 ### Simulation Substrate & World Life
 
-- FR1: The Simulation runs actors on one shared utility-AI loop over primary and derived stats, with no per-actor scripted behaviour.
+- FR1: The Simulation scores every actor decision — pursuing an unmet need, answering another actor's unmet need, or taking an immediate contested action — through one shared weighted-utility pass over that actor's current primary and derived stats; no decision is scripted per actor.
 - FR2: NPC actors pursue needs and act autonomously whether or not the Player is present.
 - FR3: The Simulation resolves an economy (food, labour, coin) from actor demands without world-state triggers.
 - FR4: The Simulation never serves a stale derived stat — a derived value read at time T reflects the primaries as of T.
@@ -474,6 +493,10 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - FR12: Whether an installed goal clears an actor's action-decision threshold is gated by the channel the Player holds over that actor (any of loyalty, fear, economic dependence, authority, informational exposure).
 - FR13: An installed goal competes with the actor's own drives and can be outbid by them.
 - FR14: Rival actors generate and pursue their own persistent goals, including counter-goals against a hand they cannot fully locate.
+- FR84: An actor's unmet need is derived from that actor's current primary and derived stats at each decision point; the Simulation does not store a separate persistent record of "still pursuing" beyond the underlying stat.
+- FR85: Before scoring, the Simulation filters an actor's candidate actions to those the actor is eligible for, based on role, faction, possession, or position; ineligible actions are never scored.
+- FR86: A protected set of survival and direct interpersonal actions is eligible to every actor regardless of role, faction, possession, or position, and cannot be excluded by an eligibility predicate.
+- FR87: Goals bias the weight of actions within an actor's eligible pool; goals never add or remove eligibility.
 
 ### Reading & Legibility
 
@@ -586,6 +609,7 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - The per-tick simulation hot path must sustain **≥60fps (frame time ≤16.6ms)** at **150 fully-simulated individuals** — the MVP slice targets 12 — with masses as faction aggregates, using staggered/jittered decision ticks rather than all-actors-per-frame.
 - Derived-stat evaluation must be lazy and bounded to what is actually read per tick; per-tick derived-stat computations must scale linearly with reads, never as O(actors²).
 - Slow-tick computations (per-channel reach rollup, power centrality, far-region night-tick) must be amortised off the hot path such that **no single frame exceeds 33ms (one dropped frame)** during a slow tick.
+- Per-actor scoring cost must scale with that actor's **eligible** action count, not the total size of the action registry — verified by benchmarking scoring-pass duration as the registry grows while an actor's eligible-pool size is held constant.
 
 ### Legibility (product-defining quality attribute)
 
@@ -624,6 +648,12 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - **Conflict model.** Resolution without execution; social counterplay. Closes the previously-missing conflict FR gap.
 - **Early reads must be comparative** — now binding as FR23.
 - **Trust and promotion.** Trust is the Player's estimate that an actor delivers (points Player → actor), distinct from a held channel (points actor → Player). Promotion is the lever on power, implemented as an **edge operation** granting an authority channel. Explicit positions/roles are **deferred until roles matter**; the edge operation is the seam.
+
+### Resolved in the 2026-07-27 party-mode roundtable (post-fable-spike)
+
+- **FR1 was wrong, but not for the reason first proposed.** The fable-spike (`fable-spike-decisions.md`) found FR1's "one shared utility-AI loop" didn't describe the shipped code and proposed splitting demands and utility scoring into two named surfaces. A four-agent roundtable (Cloud Dragonborn, Amelia, Samus Shepard, Indie), pressure-tested against the author's own counter-model, converged on a tighter fix: FR1 now names one weighted-scoring pass across three decision points (pursue, answer, act), and **demands are re-derived reads over persistent stats, not persistent memory objects** — resolving the "does a demand need memory" question without inventing a new mechanism. See Core Mechanical Model → "The atom (shipped)."
+- **Survival arbitration confirmed as weighting, never a checked-first gate.** The author's simplified "check survival first, else continue" model was flagged as structurally identical to the hard-override that already deadlocked the sim once, and would foreclose the desired "holds his post while starving" scene. Resolved: survival stays a heavy weight in the same scoring pass; flicker at a threshold gets fixed with two-threshold hysteresis (data), not a priority gate.
+- **Action-set scaling addressed via eligibility, not goals.** A second roundtable converged on gating the per-tick candidate pool by eligibility (role/faction/possession/position — cheap, structural, data-authored) rather than by goals, because goals are sparse (FR10) and a goal-gated pool would leave the goal-less majority with no pool. A protected universal core (survival + direct interpersonal actions) is never prunable by eligibility, preserving the "everything outbids, nothing overrides" guarantee. New: FR84–FR87, a Performance NFR line, and an architecture note (ship the eligibility-predicate field now, defer the full tagging system until a second action needs it).
 
 ### Still open
 
