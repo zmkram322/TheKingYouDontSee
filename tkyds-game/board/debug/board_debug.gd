@@ -3,8 +3,10 @@ extends Node2D
 # Visual verification harness for the terrain generator, and proof that the
 # generator is presentation-agnostic: this file reads the board ONLY through
 # HexMap's accessors (elevation_at, water_at, biome_at, flow_direction_at,
-# tags_at, all_hexes) and the two public TerrainGenerator entry points. If
-# this renders a kingdom, the skin seam works.
+# tags_at, all_hexes), the two public TerrainGenerator entry points, and
+# SettlementPlacer.plan_settlements (planning only — this file never calls
+# grow_settlement, so it never touches settlement micro-detail). If this
+# renders a kingdom, the skin seam works.
 #
 # Run with F6 (this scene set as the one to run), or:
 #   Godot --path tkyds-game res://board/debug/board_debug.tscn
@@ -14,6 +16,7 @@ extends Node2D
 #   Mouse wheel        — zoom toward the cursor
 #   Middle/right drag  — pan
 #   Seed / Radius / Dial fields + Regenerate button — rebuild the kingdom
+#   Settlements checkbox — toggle the planned-site markers on/off
 
 const HEX_PIXEL_SIZE := 14.0
 
@@ -69,16 +72,41 @@ const FALLBACK_TAG_OFFSET := Vector2(0, -9)
 const FALLBACK_TAG_COLOR := Color(0.9, 0.1, 0.7)
 const TAG_DOT_RADIUS := 2.2
 
+# Planned-settlement markers: dark fill with a light halo/outline so every
+# marker reads against any biome color underneath it.
+const MARKER_DARK_COLOR := Color(0.05, 0.05, 0.05, 0.95)
+const MARKER_LIGHT_COLOR := Color(0.95, 0.95, 0.85, 0.95)
+const MARKER_ARC_SEGMENTS := 32
+
+const HAMLET_MARKER_RADIUS := 3.0
+const HAMLET_MARKER_HALO_WIDTH := 1.5
+
+const VILLAGE_MARKER_RADIUS := 6.0
+const VILLAGE_MARKER_RING_WIDTH := 2.5
+const VILLAGE_MARKER_HALO_EXTRA_WIDTH := 2.0
+
+const TOWN_MARKER_OUTER_RADIUS := 9.0
+const TOWN_MARKER_INNER_RADIUS := 5.5
+const TOWN_MARKER_RING_WIDTH := 2.2
+const TOWN_MARKER_HALO_EXTRA_WIDTH := 2.0
+
 const DEFAULT_INSPECTOR_TEXT := "Click a hex to inspect it."
 
 var _map: HexMap
 var _selected_hex: Variant = null  # Vector2i once a hex has been clicked, else null
+
+# One entry per SettlementPlacer.plan_settlements() result: {hex, size,
+# wealth, layout_seed}. Planning only — never fed into grow_settlement here.
+var _settlement_plan: Array[Dictionary] = []
+var _settlement_plan_by_hex: Dictionary = {}  # Vector2i -> plan entry, for O(1) click lookup
+var _show_settlements := true
 
 var _camera: Camera2D
 var _seed_field: LineEdit
 var _radius_field: SpinBox
 var _dial_slider: HSlider
 var _dial_value_label: Label
+var _settlements_checkbox: CheckBox
 var _inspector_label: Label
 
 var _panning := false
@@ -101,6 +129,11 @@ func _generate(seed_value: int, radius: int, dial: float) -> void:
 		"radius": radius,
 		"dial": dial,
 	})
+	_settlement_plan = SettlementPlacer.plan_settlements(_map, seed_value)
+	_settlement_plan_by_hex = {}
+	for entry: Dictionary in _settlement_plan:
+		_settlement_plan_by_hex[entry["hex"]] = entry
+
 	_selected_hex = null
 	_inspector_label.text = DEFAULT_INSPECTOR_TEXT
 	_camera.position = Vector2.ZERO
@@ -172,6 +205,12 @@ func _build_controls_column() -> VBoxContainer:
 	regenerate_button.pressed.connect(_on_regenerate_pressed)
 	column.add_child(regenerate_button)
 
+	_settlements_checkbox = CheckBox.new()
+	_settlements_checkbox.text = "Settlements"
+	_settlements_checkbox.button_pressed = true
+	_settlements_checkbox.toggled.connect(_on_settlements_toggled)
+	column.add_child(_settlements_checkbox)
+
 	return column
 
 
@@ -199,6 +238,9 @@ func _build_legend_column() -> VBoxContainer:
 	_add_legend_row(grid, TAG_COLORS["can_grow_grain"], "Grain dot")
 	_add_legend_row(grid, TAG_COLORS["can_fish"], "Fish dot")
 	_add_legend_row(grid, FALLBACK_TAG_COLOR, "Other tag")
+	_add_legend_row(grid, MARKER_DARK_COLOR, "Town (double ring)")
+	_add_legend_row(grid, MARKER_DARK_COLOR, "Village (ring)")
+	_add_legend_row(grid, MARKER_DARK_COLOR, "Hamlet (dot)")
 
 	var note := Label.new()
 	note.text = "(lighter fill = higher elevation)"
@@ -232,6 +274,11 @@ func _build_inspector_column() -> VBoxContainer:
 
 func _on_dial_changed(value: float) -> void:
 	_dial_value_label.text = "%.2f" % value
+
+
+func _on_settlements_toggled(pressed: bool) -> void:
+	_show_settlements = pressed
+	queue_redraw()
 
 
 func _on_regenerate_pressed() -> void:
@@ -295,9 +342,20 @@ func _select_hex_at(world_point: Vector2) -> void:
 	else:
 		tags_text = "(none)"
 
-	_inspector_label.text = "Hex (%d, %d)\nElevation: %.3f\nWater: %s\nBiome: %s\nFlow: %s\nTags: %s" % [
+	var inspector_text := "Hex (%d, %d)\nElevation: %.3f\nWater: %s\nBiome: %s\nFlow: %s\nTags: %s" % [
 		hex.x, hex.y, elevation, _water_name(water), _biome_name(biome), flow, tags_text,
 	]
+
+	if _settlement_plan_by_hex.has(hex):
+		var plan_entry: Dictionary = _settlement_plan_by_hex[hex]
+		var size: SettlementGenerator.SettlementSize = plan_entry["size"]
+		var wealth: float = plan_entry["wealth"]
+		var layout_seed: int = plan_entry["layout_seed"]
+		inspector_text += "\nPlanned settlement: %s\nWealth: %.2f\nLayout seed: %d" % [
+			_settlement_size_name(size), wealth, layout_seed,
+		]
+
+	_inspector_label.text = inspector_text
 	queue_redraw()
 
 
@@ -329,6 +387,18 @@ func _biome_name(biome: HexMap.Biome) -> String:
 			return "mountains"
 		HexMap.Biome.MARSH:
 			return "marsh"
+		_:
+			return "unknown"
+
+
+func _settlement_size_name(size: SettlementGenerator.SettlementSize) -> String:
+	match size:
+		SettlementGenerator.SettlementSize.HAMLET:
+			return "hamlet"
+		SettlementGenerator.SettlementSize.VILLAGE:
+			return "village"
+		SettlementGenerator.SettlementSize.TOWN:
+			return "town"
 		_:
 			return "unknown"
 
@@ -376,6 +446,45 @@ func _draw() -> void:
 		var closed_selected := selected_corners.duplicate()
 		closed_selected.append(selected_corners[0])
 		draw_polyline(closed_selected, SELECTED_OUTLINE_COLOR, SELECTED_OUTLINE_WIDTH)
+
+	if _show_settlements:
+		_draw_settlement_markers()
+
+
+# Draws one marker per planned settlement site, on top of every hex fill,
+# river line, and resource dot — always the topmost layer so sites never get
+# lost under terrain detail.
+func _draw_settlement_markers() -> void:
+	for entry: Dictionary in _settlement_plan:
+		var hex: Vector2i = entry["hex"]
+		var size: SettlementGenerator.SettlementSize = entry["size"]
+		var center := Hex.world_position_of(hex, HEX_PIXEL_SIZE)
+		match size:
+			SettlementGenerator.SettlementSize.TOWN:
+				_draw_town_marker(center)
+			SettlementGenerator.SettlementSize.VILLAGE:
+				_draw_village_marker(center)
+			SettlementGenerator.SettlementSize.HAMLET:
+				_draw_hamlet_marker(center)
+
+
+func _draw_hamlet_marker(center: Vector2) -> void:
+	draw_circle(center, HAMLET_MARKER_RADIUS + HAMLET_MARKER_HALO_WIDTH, MARKER_LIGHT_COLOR)
+	draw_circle(center, HAMLET_MARKER_RADIUS, MARKER_DARK_COLOR)
+
+
+func _draw_village_marker(center: Vector2) -> void:
+	var halo_width: float = VILLAGE_MARKER_RING_WIDTH + VILLAGE_MARKER_HALO_EXTRA_WIDTH
+	draw_arc(center, VILLAGE_MARKER_RADIUS, 0.0, TAU, MARKER_ARC_SEGMENTS, MARKER_LIGHT_COLOR, halo_width, true)
+	draw_arc(center, VILLAGE_MARKER_RADIUS, 0.0, TAU, MARKER_ARC_SEGMENTS, MARKER_DARK_COLOR, VILLAGE_MARKER_RING_WIDTH, true)
+
+
+func _draw_town_marker(center: Vector2) -> void:
+	var halo_width: float = TOWN_MARKER_RING_WIDTH + TOWN_MARKER_HALO_EXTRA_WIDTH
+	draw_arc(center, TOWN_MARKER_OUTER_RADIUS, 0.0, TAU, MARKER_ARC_SEGMENTS, MARKER_LIGHT_COLOR, halo_width, true)
+	draw_arc(center, TOWN_MARKER_OUTER_RADIUS, 0.0, TAU, MARKER_ARC_SEGMENTS, MARKER_DARK_COLOR, TOWN_MARKER_RING_WIDTH, true)
+	draw_arc(center, TOWN_MARKER_INNER_RADIUS, 0.0, TAU, MARKER_ARC_SEGMENTS, MARKER_LIGHT_COLOR, halo_width, true)
+	draw_arc(center, TOWN_MARKER_INNER_RADIUS, 0.0, TAU, MARKER_ARC_SEGMENTS, MARKER_DARK_COLOR, TOWN_MARKER_RING_WIDTH, true)
 
 
 # Six corners of a pointy-top hex, matching Hex.world_position_of's
