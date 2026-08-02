@@ -21,3 +21,15 @@ func doing_label() -> String:
 	if doing == null:
 		return "choosing…"
 	return doing.describe()
+
+
+# The pre-emption entry point: forces a fresh decision now, abandoning
+# whatever's in progress, rather than waiting for the current Activity to
+# finish. world.choose() already rebuilds doing/plan unconditionally, so
+# there's no special cancel path needed — reconsidering mid-walk just
+# re-routes from the current position, and reconsidering mid-Perform simply
+# never applies that Perform's effect (nothing partial to unwind). Takes
+# world rather than storing a back-reference, so Villager stays constructible
+# without one.
+func reconsider(world: SandboxWorld) -> void:
+	world.choose(self)

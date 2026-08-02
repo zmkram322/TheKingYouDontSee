@@ -37,3 +37,11 @@ const GREETING_RUNG := &"greeting_rung"  # discrete rung a shows toward b
 # --- Sandbox examples (behavior sandbox; see sandbox/) ----------------------
 const ENERGY := &"energy"   # 0 = spent, 100 = fresh; work drains it, rest restores it
 const VIGOR := &"vigor"     # derived: how much doing an actor has in them right now
+const FEAR := &"fear"             # 0 = calm, 100 = terrified; decays on its own, spikes on a scare
+const THREATENED := &"threatened" # derived: true while a slow-release reshaping of FEAR
+                                   # (SandboxTune.FEAR_LINGER_EXPONENT) reads above THREAT_THRESHOLD.
+                                   # A pure function of FEAR, same pattern as VIGOR — FEAR only ever
+                                   # moves monotonically between discrete writes (decay, or a scare),
+                                   # so a single threshold can't flicker here; no memory needed.
+                                   # Distinct from the real sim's confrontation-time "Threat"
+                                   # evaluation noted above.

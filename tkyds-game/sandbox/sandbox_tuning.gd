@@ -34,3 +34,14 @@ const W_WORK := 60.0
 const W_REST := 80.0
 const IDLE_APPEAL := 6.0        # the floor: what "nothing presses" scores
 const COIN_COMFORT := 20.0      # coin level above which working stops appealing
+
+# --- Fear / safety interrupt ---
+const FEAR_MAX := 100.0
+const FEAR_DECAY_PER_SECOND := 8.0    # ambient calm-down, same shape as hunger/energy drift
+const SCARE_AMOUNT := 80.0            # what the "Scare" button adds, clamped to FEAR_MAX
+const THREAT_THRESHOLD := 55.0        # the lingering read (below) must clear this to count as threatened
+const FEAR_LINGER_EXPONENT := 0.5     # < 1: FEAR_MAX * (fear/FEAR_MAX)^X reads higher than raw fear
+                                       # as fear decays, so the threat reading lingers after a scare
+                                       # without needing a second threshold or any stored history
+const W_SHELTER := 120.0              # above every other option's ceiling, so it wins outright once threatened
+const SHELTER_DURATION := 4.0         # short cycle so a cleared threat is noticed at the next seam

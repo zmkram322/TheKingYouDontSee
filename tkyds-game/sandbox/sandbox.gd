@@ -29,6 +29,7 @@ var _pause_button: Button
 var _speed_buttons: Array[Button] = []
 var _speed_values: Array[float] = [1.0, 2.0, 4.0]
 var _villager_list: ItemList
+var _scare_button: Button
 var _doing_value_label: Label
 var _plan_value_label: Label
 var _stats_value_label: Label
@@ -181,6 +182,11 @@ func _build_right_panel(parent: Control) -> void:
 	col.add_child(_villager_list)
 	_rebuild_villager_list()
 
+	_scare_button = Button.new()
+	_scare_button.text = "Scare Selected"
+	_scare_button.pressed.connect(_on_scare_pressed)
+	col.add_child(_scare_button)
+
 	col.add_child(HSeparator.new())
 
 	_doing_value_label = Label.new()
@@ -281,6 +287,13 @@ func _pick_villager_near(point: Vector2) -> Villager:
 	return nearest
 
 
+func _on_scare_pressed() -> void:
+	if _selected == null:
+		return
+	world.scare(_selected)
+	_refresh_inspector()
+
+
 func _on_villager_list_selected(index: int) -> void:
 	if index >= 0 and index < world.villagers.size():
 		_select_villager(world.villagers[index])
@@ -352,7 +365,9 @@ func _format_stats(v: Villager) -> String:
 	var coin: int = world.stats.get_primary(v.actor, Stat.COIN)
 	var vigor: float = world.stats.get_derived(v.actor, Stat.VIGOR)
 	var place: StringName = world.stats.get_primary(v.actor, Stat.PLACE)
-	return "hunger: %.1f\nenergy: %.1f\ncoin: %d\nvigor: %.2f\nplace: %s" % [hunger, energy, coin, vigor, String(place)]
+	var fear: float = world.stats.get_primary(v.actor, Stat.FEAR)
+	var threatened: bool = world.stats.get_derived(v.actor, Stat.THREATENED)
+	return "hunger: %.1f\nenergy: %.1f\ncoin: %d\nvigor: %.2f\nplace: %s\nfear: %.1f\nthreatened: %s" % [hunger, energy, coin, vigor, String(place), fear, threatened]
 
 
 # Same rendering for the live pass and the last committed decision so the two

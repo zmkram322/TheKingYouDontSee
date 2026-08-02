@@ -33,7 +33,9 @@ func reset() -> void:
 	stats.set_actor_default(Stat.ENERGY, SandboxTune.ENERGY_MAX)
 	stats.set_actor_default(Stat.COIN, 0)
 	stats.set_actor_default(Stat.PLACE, &"well")
+	stats.set_actor_default(Stat.FEAR, 0.0)
 	stats.define_derived(Stat.VIGOR, _derive_vigor)
+	stats.define_derived(Stat.THREATENED, _derive_threatened)
 
 	options = SandboxCatalog.build()
 
@@ -86,18 +88,38 @@ func _derive_vigor(store: StatStore, a: Actor, _b: Actor) -> float:
 	return clampf((energy - 0.5 * hunger) / SandboxTune.ENERGY_MAX, 0.0, 1.0)
 
 
+# Pure math off the one primary — no stored history. The reshape (X < 1)
+# makes this read stay above THREAT_THRESHOLD longer than raw FEAR would as
+# it decays, which is what gives "takes a while to calm down" without a
+# second threshold or a hand-written primary.
+func _derive_threatened(store: StatStore, a: Actor, _b: Actor) -> bool:
+	var fear: float = store.get_primary(a, Stat.FEAR)
+	var lingering: float = SandboxTune.FEAR_MAX * pow(fear / SandboxTune.FEAR_MAX, SandboxTune.FEAR_LINGER_EXPONENT)
+	return lingering >= SandboxTune.THREAT_THRESHOLD
+
+
 # --- The step -----------------------------------------------------------
 
 func advance(delta: float) -> void:
 	time += delta
 
-	# Ambient drift, through the store, so derived caches (VIGOR) invalidate
-	# honestly rather than going stale under a doing actor's feet.
+	# Ambient drift, through the store, so derived caches (VIGOR, THREATENED)
+	# invalidate honestly rather than going stale under a doing actor's feet.
 	for v in villagers:
 		var hunger: float = stats.get_primary(v.actor, Stat.HUNGER)
 		stats.write_primary(v.actor, Stat.HUNGER, minf(SandboxTune.HUNGER_MAX, hunger + SandboxTune.HUNGER_PER_SECOND * delta))
 		var energy: float = stats.get_primary(v.actor, Stat.ENERGY)
 		stats.write_primary(v.actor, Stat.ENERGY, maxf(0.0, energy - SandboxTune.ENERGY_DRIFT_PER_SECOND * delta))
+
+		# Cheap watcher, not a poll of the brain: reading a cached derived
+		# bool before/after one primary write is nowhere near the cost of a
+		# full rescore. The expensive part (reconsider -> choose(), scoring
+		# the whole catalog) only runs on the rare tick where THREATENED
+		# actually flips.
+		var was_threatened: bool = stats.get_derived(v.actor, Stat.THREATENED)
+		var fear: float = stats.get_primary(v.actor, Stat.FEAR)
+		stats.write_primary(v.actor, Stat.FEAR, maxf(0.0, fear - SandboxTune.FEAR_DECAY_PER_SECOND * delta))
+		_sync_threat(v, was_threatened)
 
 	for v in villagers:
 		# Commitment rule: a decision sticks until its activities finish —
@@ -111,6 +133,30 @@ func advance(delta: float) -> void:
 			else:
 				choose(v)
 		v.doing.advance(delta)
+
+
+# Compares THREATENED from before/after a FEAR write and reconsiders only on
+# an actual flip — the pre-emption trigger. This is bookkeeping about when to
+# ask the brain again, not a second copy of the threat logic itself; that
+# logic lives entirely in _derive_threatened.
+func _sync_threat(v: Villager, was_threatened: bool) -> void:
+	var now_threatened: bool = stats.get_derived(v.actor, Stat.THREATENED)
+	if now_threatened == was_threatened:
+		return
+	if now_threatened:
+		_log("%s is startled and bolts for safety!" % v.actor.person_name)
+	v.reconsider(self)
+
+
+# The scare button's handler. Writes FEAR directly, same as any other stat
+# write, then runs the same before/after check the ambient loop uses — so a
+# scare takes effect immediately (mid-Activity, not on the next frame's
+# drift pass) without a second, parallel notion of "just got scared."
+func scare(v: Villager, amount: float = SandboxTune.SCARE_AMOUNT) -> void:
+	var was_threatened: bool = stats.get_derived(v.actor, Stat.THREATENED)
+	var fear: float = stats.get_primary(v.actor, Stat.FEAR)
+	stats.write_primary(v.actor, Stat.FEAR, minf(SandboxTune.FEAR_MAX, fear + amount))
+	_sync_threat(v, was_threatened)
 
 
 func choose(v: Villager) -> void:
