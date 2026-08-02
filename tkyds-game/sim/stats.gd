@@ -33,3 +33,7 @@ const GREETING_RUNG := &"greeting_rung"  # discrete rung a shows toward b
 # (Threat and backing are evaluations, not stats: they read live confrontation
 # state — who has committed as a backer — which lives on demands, not in the
 # store. They are computed in Simulation. See the decisions doc.)
+
+# --- Sandbox examples (behavior sandbox; see sandbox/) ----------------------
+const ENERGY := &"energy"   # 0 = spent, 100 = fresh; work drains it, rest restores it
+const VIGOR := &"vigor"     # derived: how much doing an actor has in them right now
