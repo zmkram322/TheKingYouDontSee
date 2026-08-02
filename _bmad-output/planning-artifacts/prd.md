@@ -3,8 +3,8 @@ stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-0
 workflowType: 'prd'
 workflow: 'edit'
 releaseMode: 'phased'
-lastEdited: '2026-07-27'
-draftNote: 'Steps 4-12 were drafted by the PM facilitator in a single pass on 2026-07-24. The 2026-07-25 edit session revised the load-bearing sections against a direct author elicitation: added the Core Mechanical Model (new), rewrote Product Scope around the proving scene, rebuilt the Functional Requirements contract, and added Explicit Non-Goals. The 2026-07-27 edit session rewrote FR1 and the decision-model portions of the Core Mechanical Model against fable-spike findings and a party-mode roundtable (see Open Questions → "Resolved in the 2026-07-27 party-mode roundtable"). Sections still carrying unreviewed 2026-07-24 draft content are marked inline. See "Open Questions" at the end.'
+lastEdited: '2026-08-02'
+draftNote: 'Steps 4-12 were drafted by the PM facilitator in a single pass on 2026-07-24. The 2026-07-25 edit session revised the load-bearing sections against a direct author elicitation: added the Core Mechanical Model (new), rewrote Product Scope around the proving scene, rebuilt the Functional Requirements contract, and added Explicit Non-Goals. The 2026-07-27 edit session rewrote FR1 and the decision-model portions of the Core Mechanical Model against fable-spike findings and a party-mode roundtable (see Open Questions → "Resolved in the 2026-07-27 party-mode roundtable"). The 2026-08-02 edit session added the hex-board/influence-layer as a spatial interface to reach and cascade, validated via a four-agent party-mode roundtable against `hex-board-influence-layer-seed.md` (see Open Questions → "Resolved in the 2026-08-02 party-mode roundtable"). Sections still carrying unreviewed 2026-07-24 draft content are marked inline. See "Open Questions" at the end.'
 classification:
   projectType: 'single-player-pc-game (emergent-simulation systemic RPG, Godot 4, PC/Steam)'
   domain: 'systems-driven simulation game (social/political immersive-sim adjacent)'
@@ -35,6 +35,10 @@ inputDocuments:
     role: 'validation-evidence'
     binding: true
     note: 'Spike build against the proving scene; §9 findings drove the 2026-07-27 FR1 rewrite and the eligibility/candidate-pool FRs (FR84-87).'
+  - path: '_bmad-output/hex-board-influence-layer-seed.md'
+    role: 'validated-seed'
+    binding: true
+    note: 'Captured 2026-08-02 as a non-binding seed; pressure-tested the same day by a four-agent party-mode roundtable (Cloud Dragonborn, Samus Shepard, Mary, Indie) per hex-board-prd-edit-session-plan.md and re-roled binding on incorporation. Drove the new Core Mechanical Model subsection "The Board," FR88-FR99, and the Growth/Vision phasing of the board in Product Scope.'
 documentCounts:
   gdd: 0
   brief: 0
@@ -48,6 +52,8 @@ editHistory:
     changes: 'Rewrote Journey 1 against the proving scene, with FR-level traceability; added the Corwin/Bram comparative read and the fail branch. Marked Journey 1 and the MVP scene as placeholders: the FR structure binds, the fiction does not, and concrete details are expected to be tuned once the systems are playable. Added trust and promotion to the Core Mechanical Model and as FR77-FR83. Trust is the Player estimate that an actor delivers, inferred from observed goal outcomes and distinct from a held channel; promotion grants an authority channel as an edge operation (explicit positions deferred until roles matter). Added both to Growth, dependency-ordered after installed goals. Established append-only FR numbering policy so identifiers stay stable.'
   - date: '2026-07-27 (session 2)'
     changes: 'Rewrote FR1 and the Core Mechanical Model decision-model sections against fable-spike-decisions.md findings and a two-round party-mode roundtable. Demands are now specified as re-derived reads over persistent stats, not persistent memory objects. Survival arbitration confirmed as weighting, never a checked-first gate, with hysteresis as the data-driven fix for flicker. Added a new Eligibility subsection to the Core Mechanical Model and FR84-FR87 to bound per-actor scoring cost by eligibility rather than by goals, protecting a universal core action set from identity-based pruning. Added a matching Performance NFR line and two architecture notes (eligibility as a data seam now, full tagging deferred). Added fable-spike-decisions.md as a binding input document. Logged resolution in Open Questions.'
+  - date: '2026-08-02'
+    changes: 'Added the hex-board/influence-layer as a spatial interface to reach and cascade, validated via a four-agent party-mode roundtable (Cloud Dragonborn/architecture, Samus Shepard/design, Mary/positioning, Indie/solo-dev scope) against hex-board-influence-layer-seed.md; no spike was needed. Added Core Mechanical Model subsection "The Board — spatial interface to reach and cascade." Added FR88-FR99: goal-install-at-hex (reusing FR11/FR12/FR45), placement ranked by loyalty/trust, stick-until-resolved goals with a single-depth "seize control" interrupt, occupied capacity as a Player-side bookkeeping index (not a scan), the instant/permanent split, two ownership layers reusing existing storage patterns, resource-block reuse, a social overlay on the same board (not a second board), the territorial-legibility rollup, and terrain generation as a new one-way instantiation step distinct from the existing actor promote/collapse seam (FR73). Added a Performance NFR note for the added slow-tick rollup. Split the board across Growth (core verb, dependency-ordered after installed goals/trust/promotion/cascade) and Vision (terrain generation, template library, territorial legibility, scattered asset layer) in Product Scope. Added Civ 6/Catan to Market Context with an explicit not-menu-driven contrast; left Detected Innovation Areas and the Executive Summary unchanged. Added a light-touch board reference to Journey 4 without a full rewrite. Logged resolution and migrated remaining open seed-doc threads into Open Questions.'
 ---
 
 # Product Requirements Document - TheKingYouDontSee
@@ -184,6 +190,7 @@ Ordered by dependency:
 - **Promote/collapse LOD** (individual ↔ faction) enabling the covert traitor and scaling the cast.
 - **Information agents** (unreliable secondhand eyes); **visibility-as-progression** (fog over the social graph lifts as reach grows).
 - **Diegetic legibility depth** — richer tells, sigils, context-of-observation.
+- **Hex board — proving scene.** *Depends on installed goals, trust, promotion, and cascade* — board placement is rank-ordered by loyalty/trust (needs trust to exist) and the jurisdictional ownership layer is authority/promotion made geometric (needs promotion to exist). A handful of hand-placed hexes, no procedural generation, reusing actors already live from the ground-level slice. Proves: zoom continuity (same coordinate space as the walked world), the install/placement/occupied-capacity loop, a visibly legible "seize control" interrupt, and consequences landing at ground level rather than in the capacity math. Core verb only (FR88-FR96); see FR97-FR99 and Vision below for territorial legibility and terrain generation.
 
 ### Vision (Future)
 
@@ -191,6 +198,7 @@ Ordered by dependency:
 - **Far-region simulation** via night-ticked headlines/newspapers as the sole cross-tier channel.
 - The full spread of value-chain paths (war, commerce, crime, secrets, public service, and more) with **parity** — each reaching a top-tier outcome the others can't.
 - Multiple **win conditions** spanning the overt-to-covert spectrum (the Puppeteer at one end; commanding, visible dominance at the other), sustained over time.
+- **Hex board — generative richness.** The full terrain-generation pipeline (elevation → hydrology → biome, FR99), the settlement template library, the two-speed territorial-legibility rollup (FR98), and the scattered asset-ownership layer (FR95) — kingdom-scale content and presentation depth built on the Growth-tier board core.
 
 ## Core Mechanical Model
 
@@ -268,6 +276,25 @@ Each driver carries a persistence model.
 - A goal installed high in a hierarchy propagates **by changing the state everyone below reacts to**, not by copying goals downward. A lord given an aim cuts wages, locks a granary, or calls a muster; the people beneath him respond through their own needs.
 - **Power becomes computable.** "How many people fall under the shadow of your decisions" is the size of the subtree whose behaviour changed under an installed goal — a measurement, not a metaphor.
 - **Progression is a ladder of leverage over state, not of rank.** A goal installed in a prestigious actor who controls nothing changes nothing. Reach must be measured as access to actors who can move state.
+
+### The Board — spatial interface to reach and cascade
+
+*Added 2026-08-02, validated by a four-agent party-mode roundtable against `hex-board-influence-layer-seed.md`. The board is an interface onto mechanisms already specified above (reach, cascade, promotion, persistence); it adds one new persistence shape (occupied capacity) and one new generation mechanism (terrain), and reuses everything else.*
+
+- **The board is a zoom level of the same world, not a second interface.** A hex resolves through the existing `location → tags` lookup; the player walks the ground and zooms out to the same coordinate space, never switching to a disconnected screen.
+- **The board's only verb is targeting.** Installing a goal at a hex installs it in whoever holds that location — the same goal-install mechanism (FR11, FR12, FR45), aimed at a place instead of named directly. No second goal-installation system exists.
+- **No new currency.** Board actions spend the same per-channel reach (FR46) as any other exercise of influence.
+- **Placement priority is rank-ordered by loyalty and trust** (FR27, FR77-FR78) when more than one actor could install on the same hex.
+- **A placed goal sticks and resolves on its own clock**, matching the stack-not-pause cadence already used elsewhere — it is not continuously re-arbitrated against a rival's competing install. This governs the board/placement layer only; ground-level arbitration (an actor's own drives outbidding a goal, per Arbitration above) is unchanged.
+- **Contesting a standing goal is a discrete played action ("seize control"), not passive re-arbitration.** It can target only a standing goal (a permanent, below), never a one-shot goal that has already resolved. It is single-depth by design — it cannot itself be countered — a deliberate scope limit, not a structural ceiling.
+- **A board goal is either an instant or a permanent.** Instants resolve once and release their occupied capacity. Permanents stand until revoked, interrupted, or otherwise resolved, occupying capacity the whole time. Both cost reach to install.
+- **Capacity is occupied, not drained, not a refilling gauge** — a third persistence shape alongside transactional and accrual (Persistence, above). Installing a goal ties up a portion of the Player's current reach for as long as it is active; capacity returns in full when the goal resolves, by any means (success, failure, or interruption) — reach itself is never damaged, and never a flat per-cycle refill. This is tracked as a small stored index of the Player's own currently-active installed goals and their cost, not a scan of the world's goal state — the goal itself is already legitimate stored state (FR10); the index is bookkeeping over goals that already exist, not a second memory of intent (contrast FR84).
+- **Outcome consequences land at ground level, never in the capacity math.** Whether a goal succeeds or fails, its capacity returns the same way; consequences are felt through the existing relationship/channel machinery (FR35).
+- **Two ownership layers, reusing existing storage shapes.** Territorial/jurisdictional control (authority and promotion, FR81-FR83, made geometric) is contiguous and hierarchical, using the same sparse+inheritance pattern as the social graph. Asset/enterprise ownership (FR55, made geometric) is scattered and crosses jurisdiction freely, using the same sparse-edge pattern as accrual channels. Both render as toggle-able overlays on one board.
+- **A hex's resource stat is not a new data structure.** It is whichever primary the shipped economy already tracks at that location (production, worker count, wage) — one source of truth between the board and the walked world.
+- **Social/influence state is a toggle-able overlay on the same board**, not a second board — every actor already resolves to a hex through jurisdiction or enterprise, so social state paints onto ground that already exists.
+- **Territorial legibility extends diegetic presentation (FR67-FR69) from body scale to territory scale.** A rollup, the same shape as the existing reach rollup, aggregates the tell/driver state of actors within a domain's footprint, computed at two speeds: a frequent "mood" and a long-window, smoothed "character." The claimed identity an actor broadcasts (FR22) sits alongside this honest aggregate, not in place of it — the gap between the two is the read.
+- **Terrain generation is a separate, one-way mechanism, not a second use of the actor promote/collapse seam.** A cheap macro layer (elevation, hydrology, biome) generates once, globally, up front. Settlement-level detail generates once per region, on first attention, from a small authored template library with parametric (not structural) variation — a step with no inverse. Once generated, the actors populating that settlement promote and collapse through the existing, unchanged seam (FR73).
 
 ### Conflict — resolution without execution
 
@@ -349,13 +376,13 @@ Aldric never asked. He had no goal set for Bram, and Bram had none set for him.
 
 **Opening.** The player-character now has real reach — across channels, across the map. (Shown here as Aldric; the arc is path-agnostic and reachable from either run above.)
 
-**Rising action.** His accumulated decisions ripple: he predicts that a locked granary will break a region, and positions for it — whether by commanding the lord (overt) or maneuvering him (covert). Far regions report back as **headlines**. Rival kingmakers generate live counter-goals against a hand they cannot locate.
+**Rising action.** His accumulated decisions ripple: he predicts that a locked granary will break a region, and positions for it — whether by commanding the lord (overt) or maneuvering him (covert) — now concretely the board's goal-install-at-hex, ranked by trust and contestable by a rival's "seize control" (see Core Mechanical Model → The Board). Far regions report back as **headlines**. Rival kingmakers generate live counter-goals against a hand they cannot locate.
 
 **Climax.** Famine → strike → mob → revolt breaks exactly as he foresaw, and he profits — while rivals visibly tried and failed to see it coming. He can **trace the chain** back to his own move.
 
 **Resolution.** The kingdom moves to a will it cannot fully read — his. He has become the king you don't see, by whatever path he built.
 
-*Reveals requirements:* per-channel reach/power (slow-tick PageRank); rival actors with live counter-goals; the traceable emergent cascade + attribution surfaced diegetically; far-region headlines as cross-tier channel; win-condition evaluation across the overt↔covert spectrum.
+*Reveals requirements:* per-channel reach/power (slow-tick PageRank); rival actors with live counter-goals; the traceable emergent cascade + attribution surfaced diegetically; far-region headlines as cross-tier channel; win-condition evaluation across the overt↔covert spectrum; FR88-FR99 (the board as the concrete mechanism for kingdom-scale positioning).
 
 ### Journey Requirements Summary
 
@@ -406,6 +433,7 @@ Aldric never asked. He had no goal set for Bram, and Bram had none set for him.
 - **Dishonored** — one-substrate multi-path with world-reaction selling the fork; TKYDS extends the reaction channel to greeting/body-language and adds economic engines.
 - **Shadow of Mordor (Nemesis)** — north star for traceable emergent rivalry; TKYDS aims to add the path-multiplicity Nemesis lacks.
 - **Disco Elysium** — reference for embodied, continuous, socially-legible world without combat execution.
+- **Civ 6 / Catan** — source of the hex board's resource-and-adjacency and strategic-zoom instincts, not its interface model: the board is a zoom level of the same embodied, diegetically-legible world (see Core Mechanical Model → The Board), not a disconnected menu-driven screen — the distinction that keeps the CK3 comparable's "not menu-driven" claim intact.
 
 ### Validation Approach
 
@@ -459,9 +487,9 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 
 ### Post-MVP Features
 
-**Phase 2 (Growth):** as specified in **Product Scope → Growth Features**, dependency-ordered: directed dispatch; installed goals at depth 1; layered goals and cascade; a second and third **distinct route** spanning overt↔covert (prototype the most divergent pair — war/rupture vs. crime/exposure — side by side early); **promote/collapse LOD**; **information agents**; **visibility-as-progression**; richer diegetic legibility.
+**Phase 2 (Growth):** as specified in **Product Scope → Growth Features**, dependency-ordered: directed dispatch; installed goals at depth 1; layered goals and cascade; a second and third **distinct route** spanning overt↔covert (prototype the most divergent pair — war/rupture vs. crime/exposure — side by side early); **promote/collapse LOD**; **information agents**; **visibility-as-progression**; richer diegetic legibility; the **hex board proving scene** (goal-install-at-hex, occupied capacity, instant/permanent + interrupt), dependency-ordered after installed goals, trust, promotion, and cascade.
 
-**Phase 3 (Vision):** kingdom-scale become-the-unseen-power arc; rival kingmakers with live counter-goals; the traceable emergent epic moment; far-region headlines; full value-chain spread with parity; multiple win conditions across the overt↔covert spectrum; graduated presentation (3D greeting ladder, tells, sigils, context-of-observation).
+**Phase 3 (Vision):** kingdom-scale become-the-unseen-power arc; rival kingmakers with live counter-goals; the traceable emergent epic moment; far-region headlines; full value-chain spread with parity; multiple win conditions across the overt↔covert spectrum; graduated presentation (3D greeting ladder, tells, sigils, context-of-observation); **hex board generative richness** (terrain generation, settlement templates, territorial legibility, scattered asset layer).
 
 ### Risk Mitigation Strategy
 
@@ -555,6 +583,21 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - FR82: A promoted actor accumulates their own reach, may hold others, and may install goals of their own — including goals contrary to the Player's.
 - FR83: NPC actors promote actors they trust, forming organisational hierarchies without authored content, which the Player can read by observing who rises.
 
+### Board — Spatial Interface to Reach and Cascade
+
+- FR88: The Player can install a goal targeted at a hex; the Simulation installs it in whichever actor holds that location, using the same goal-install mechanism as FR11.
+- FR89: When more than one actor could install a goal on the same hex, placement priority is ranked by the Player's loyalty and trust standing with the location's holder.
+- FR90: An installed board goal resolves on its own clock without continuous re-arbitration against a rival's competing install; ground-level utility arbitration (FR6, FR7, FR13) is unaffected by this rule.
+- FR91: The Player can contest a standing board goal through a discrete "seize control" action, targetable only against a standing goal, never against a one-shot goal that has already resolved.
+- FR92: A board goal is either an instant, which resolves once and releases its occupied capacity, or a permanent, which stands and occupies capacity until resolved, revoked, or interrupted; both cost reach to install.
+- FR93: Installing a board goal occupies a portion of the Player's current reach for the goal's duration; capacity returns in full when the goal resolves by any means, tracked as a stored record of the Player's own currently-active installed goals rather than a scan of all actors' goals.
+- FR94: A board goal's success or failure does not alter occupied capacity; its consequences are expressed through the existing relationship/channel machinery (FR35).
+- FR95: The Player can view and act on two independent ownership layers over the board — territorial/jurisdictional control (contiguous, hierarchical, one holder per region) and asset/enterprise ownership (scattered, crosses jurisdiction freely) — each rendered as a toggle-able overlay.
+- FR96: A hex's actionable resource state is the same primary the shipped economy already tracks at that location; the board and the walked world read one number.
+- FR97: Social/influence state renders as a toggle-able overlay on the same board as the ownership layers, keyed to actors already positioned via jurisdiction or enterprise, not as a separate board or coordinate space.
+- FR98: The Simulation computes a territorial-legibility rollup — the aggregated tell/driver state of actors within a domain's footprint — at two speeds: a frequent current-mood read and a smoothed long-window regional-character read.
+- FR99: The Simulation generates terrain in two layers: a cheap macro layer (elevation, hydrology, biome) for the whole kingdom up front, and settlement-level detail generated once per region, on first attention, from an authored template library with parametric variation.
+
 ### Conflict Resolution
 
 - FR52: Contested conflict between actors resolves from actor state, with no player execution skill (no timing, aiming, or reflex input).
@@ -611,6 +654,7 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - Derived-stat evaluation must be lazy and bounded to what is actually read per tick; per-tick derived-stat computations must scale linearly with reads, never as O(actors²).
 - Slow-tick computations (per-channel reach rollup, power centrality, far-region night-tick) must be amortised off the hot path such that **no single frame exceeds 33ms (one dropped frame)** during a slow tick.
 - Per-actor scoring cost must scale with that actor's **eligible** action count, not the total size of the action registry — verified by benchmarking scoring-pass duration as the registry grows while an actor's eligible-pool size is held constant.
+- The territorial-legibility rollup adds a **third slow-tick computation** alongside the reach rollup and power centrality against the same 150-actor/33ms budget; its frequent-tick "mood" read runs more often than the existing slow-tick rollups and must be benchmarked empirically once implemented, not assumed to fit within existing headroom.
 
 ### Legibility (product-defining quality attribute)
 
@@ -656,6 +700,17 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - **Survival arbitration confirmed as weighting, never a checked-first gate.** The author's simplified "check survival first, else continue" model was flagged as structurally identical to the hard-override that already deadlocked the sim once, and would foreclose the desired "holds his post while starving" scene. Resolved: survival stays a heavy weight in the same scoring pass; flicker at a threshold gets fixed with two-threshold hysteresis (data), not a priority gate.
 - **Action-set scaling addressed via eligibility, not goals.** A second roundtable converged on gating the per-tick candidate pool by eligibility (role/faction/possession/position — cheap, structural, data-authored) rather than by goals, because goals are sparse (FR10) and a goal-gated pool would leave the goal-less majority with no pool. A protected universal core (survival + direct interpersonal actions) is never prunable by eligibility, preserving the "everything outbids, nothing overrides" guarantee. New: FR84–FR87, a Performance NFR line, and an architecture note (ship the eligibility-predicate field now, defer the full tagging system until a second action needs it).
 
+### Resolved in the 2026-08-02 party-mode roundtable (hex board)
+
+- **The hex board is Growth/Vision-tier, not MVP** — confirmed against the proving scene's scope before the roundtable convened.
+- **Architecture (Cloud Dragonborn).** The board composes with existing patterns more than it needed new ones: hex cells reuse the `location → tags` lookup; the territorial-legibility rollup reuses the reach-rollup shape; the two ownership layers reuse the social graph's inheritance pattern and the accrual channels' sparse-edge pattern respectively. One genuine gap closed: terrain generation is a new one-way instantiation step, not a second use of the actor promote/collapse seam (FR73) as the seed doc first proposed — the two mechanisms share a philosophy, not code.
+- **Occupied capacity (the session's highest-risk claim) resolved without a spike.** It is a derived read over the Player's own currently-active installed goals, tracked via a small stored bookkeeping index (built on install, torn down on resolution) rather than a scan of all actors' goals. This is not a "demand with memory" in the sense FR84 rejects — the goals themselves are already legitimate stored state (FR10); the index is an aggregate over them, structurally akin to the sparse-edge indices already used elsewhere.
+- **Contesting a rival (Samus Shepard).** FR13 as written only covered a goal competing against its holder's own drives, not against a second installer's competing goal — the seed doc's "no bespoke verb needed" claim wasn't actually specified. Resolved: placement is rank-ordered by loyalty/trust; a placed goal sticks and resolves on its own clock; contesting a standing goal requires a discrete, visible "seize control" interrupt (single-depth for now, deliberately not built to preclude a future stack). This also resolves the seed doc's parked "standing-goal visibility" concern for the contest case specifically — an interrupt is inherently a played, visible action, not silent erosion. The overlay's own visual grammar for ambient (non-contest) visibility remains open (below).
+- **Route parity (Samus Shepard).** The board's "resource block = shipped economy primary" framing is inherently production-shaped, risking favoring territorial/production routes unless covert routes get an equally native fit. Resolved: one board, not two, and no new per-route vocabulary — every actor already resolves to a hex via jurisdiction or enterprise, so social/influence state (the covert routes' natural content) renders as a toggle-able overlay on the same grid rather than needing its own resource vocabulary.
+- **Positioning (Mary).** Civ 6 and Catan added to Market Context as comparables with an explicit contrast (the board is a zoom level of the embodied world, not a menu-driven screen) — not a fifth Detected Innovation Area; the board is existing claims #2 (diegetic legibility) and #4 (unified promote/collapse LOD) proven at a new scale. Executive Summary target-player framing holds unchanged, conditional on the tycoon guardrail continuing to apply to every board action.
+- **Scope reality (Indie).** The seed doc's full scope split: goal-install-at-hex, occupied capacity, instant/permanent + interrupt, and the jurisdictional ownership layer are Growth-tier and load-bearing; the full terrain-generation pipeline, template library, two-speed territorial-legibility rollup, and scattered asset layer are Vision-tier generative richness, not core-loop-proving. The board's Growth entry point is a hand-authored "board proving scene" (no procedural generation), dependency-ordered after installed goals, trust, promotion, and cascade — the board's own placement-ranking and jurisdictional-ownership rules reach back into all four.
+- **No spike needed (Step 2 verdict).** Occupied capacity was resolved by design decision rather than remaining ambiguous, and will be exercised for real by the proving scene itself. Terrain generation's on-demand split is deferred to Vision and isn't being built yet — spike it, if ever, when it's actually next up.
+
 ### Still open
 
 **Source-document hygiene · [author]**
@@ -688,6 +743,18 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 **Cross-cutting · [author]**
 - **Off-screen coherence** remains asserted and unproven; must be validated in the smallest form before any reveal/progression UI is built on it.
 - Logline, definition of power, and the illegible-authorship spine — confirm they still hold now that power is computable as cascade-subtree size.
+
+**Hex board — carried from the seed doc, not resolved this session**
+- **Zoom-transition feel · [author]** — what moving between the board and the ground level is actually like, mechanically and experientially. Not discussed this session; Cloud's pass confirmed the two share one coordinate space, but not what the transition itself feels like to play.
+- **Micro-hex-per-strategic-hex scale · [author]** — order-of-magnitude question, how many micro-hexes typically compose one strategic-zoom cell. Not pinned down.
+- **Presence-scarcity at high influence · [author]** — does travel to specific places remain necessary once influence is high, or does the requirement change shape? Not addressed this session.
+- **Differential pricing for standing vs. one-shot goals · [author, tuning]** — the likely single lever against a lategame "autopilot" trap; explicitly deferred to a calibration pass.
+- **Overlay visual grammar · [party — Samus]** — which tells map to which visual signal on the social/territorial overlay is undesigned, deliberately deferred until goal-install/interrupt is playable. The *contest* case is now visible by construction (seize control is a played action); ambient/non-contest visibility is still open.
+- **Dormant-but-occupied capacity · [author]** — if a held actor's own drives are currently outbidding a standing board goal, does the goal's capacity stay locked the whole time it's not being honored?
+- **Revocation cost · [author]** — whether pulling a standing board goal off someone costs something, symmetric with installing one.
+- **Exact stack timing/duration mechanics · [author, tuning]** — deferred to tuning.
+- **Asset-in-foreign-jurisdiction mechanism · [author]** — currently flavor-only (no mechanical exposure); parked as the likely eventual home for FR58/FR59 texture if it ever earns a mechanism.
+- **Person-to-person influence with no spatial anchor · [author]** — every actor discussed so far resolves to a hex via jurisdiction or enterprise; whether a genuinely non-spatial influence action ever arises, and how it would render on a hex-built board, is unflagged until it happens.
 
 ### Deferred: Polish (Step 11)
 - Full document polish (dedup, flow, terminology, header hygiene) is still deferred and now has concrete targets: the **tycoon guardrail** is stated four times and **path parity** four times; **Product Scope** and **Project Scoping & Phased Development** both define MVP/Growth/Vision and should be merged. Run polish after the remaining open questions land.
