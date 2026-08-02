@@ -45,15 +45,18 @@ const LAKE_SPILL_MARGIN := 0.02
 const LAKE_MAX_FILL_HEXES := 6
 
 # --- Biome ---
-# Hex-grid steps from the nearest river/lake/sea at which moisture bottoms
-# out at 0; closer than that, moisture falls off linearly to 1 at distance 0.
-const MOISTURE_FALLOFF_RADIUS := 6
-const MOUNTAIN_ELEVATION := 0.78
-const HILLS_ELEVATION := 0.6
+# Regional humidity comes from its own noise channel, decoupled from
+# distance to water (see _measure_moisture for why). MOISTURE_SEED_OFFSET
+# keeps it decorrelated from the elevation noise using the same seed.
+const MOISTURE_SEED_OFFSET := 97711
+const MOISTURE_NOISE_FREQUENCY := 0.05
+const MOISTURE_NOISE_OCTAVES := 2
+const MOUNTAIN_ELEVATION := 0.88
+const HILLS_ELEVATION := 0.72
 # Marsh only forms this close above sea level (low ground) and wet enough.
 const MARSH_ELEVATION_MARGIN := 0.06
 const MARSH_MOISTURE_MIN := 0.75
-const FOREST_MOISTURE_MIN := 0.4
+const FOREST_MOISTURE_MIN := 0.5
 
 # --- Playability dial ---
 const PLAYABILITY_DIAL_DEFAULT := 0.5
@@ -79,11 +82,12 @@ static func generate_kingdom_with_overrides(seed: int, overrides: Dictionary) ->
 	_flood_oceans(map, all_hexes)
 
 	var land_hexes := _land_hexes_of(map, all_hexes)
+	_stretch_land_elevation(map, land_hexes)
 	_trace_flow_directions(map, land_hexes)
 	_pool_lakes(map, land_hexes)
 	_carve_rivers(map, land_hexes)
 
-	var moisture := _measure_moisture(map, all_hexes)
+	var moisture := _measure_moisture(all_hexes, seed)
 	_classify_biomes(map, land_hexes, moisture)
 	_tag_resources(map, land_hexes)
 	_balance_playability(map, land_hexes, dial)
@@ -147,6 +151,37 @@ static func _land_hexes_of(map: HexMap, hexes: Array[Vector2i]) -> Array[Vector2
 		if map.water_at(hex) != HexMap.Water.SEA:
 			result.append(hex)
 	return result
+
+
+# Land elevation from the noise+falloff rarely spans the full 0..1 range in
+# practice (observed land max often sits well under 1.0), so a fixed
+# threshold like MOUNTAIN_ELEVATION sees almost no land cross it. This
+# stretches THIS map's actual land elevation span to fill [SEA_LEVEL, 1.0].
+# It's order-preserving (a strictly increasing remap), so it changes no
+# neighbor-is-lower comparison hydrology already relies on — only the
+# thresholds in stage E, which is the point. Deterministic: min/max come
+# from this map's own land hexes, nothing external.
+static func _stretch_land_elevation(map: HexMap, land_hexes: Array[Vector2i]) -> void:
+	if land_hexes.is_empty():
+		return
+
+	var land_min: float = 1.0
+	var land_max: float = 0.0
+	for hex: Vector2i in land_hexes:
+		var elevation: float = map.elevation_at(hex)
+		if elevation < land_min:
+			land_min = elevation
+		if elevation > land_max:
+			land_max = elevation
+
+	var span: float = land_max - land_min
+	if span <= 0.0001:
+		return  # degenerate (near-flat land) — nothing meaningful to stretch
+
+	for hex: Vector2i in land_hexes:
+		var elevation: float = map.elevation_at(hex)
+		var stretched: float = SEA_LEVEL + (elevation - land_min) / span * (1.0 - SEA_LEVEL)
+		map.set_elevation(hex, clampf(stretched, SEA_LEVEL, 1.0))
 
 
 # --- Stage D: hydrology -------------------------------------------------------
@@ -237,34 +272,30 @@ static func _carve_rivers(map: HexMap, land_hexes: Array[Vector2i]) -> void:
 
 # --- Stage E: biome -----------------------------------------------------------
 
-# Multi-source BFS from every sea/river/lake hex over the claimed grid;
-# moisture falls off linearly with hex-grid distance to the nearest one.
-static func _measure_moisture(map: HexMap, all_hexes: Array[Vector2i]) -> Dictionary:
-	var distance: Dictionary = {}
-	var queue: Array[Vector2i] = []
-	for hex: Vector2i in all_hexes:
-		var water: HexMap.Water = map.water_at(hex)
-		if water == HexMap.Water.SEA or water == HexMap.Water.RIVER or water == HexMap.Water.LAKE:
-			distance[hex] = 0
-			queue.append(hex)
-
-	var head := 0
-	while head < queue.size():
-		var current: Vector2i = queue[head]
-		head += 1
-		var current_distance: int = distance[current]
-		for neighbor: Vector2i in Hex.neighbors_of(current):
-			if not map.has_hex(neighbor) or distance.has(neighbor):
-				continue
-			distance[neighbor] = current_distance + 1
-			queue.append(neighbor)
+# Regional humidity from its own seeded noise channel — deliberately NOT a
+# function of distance to water. An earlier version measured moisture as
+# falloff-from-nearest-water; since the kingdom is deliberately ringed by
+# sea, that read nearly all land as maximally wet and FOREST swallowed the
+# interior, and it also meant hexes right at a river or lake's edge — the
+# hexes can_grow_grain needs to be PLAINS — read as the WETTEST hexes on the
+# map, actively working against grain instead of encouraging it. A
+# regional-humidity field uncorrelated with water proximity lets river/lake
+# shores land in PLAINS territory as often as chance puts them there,
+# instead of never.
+static func _measure_moisture(all_hexes: Array[Vector2i], seed: int) -> Dictionary:
+	var noise := FastNoiseLite.new()
+	noise.seed = seed + MOISTURE_SEED_OFFSET
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.frequency = MOISTURE_NOISE_FREQUENCY
+	noise.fractal_octaves = MOISTURE_NOISE_OCTAVES
+	noise.fractal_lacunarity = NOISE_LACUNARITY
+	noise.fractal_gain = NOISE_GAIN
 
 	var moisture: Dictionary = {}
 	for hex: Vector2i in all_hexes:
-		var far_default: int = MOISTURE_FALLOFF_RADIUS * 4
-		var hex_distance: int = int(distance.get(hex, far_default))
-		var wetness: float = 1.0 - float(hex_distance) / float(MOISTURE_FALLOFF_RADIUS)
-		moisture[hex] = clampf(wetness, 0.0, 1.0)
+		var world := Hex.world_position_of(hex, 1.0)
+		var raw: float = (noise.get_noise_2d(world.x, world.y) + 1.0) / 2.0
+		moisture[hex] = clampf(raw, 0.0, 1.0)
 	return moisture
 
 

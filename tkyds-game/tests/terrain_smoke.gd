@@ -16,6 +16,12 @@ const SMALL_RADIUS := 6
 # radius the generator actually used internally."
 const MIX_CHECK_RADIUS := 12
 
+# Full kingdom scale, matching KINGDOM_RADIUS, for the biome-distribution
+# checks — the shape/balance of the biome mix is a full-map property and
+# doesn't show up reliably at TEST_RADIUS's much smaller sample size.
+const DISTRIBUTION_RADIUS := 24
+const DISTRIBUTION_SEEDS: Array[int] = [12345, 7, 999, 1, 2, 3, 4, 5]
+
 var _failures: Array[String] = []
 
 
@@ -28,6 +34,7 @@ func _initialize() -> void:
 
 	_check_dial_behavior()
 	_check_nudge_pass_fires()
+	_check_biome_distribution()
 
 	print("")
 	if _failures.is_empty():
@@ -128,6 +135,60 @@ func _any_candidate_has_mix(map: HexMap, radius: int) -> bool:
 		if _has_coherent_mix(map, site, radius):
 			return true
 	return false
+
+
+# Pins the biome mix at kingdom scale (dial=0.0, no rescue nudge) so nature
+# alone has to produce a playable-looking map: PLAINS and FOREST both
+# present in real (not token) quantity, MOUNTAINS a visible-but-minority
+# presence, and grain forming without the dial's help on most seeds. Bounds
+# are deliberately generous — this pins the shape of the distribution
+# (nothing degenerate), not a specific tuning, so it shouldn't flake as the
+# noise constants get nudged again later.
+func _check_biome_distribution() -> void:
+	var grain_ok_count := 0
+	for seed_value in DISTRIBUTION_SEEDS:
+		var map := TerrainGenerator.generate_kingdom_with_overrides(seed_value, {"radius": DISTRIBUTION_RADIUS, "dial": 0.0})
+
+		var land := 0
+		var plains := 0
+		var forest := 0
+		var mountains := 0
+		var grain := 0
+		for hex in map.all_hexes():
+			var biome: HexMap.Biome = map.biome_at(hex)
+			if biome == HexMap.Biome.OCEAN:
+				continue
+			land += 1
+			if biome == HexMap.Biome.PLAINS:
+				plains += 1
+			elif biome == HexMap.Biome.FOREST:
+				forest += 1
+			elif biome == HexMap.Biome.MOUNTAINS:
+				mountains += 1
+			if map.tags_at(hex).has("can_grow_grain"):
+				grain += 1
+
+		_expect(land > 0, "seed %d should claim some land at radius %d" % [seed_value, DISTRIBUTION_RADIUS])
+		if land == 0:
+			continue
+
+		var plains_fraction: float = float(plains) / float(land)
+		var forest_fraction: float = float(forest) / float(land)
+		var mountains_fraction: float = float(mountains) / float(land)
+
+		_expect(plains_fraction > 0.10, "seed %d: PLAINS should exceed 10%% of land (not degenerate), got %.1f%%" % [seed_value, plains_fraction * 100.0])
+		_expect(plains_fraction < 0.60, "seed %d: PLAINS should stay under 60%% of land (not a monoculture), got %.1f%%" % [seed_value, plains_fraction * 100.0])
+		_expect(forest_fraction > 0.10, "seed %d: FOREST should exceed 10%% of land (not degenerate), got %.1f%%" % [seed_value, forest_fraction * 100.0])
+		_expect(forest_fraction < 0.60, "seed %d: FOREST should stay under 60%% of land (not a monoculture), got %.1f%%" % [seed_value, forest_fraction * 100.0])
+		_expect(mountains_fraction >= 0.01, "seed %d: MOUNTAINS should be at least 1%% of land (a visible presence), got %.1f%%" % [seed_value, mountains_fraction * 100.0])
+		_expect(mountains_fraction < 0.20, "seed %d: MOUNTAINS should stay under 20%% of land, got %.1f%%" % [seed_value, mountains_fraction * 100.0])
+
+		if grain >= 3:
+			grain_ok_count += 1
+
+	var seed_count: int = DISTRIBUTION_SEEDS.size()
+	var majority: int = seed_count / 2 + 1
+	_expect(grain_ok_count >= majority, "natural (dial 0.0) grain hexes should number >= 3 on a majority of seeds (>= %d of %d), got %d" % [majority, seed_count, grain_ok_count])
 
 
 # Flow sanity + river termination + ocean ring + biome/tag gating, run
