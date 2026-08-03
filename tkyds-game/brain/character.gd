@@ -52,3 +52,40 @@ func drop_action(action: Action) -> void:
 # whenever the world changes in a way that might change their mind.
 func decide_action() -> Action:
 	return brain.reconsider(actions)
+
+
+# --- Doing ------------------------------------------------------------------
+
+# One slice of living: get on with whatever's being pursued, and when it's
+# done, settle it and decide afresh.
+#
+# Deliberately does NOT re-decide every slice. A decision is re-made when
+# something happens — a fright, a passer-by, the work finishing — not sixty
+# times a second, which would be both wasteful and twitchy. Everything else
+# pokes decide_action() when it has a reason to.
+func act(delta: float) -> void:
+	if brain.active_action == null:
+		decide_action()
+		if brain.active_action == null:
+			return   # nothing open to them at all
+
+	var doing := brain.active_action
+	if doing.body == null:
+		return   # nothing to carry it out with yet
+
+	if not doing.body.is_satisfied(self):
+		doing.body.advance(self, delta)
+
+	if doing.body.is_satisfied(self):
+		brain.finish_active_action()
+		decide_action()
+
+
+# What they'd be seen doing right now.
+func doing_label() -> String:
+	var doing := brain.active_action
+	if doing == null:
+		return "deciding…"
+	if doing.body == null:
+		return doing.label
+	return doing.body.describe(self)

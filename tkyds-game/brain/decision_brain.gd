@@ -133,10 +133,20 @@ func assigned_count() -> int:
 	return queue.size()
 
 
-# Done with it, or called off — either way it stops being owed. Named for what
-# the queue knows, which is only that it's no longer waiting; whether it was
-# actually carried out is the runner's business, not the brain's.
+# Called off from outside — a lord changing his mind, an order withdrawn. It
+# stops being owed whether or not it was ever carried out; the queue only ever
+# knew that it was waiting.
 func clear_assigned_action(action: Action) -> void:
 	queue.erase(action)
 	if active_action == action:
 		active_action = null
+
+
+# The runner reporting the active action is done. Discharges it if it was owed
+# — finishing a lord's errand should settle the debt — and stops pursuing it
+# either way, leaving the subject free to decide afresh.
+func finish_active_action() -> void:
+	if active_action == null:
+		return
+	queue.erase(active_action)
+	active_action = null
