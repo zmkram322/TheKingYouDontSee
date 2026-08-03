@@ -1,12 +1,15 @@
 # Behavior Sandbox — what it is
 
 `behavior/` is generic decision-making machinery (a utility brain that scores
-options and picks the best eligible one, plus the Activity machinery that
-runs whatever gets chosen — an actor is always doing exactly one Activity). `sandbox/` is one example world built on top of
-it — four actions, four places, five villagers. The scene here
+options and picks the best eligible one, an Orchestrator that owns each
+actor's pause/resume stack, plus the State machinery that runs whatever gets
+chosen — an actor is always running exactly one State, which may itself be a
+SequenceState composed of smaller steps). `sandbox/` is one example world
+built on top of it — four actions, four places, five villagers. The scene here
 (`sandbox.tscn` + `sandbox.gd`) is just a skin over a headless `SandboxWorld`;
-it draws places and bodies and reads `world.stats` / `v.last_decision` back
-out, it never invents behavior of its own.
+it draws places and bodies and reads `world.stats` /
+`v.orchestrator.last_decision` back out, it never invents behavior of its
+own.
 
 ## Run it
 
@@ -54,17 +57,20 @@ once in `reset()` and read it with `get_derived`; the cache invalidates
 itself off whatever primaries the derivation actually touched, so you never
 have to think about staleness.
 
-## Add a new kind of activity
+## Add a new kind of state
 
-Subclass `Activity` (see `sandbox/walk_to.gd` or `sandbox/perform.gd` for the
+Subclass `State` (see `sandbox/walk_to.gd` or `sandbox/perform.gd` for the
 shape): override `begin()`, `advance(delta)`, `finished`, and `describe()`
-(the label the skin prints over the actor's head). Enqueue it from
-`SandboxWorld.choose()` alongside `WalkTo`/`Perform`.
+(the label the skin prints over the actor's head). Add it to the `steps`
+array `SandboxWorld.build_goal()` builds, alongside `WalkTo`/`Perform`. If an
+option ever needs more than a couple of steps, or a step that itself needs
+to sequence sub-steps, nest a `SequenceState` inside another — that's the one
+composite in the hierarchy and it costs nothing to nest.
 
 ## Where the seams are
 
-- Rescoring only happens between plans — a decision sticks until its
-  activities finish. If flicker ever shows up, the fix is hysteresis added
+- Rescoring only happens between goals — a decision sticks until its root
+  State finishes. If flicker ever shows up, the fix is hysteresis added
   as data (an appeal-curve tweak in `sandbox_tuning.gd`), never a priority
   gate bolted onto the brain.
 - Walking writes the `PLACE` stat on arrival, so position stays a fact any

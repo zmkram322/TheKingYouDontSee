@@ -344,8 +344,8 @@ func _refresh_inspector() -> void:
 	var live := UtilityBrain.decide(world.stats, v.actor, world.options)
 	_live_pass_label.text = _format_decision(live)
 
-	if v.last_decision != null:
-		_last_committed_label.text = _format_decision(v.last_decision)
+	if v.orchestrator.last_decision != null:
+		_last_committed_label.text = _format_decision(v.orchestrator.last_decision)
 	else:
 		_last_committed_label.text = "(no decision committed yet)"
 
@@ -354,11 +354,9 @@ func _plan_summary(v: Villager) -> String:
 	var goal := v.current_goal()
 	if goal == null or not goal.started:
 		return "choosing…"
-	var parts: Array[String] = [goal.doing.describe()]
-	for step in goal.plan:
-		parts.append(step.describe())
-	for i in range(1, v.goal_queue.size()):
-		var queued: Goal = v.goal_queue[i]
+	var parts: Array[String] = goal.root.describe_all()
+	for i in range(1, v.orchestrator.stack.size()):
+		var queued: Goal = v.orchestrator.stack[i]
 		parts.append("[queued] " + queued.option.label)
 	return ", then ".join(parts)
 

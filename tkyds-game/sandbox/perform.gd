@@ -1,5 +1,5 @@
 class_name Perform
-extends Activity
+extends State
 
 # Doing the chosen action where it happens: count down the duration, then
 # apply the effect exactly once and log it. The Activity doesn't know or

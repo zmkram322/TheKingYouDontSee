@@ -1,5 +1,5 @@
 class_name WalkTo
-extends Activity
+extends State
 
 # Walking is an Activity like any other — nothing about the sandbox loop
 # treats movement as special. Arriving writes the PLACE stat, so

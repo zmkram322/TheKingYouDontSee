@@ -27,12 +27,12 @@ func _initialize() -> void:
 		world.advance(STEP)
 		elapsed += STEP
 		for v in world.villagers:
-			if first_choice[v.actor.person_name] == &"" and v.last_decision != null and v.last_decision.chosen != null:
-				first_choice[v.actor.person_name] = v.last_decision.chosen.id
+			if first_choice[v.actor.person_name] == &"" and v.orchestrator.last_decision != null and v.orchestrator.last_decision.chosen != null:
+				first_choice[v.actor.person_name] = v.orchestrator.last_decision.chosen.id
 
 	# 1. Everyone has weighed in at least once.
 	for v in world.villagers:
-		_expect(v.last_decision != null, "%s should hold a non-null last_decision" % v.actor.person_name)
+		_expect(v.orchestrator.last_decision != null, "%s should hold a non-null last_decision" % v.actor.person_name)
 
 	# 2. The four staggered starting states each produce the expected first
 	# choice — including Cole, whose eat_at_inn is pruned by the possession
@@ -64,7 +64,7 @@ func _initialize() -> void:
 	# 4. Nobody is left with no Activity to run.
 	for v in world.villagers:
 		var goal := v.current_goal()
-		_expect(goal != null and goal.doing != null, "%s should not be stuck with no current goal" % v.actor.person_name)
+		_expect(goal != null and goal.root != null, "%s should not be stuck with no current goal" % v.actor.person_name)
 
 	print("")
 	print("--- last log lines ---")

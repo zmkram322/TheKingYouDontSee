@@ -16,6 +16,7 @@ const WALK_SPEED := 90.0                # pixels/second
 # --- Eating at the inn ---
 const MEAL_PRICE := 5
 const MEAL_RELIEVES_HUNGER := 55.0
+const EAT_DURATION := 2.0
 
 # --- Working the field ---
 const WAGE := 8

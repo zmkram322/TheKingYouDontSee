@@ -15,7 +15,7 @@ static func build() -> Array[ActionOption]:
 	# safety interrupt is expressed entirely as data predicates, not as a
 	# priority check anywhere in the brain.
 	options.append(
-		ActionOption.make(&"eat_at_inn", "eating at the inn", &"inn", 2.0)
+		ActionOption.make(&"eat_at_inn", "eating at the inn", &"inn", SandboxTune.EAT_DURATION)
 			.only_if(func(store: StatStore, actor: Actor) -> bool:
 				var has_coin: bool = int(store.get_primary(actor, Stat.COIN)) >= SandboxTune.MEAL_PRICE
 				var calm: bool = not bool(store.get_derived(actor, Stat.THREATENED))
@@ -91,7 +91,7 @@ static func build() -> Array[ActionOption]:
 	)
 
 	# The passerby greeting. place == &"" is the "wherever I already am"
-	# sentinel — see _build_goal — so choosing this never sends anyone
+	# sentinel — see build_goal — so choosing this never sends anyone
 	# walking anywhere; it just briefly interrupts whatever they were doing
 	# in place, same front-insert/resume path the fear interrupt uses. Gated
 	# by NEARBY (written by SandboxWorld's proximity scan, not readable here
