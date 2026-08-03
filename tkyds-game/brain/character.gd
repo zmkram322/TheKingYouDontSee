@@ -47,7 +47,8 @@ func drop_action(action: Action) -> void:
 
 # --- Deciding ---------------------------------------------------------------
 
-# What this character would do right now: the best of what they know that's
-# also open to them.
+# Re-decide and commit: the best of everything open to them right now, whether
+# that's something they know how to do or something they owe. Poke this
+# whenever the world changes in a way that might change their mind.
 func decide_action() -> Action:
-	return brain.choose_action(actions)
+	return brain.reconsider(actions)
