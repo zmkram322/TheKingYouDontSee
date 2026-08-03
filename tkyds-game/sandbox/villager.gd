@@ -1,14 +1,13 @@
 class_name Villager
 extends RefCounted
 
-# Pairs a sim Actor with what the sandbox adds: a body in space and a current
-# doing. Identity and stats stay entirely in Actor/StatStore — this class
-# only carries what the sandbox needed on top (position, activity, plan).
+# Pairs a sim Actor with what the sandbox adds: a body in space and a queue
+# of goals. Identity and stats stay entirely in Actor/StatStore — this class
+# only carries what the sandbox needed on top (position, the goal queue).
 
 var actor: Actor
 var position: Vector2
-var doing: Activity = null           # what they're doing right now (null = about to choose)
-var plan: Array[Activity] = []       # what comes after; kept as a simple queue, not a combinator
+var goal_queue: Array[Goal] = []     # front = running now; rest = paused or waiting their turn
 var last_decision: UtilityBrain.Decision = null   # kept so the inspector can show why
 
 
@@ -17,19 +16,22 @@ func _init(new_actor: Actor, start_position: Vector2) -> void:
 	position = start_position
 
 
+func current_goal() -> Goal:
+	return goal_queue[0] if not goal_queue.is_empty() else null
+
+
 func doing_label() -> String:
-	if doing == null:
+	var goal := current_goal()
+	if goal == null or not goal.started:
 		return "choosing…"
-	return doing.describe()
+	return goal.doing.describe()
 
 
-# The pre-emption entry point: forces a fresh decision now, abandoning
-# whatever's in progress, rather than waiting for the current Activity to
-# finish. world.choose() already rebuilds doing/plan unconditionally, so
-# there's no special cancel path needed — reconsidering mid-walk just
-# re-routes from the current position, and reconsidering mid-Perform simply
-# never applies that Perform's effect (nothing partial to unwind). Takes
-# world rather than storing a back-reference, so Villager stays constructible
-# without one.
+# The pre-emption entry point: forces a fresh decision now. world.choose()
+# handles what happens to whatever's currently running — if the fresh winner
+# differs, the current goal is paused (pushed back one slot, not discarded)
+# rather than abandoned, so it resumes exactly where it left off once the
+# new goal clears. Takes world rather than storing a back-reference, so
+# Villager stays constructible without one.
 func reconsider(world: SandboxWorld) -> void:
 	world.choose(self)

@@ -63,7 +63,8 @@ func _initialize() -> void:
 
 	# 4. Nobody is left with no Activity to run.
 	for v in world.villagers:
-		_expect(v.doing != null, "%s should not be stuck with doing == null" % v.actor.person_name)
+		var goal := v.current_goal()
+		_expect(goal != null and goal.doing != null, "%s should not be stuck with no current goal" % v.actor.person_name)
 
 	print("")
 	print("--- last log lines ---")

@@ -351,11 +351,15 @@ func _refresh_inspector() -> void:
 
 
 func _plan_summary(v: Villager) -> String:
-	if v.doing == null:
+	var goal := v.current_goal()
+	if goal == null or not goal.started:
 		return "choosing…"
-	var parts: Array[String] = [v.doing.describe()]
-	for step in v.plan:
+	var parts: Array[String] = [goal.doing.describe()]
+	for step in goal.plan:
 		parts.append(step.describe())
+	for i in range(1, v.goal_queue.size()):
+		var queued: Goal = v.goal_queue[i]
+		parts.append("[queued] " + queued.option.label)
 	return ", then ".join(parts)
 
 

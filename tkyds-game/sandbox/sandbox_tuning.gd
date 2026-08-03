@@ -45,3 +45,12 @@ const FEAR_LINGER_EXPONENT := 0.5     # < 1: FEAR_MAX * (fear/FEAR_MAX)^X reads 
                                        # without needing a second threshold or any stored history
 const W_SHELTER := 120.0              # above every other option's ceiling, so it wins outright once threatened
 const SHELTER_DURATION := 4.0         # short cycle so a cleared threat is noticed at the next seam
+
+# --- Passerby greeting ---
+# Smaller than the ~36px gap between Berta's and Fen's starting spots, so the
+# smoke test's first-choice assertions can't be disturbed by a false trigger
+# at t=0 — verified by running the smoke test, not just by this comment.
+const GREET_PROXIMITY_RADIUS := 24.0
+const GREET_COOLDOWN_SECONDS := 20.0  # how long before the same actor will greet again
+const GREET_DURATION := 1.0           # brief — a nod in passing, not a conversation
+const W_GREET := 12.0                 # modest: beats idling, never competes with a real need

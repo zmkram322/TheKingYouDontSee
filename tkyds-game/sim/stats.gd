@@ -45,3 +45,9 @@ const THREATENED := &"threatened" # derived: true while a slow-release reshaping
                                    # so a single threshold can't flicker here; no memory needed.
                                    # Distinct from the real sim's confrontation-time "Threat"
                                    # evaluation noted above.
+const NEARBY := &"nearby"                 # true while another villager is within GREET_PROXIMITY_RADIUS
+                                           # (a plain boolean — deliberately doesn't say WHO; see
+                                           # sandbox/sandbox_world.gd's proximity scan)
+const GREET_COOLDOWN := &"greet_cooldown" # seconds left before this actor will greet again; counts
+                                           # down in ambient drift like FEAR, so eligibility never
+                                           # needs "now" — only ever compares against 0

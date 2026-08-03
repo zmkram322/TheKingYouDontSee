@@ -90,4 +90,25 @@ static func build() -> Array[ActionOption]:
 				return SandboxTune.W_SHELTER * pow(fear / SandboxTune.FEAR_MAX, 2.0))
 	)
 
+	# The passerby greeting. place == &"" is the "wherever I already am"
+	# sentinel — see _build_goal — so choosing this never sends anyone
+	# walking anywhere; it just briefly interrupts whatever they were doing
+	# in place, same front-insert/resume path the fear interrupt uses. Gated
+	# by NEARBY (written by SandboxWorld's proximity scan, not readable here
+	# some other way — position lives outside the store on purpose) and by
+	# GREET_COOLDOWN so two villagers lingering close by don't re-fire every
+	# tick. Deliberately can't name who's nearby — see the eligibility
+	# predicate's comment for why.
+	options.append(
+		ActionOption.make(&"greet_passerby", "nodding to someone passing by", &"", SandboxTune.GREET_DURATION)
+			.only_if(func(store: StatStore, actor: Actor) -> bool:
+				var nearby: bool = store.get_primary(actor, Stat.NEARBY)
+				var cooldown: float = store.get_primary(actor, Stat.GREET_COOLDOWN)
+				return nearby and cooldown <= 0.0)
+			.scored_by(func(_store: StatStore, _actor: Actor) -> float:
+				return SandboxTune.W_GREET)
+			.then(func(store: StatStore, actor: Actor) -> void:
+				store.write_primary(actor, Stat.GREET_COOLDOWN, SandboxTune.GREET_COOLDOWN_SECONDS))
+	)
+
 	return options
