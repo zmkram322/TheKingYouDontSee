@@ -43,7 +43,16 @@ func _init(new_subject) -> void:
 
 # Is this action open to the subject right now? An action rules itself out
 # through its own gate, never through a special case in here.
+#
+# The one exception is the protected set — the handful of survival and direct
+# interpersonal actions everyone may always attempt. Their gates are not
+# consulted at all, which is what makes the guarantee structural: it cannot be
+# undone by authoring, only outbid by weight. Note this protects the category,
+# never the instance: a starving man must always be able to attempt to eat, but
+# he is not owed a scoring pass over every inn in the region.
 func is_available(action: Action) -> bool:
+	if action.protected:
+		return true
 	return action.eligible.call(subject)
 
 
@@ -133,6 +142,23 @@ func assigned_count() -> int:
 	return queue.size()
 
 
+# Is this work already owed? Asked by whoever is about to hand work over, so
+# they don't hand it over twice. This is the reason an Obligation says what
+# it's about: without it the only way to answer would be to remember having
+# asked, and a remembered intention is the one thing the design refuses to
+# keep. Looking at what the subject currently owes is reading the world, not
+# remembering.
+func owes_anything_about(about: StringName) -> bool:
+	return find_obligation_about(about) != null
+
+
+func find_obligation_about(about: StringName) -> Obligation:
+	for action in queue:
+		if action is Obligation and action.about == about:
+			return action
+	return null
+
+
 # Called off from outside — a lord changing his mind, an order withdrawn. It
 # stops being owed whether or not it was ever carried out; the queue only ever
 # knew that it was waiting.
@@ -149,4 +175,12 @@ func finish_active_action() -> void:
 	if active_action == null:
 		return
 	queue.erase(active_action)
+	active_action = null
+
+
+# The runner reporting it can't be got on with — every inn shut, no grain to be
+# had. Deliberately NOT the same as finishing: the work was never done, so an
+# obligation stays owed and only stops being pursued. Collapsing the two would
+# let a debt nobody could serve quietly pay itself off.
+func abandon_active_action() -> void:
 	active_action = null

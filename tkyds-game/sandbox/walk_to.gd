@@ -1,10 +1,15 @@
-class_name WalkTo
+class_name SandboxWalkTo
 extends State
 
 # Walking is an Activity like any other — nothing about the sandbox loop
 # treats movement as special. Arriving writes the PLACE stat, so
 # position-as-fact (the location + tags model the rest of the sim reads)
 # stays true even while the body's motion through space is pure skin.
+#
+# Named for the sandbox because `brain/walk_to.gd` claims the plain name.
+# Two files declaring the same class_name is not an error Godot reports — one
+# silently wins, and which one depends on the order the project was scanned in,
+# so the losing side fails at parse time with a constructor from the other.
 
 const ARRIVE_EPSILON := 4.0   # a few px — "close enough" without float-equality games
 

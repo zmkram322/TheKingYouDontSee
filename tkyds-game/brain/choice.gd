@@ -28,31 +28,44 @@ func _init(new_options: Callable) -> void:
 	options = new_options
 
 
-# Done when there's nothing to pick, or when what it would pick is itself
-# done. Both halves are needed: the first covers an empty or fully-gated
-# Choice, the same way an empty Sequence is satisfied; the second is what
-# makes it a decision point rather than a holding pen. Without it a character
-# who had finished eating would still be offered the inn — it's open, she can
-# afford it — and would stand there being perpetually about to eat.
+# Done when what it would pick is itself done. Nothing to pick is NOT done —
+# see is_possible. That distinction is the whole reason this class has three
+# answers instead of two: a character with every inn shut has not finished
+# eating, and must not be recorded as having done so.
+#
+# Asking what it would pick is what makes this a decision point rather than a
+# holding pen. Without it a character who had finished eating would still be
+# offered the inn — it's open, she can afford it — and would stand there being
+# perpetually about to eat.
 func is_satisfied(who) -> bool:
 	var winner := _pick(who)
 	if winner == null:
-		return true
-	return winner.body == null or winner.body.is_satisfied(who)
+		return false
+	return winner.body.is_satisfied(who)
 
 
-func advance(who, delta: float) -> void:
+# Nothing to pick means thwarted: every option was either never offered or
+# gated shut. The work is real and still wanted — there is simply no way to get
+# on with it from here. Whoever is driving must abandon it without recording it
+# as done, and try again when the world has changed.
+func is_possible(who) -> bool:
 	var winner := _pick(who)
-	if winner != null and winner.body != null:
-		winner.body.advance(who, delta)
+	if winner == null:
+		return false
+	return winner.body.is_possible(who)
+
+
+func advance(who, delta: float) -> bool:
+	var winner := _pick(who)
+	if winner == null:
+		return false
+	return winner.body.advance(who, delta)
 
 
 func describe(who) -> String:
 	var winner := _pick(who)
 	if winner == null:
-		return ""
-	if winner.body == null:
-		return winner.label
+		return "(nothing to choose from)"
 	var inner := winner.body.describe(who)
 	return winner.label if inner.is_empty() else "%s — %s" % [winner.label, inner]
 

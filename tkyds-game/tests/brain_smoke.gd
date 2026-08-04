@@ -1,8 +1,8 @@
 extends SceneTree
 
-# Headless proof scene for brain/action.gd + brain/decision_brain.gd +
-# brain/character.gd, with no dependency on sim/ — these characters carry
-# plain Dictionary stats, not a StatStore.
+# Headless proof scene for brain/action.gd + brain/obligation.gd +
+# brain/decision_brain.gd + brain/character.gd, with no dependency on sim/ —
+# these characters carry plain Dictionary stats, not a StatStore.
 #
 #   1-3) Berta & Cole: scoring, the availability gate pruning a would-be
 #        winner, the two halves staying separate, and availability being
@@ -14,16 +14,33 @@ extends SceneTree
 #        queued action stays owed while it's being worked on.
 #   6)   The peasant: exhaustion outbids a lord's order, and the order is
 #        still owed when he wakes.
+#   7)   The peasant again, this time actually working: the order is carried
+#        out to the end and leaves the queue by being done. Taking work on and
+#        putting it down are separate proofs, and this is the second one.
+#   8)   A protected action cannot be gated away, however hard its own gate
+#        tries.
+#   9)   Work already owed is recognised as owed, so nobody hands it over
+#        twice.
 #
 # Usage: godot --headless --path tkyds-game --script res://tests/brain_smoke.gd
 
+const SLICE := 0.05
+const EXPECTED_CHECKS := 32   # a crash that skips assertions must not read as a pass
+
 var _failures: Array[String] = []
+var _checks := 0
 
 
 func _initialize() -> void:
 	_scoring_and_availability()
 	_the_innkeeper()
 	_the_peasant()
+	_the_peasant_finishes()
+	_protected_cannot_be_gated_away()
+	_work_already_owed_is_recognised()
+
+	if _checks < EXPECTED_CHECKS:
+		_failures.append("only %d of %d checks ran — something bailed out early" % [_checks, EXPECTED_CHECKS])
 
 	print("")
 	if _failures.is_empty():
@@ -45,13 +62,16 @@ func _scoring_and_availability() -> void:
 	var actions: Array[Action] = [
 		Action.new("eat",
 			func(who: Character) -> bool: return who.stats.coin >= 5,
-			func(who: Character) -> float: return who.stats.hunger),
+			func(who: Character) -> float: return who.stats.hunger,
+			Busy.new("eating")),
 		Action.new("rest",
 			func(_who: Character) -> bool: return true,
-			func(who: Character) -> float: return 100.0 - who.stats.energy),
+			func(who: Character) -> float: return 100.0 - who.stats.energy,
+			Busy.new("resting")),
 		Action.new("idle",
 			func(_who: Character) -> bool: return true,
-			func(_who: Character) -> float: return 5.0),
+			func(_who: Character) -> float: return 5.0,
+			Busy.new("idling")),
 	]
 	var eat: Action = actions[0]
 
@@ -88,7 +108,8 @@ func _scoring_and_availability() -> void:
 	print("--- Cole forgets how to eat, and learns to pray; Berta is untouched ---")
 	var pray := Action.new("pray",
 		func(_who: Character) -> bool: return true,
-		func(_who: Character) -> float: return 90.0)
+		func(_who: Character) -> float: return 90.0,
+		Busy.new("praying"))
 	cole.drop_action(eat)
 	cole.add_action(pray)
 	cole.add_action(pray)   # adding twice must not stack a second copy
@@ -107,10 +128,12 @@ func _the_innkeeper() -> void:
 	# has — they're work handed to him, and they compete on their own merits.
 	var doze := Action.new("doze by the fire",
 		func(_who: Character) -> bool: return true,
-		func(who: Character) -> float: return 100.0 - who.stats.energy)
+		func(who: Character) -> float: return 100.0 - who.stats.energy,
+		Busy.new("dozing"))
 	var flee := Action.new("flee out the back",
 		func(_who: Character) -> bool: return true,
-		func(who: Character) -> float: return 3.0 * who.stats.fear)
+		func(who: Character) -> float: return 3.0 * who.stats.fear,
+		Busy.new("running"))
 	var known: Array[Action] = [doze, flee]
 	var hal := Character.new("Hal", {"energy": 90.0, "fear": 0.0}, known)
 
@@ -157,16 +180,8 @@ func _the_innkeeper() -> void:
 # --- Exhaustion outbidding a lord --------------------------------------------
 
 func _the_peasant() -> void:
-	var sleep := Action.new("sleep",
-		func(_who: Character) -> bool: return true,
-		func(who: Character) -> float: return 100.0 - who.stats.energy)
-	var known: Array[Action] = [sleep]
-	var tam := Character.new("Tam", {"energy": 60.0}, known)
-
-	# The lord's claim is expressed as a high score, not as a position in a
-	# list. That's exactly what lets a real need beat it without deleting it.
-	var plough := _order("plough the north field", 80.0)
-	tam.brain.assign_action(plough)
+	var tam := _tam()
+	var plough: Obligation = tam.brain.queue[0]
 
 	print("")
 	print("--- Tam has a lord's order and energy to spare ---")
@@ -179,7 +194,7 @@ func _the_peasant() -> void:
 	tam.stats.energy = 5.0
 	var tam_spent := tam.decide_action()
 	_print_why(tam, tam_spent)
-	_expect(tam_spent == sleep, "exhaustion should outbid the lord's order (got %s)" % _label_of(tam_spent))
+	_expect(tam_spent != null and tam_spent.label == "sleep", "exhaustion should outbid the lord's order (got %s)" % _label_of(tam_spent))
 	_expect(tam.brain.queue.has(plough), "the field is still owed while he sleeps")
 
 	print("")
@@ -190,15 +205,119 @@ func _the_peasant() -> void:
 	_expect(tam_rested == plough, "he should go back to the field on waking (got %s)" % _label_of(tam_rested))
 
 
+# --- Putting the work down again ---------------------------------------------
+
+# The scene above proves an obligation can be taken on and outbid. It does not
+# prove it can ever be finished, which is the harder half: an obligation that
+# can be owed and never discharged grows the queue without bound. So here Tam
+# actually ploughs, and the debt goes away by being paid rather than by being
+# called off.
+func _the_peasant_finishes() -> void:
+	print("")
+	print("--- Tam works the field to the end ---")
+	var tam := _tam()
+	var plough: Obligation = tam.brain.queue[0]
+
+	tam.act(SLICE)
+	_expect(tam.brain.active_action == plough, "he should be at the field (got %s)" % _label_of(tam.brain.active_action))
+	print("  doing: %s" % tam.doing_label())
+
+	var worked := 0.0
+	while worked < 20.0 and tam.brain.assigned_count() > 0:
+		tam.act(SLICE)
+		worked += SLICE
+
+	print("  after %.1fs the field is %.0f%% ploughed" % [worked, tam.stats.ploughed])
+	_expect(tam.stats.ploughed >= 100.0, "the field should actually get ploughed (got %.0f)" % tam.stats.ploughed)
+	_expect(tam.brain.assigned_count() == 0, "finishing the work should settle the debt")
+	_expect(tam.brain.active_action != plough, "he should not still be pursuing a discharged order")
+
+
+# --- The protected set --------------------------------------------------------
+
+# FR86: a handful of survival and direct interpersonal actions are open to
+# everyone, always. The guarantee has to be structural — a convention loses to
+# whoever writes the one gate that seems reasonable at the time.
+func _protected_cannot_be_gated_away() -> void:
+	print("")
+	print("--- a guard who has been authored unable to run ---")
+	var hold := Action.new("hold the post",
+		func(_who: Character) -> bool: return true,
+		func(_who: Character) -> float: return 10.0,
+		Busy.new("holding the post"))
+	# The gate says never, in as many words. Being protected outranks it.
+	var flee := Action.new("flee",
+		func(_who: Character) -> bool: return false,
+		func(who: Character) -> float: return 3.0 * who.stats.fear,
+		Busy.new("running")).always_available()
+	var known: Array[Action] = [hold, flee]
+	var guard := Character.new("Guard", {"fear": 0.0}, known)
+
+	var calm := guard.decide_action()
+	_print_why(guard, calm)
+	_expect(guard.brain.is_available(flee), "a protected action must stay available however its gate is written")
+	_expect(calm == hold, "with nothing to fear he should hold the post (got %s)" % _label_of(calm))
+
+	print("")
+	print("--- and then something worth running from ---")
+	guard.stats.fear = 40.0
+	var scared := guard.decide_action()
+	_print_why(guard, scared)
+	# Protected buys a place in the pass, not a win. It still has to outbid.
+	_expect(scared == flee, "fear should be able to outbid the post (got %s)" % _label_of(scared))
+	_expect(not hold.protected and flee.protected, "only the marked action should be protected")
+
+
+# --- Recognising work that is already owed ------------------------------------
+
+# An Action is a label and two anonymous callables, so the only way to find one
+# again is to have kept hold of it. An Obligation says what it's about, which
+# is what lets whoever hands work over ask whether it is already owed instead
+# of remembering that they asked.
+func _work_already_owed_is_recognised() -> void:
+	print("")
+	print("--- the same errand, asked for twice ---")
+	var tam := _tam()
+
+	_expect(tam.brain.owes_anything_about(&"plough the north field"), "the field should read as owed")
+	_expect(not tam.brain.owes_anything_about(&"mend the fence"), "work nobody asked for should not read as owed")
+
+	var found := tam.brain.find_obligation_about(&"plough the north field")
+	_expect(found != null and found.asked_by == "the lord", "the obligation should still know who asked (got %s)" % (found.asked_by if found != null else "nothing"))
+	_expect(found == tam.brain.queue[0], "matching on what it's about should find the very obligation that was handed over")
+
+
 # --- Helpers -----------------------------------------------------------------
 
-# Work handed over from outside. It's an ordinary Action — it just lives in the
-# queue instead of in what the character knows, and is therefore remembered
-# when it loses rather than regenerated by scoring like a need would be.
-func _order(label: String, worth: float) -> Action:
-	return Action.new(label,
+# Work handed over from outside. It's an ordinary Action in every way that
+# matters — it just lives in the queue instead of in what the character knows,
+# and is therefore remembered when it loses rather than regenerated by scoring
+# like a need would be.
+func _order(label: String, worth: float) -> Obligation:
+	return Obligation.new(label,
 		func(_who: Character) -> bool: return true,
-		func(_who: Character) -> float: return worth)
+		func(_who: Character) -> float: return worth,
+		Busy.new(label),
+		StringName(label), "the lord")
+
+
+func _tam() -> Character:
+	var sleep := Action.new("sleep",
+		func(_who: Character) -> bool: return true,
+		func(who: Character) -> float: return 100.0 - who.stats.energy,
+		Busy.new("sleeping"))
+	var known: Array[Action] = [sleep]
+	var tam := Character.new("Tam", {"energy": 100.0, "ploughed": 0.0}, known)
+
+	# The lord's claim is expressed as a high score, not as a position in a
+	# list. That's exactly what lets a real need beat it without deleting it.
+	var plough := Obligation.new("plough the north field",
+		func(_who: Character) -> bool: return true,
+		func(_who: Character) -> float: return 80.0,
+		Ploughing.new(),
+		&"plough the north field", "the lord")
+	tam.brain.assign_action(plough)
+	return tam
 
 
 func _print_why(who: Character, winner: Action) -> void:
@@ -216,6 +335,49 @@ func _label_of(action: Action) -> String:
 
 
 func _expect(ok: bool, what: String) -> void:
+	_checks += 1
 	if not ok:
 		_failures.append(what)
 	print(("PASS  " if ok else "FAIL  ") + what)
+
+
+# --- Leaves used by this scene ------------------------------------------------
+
+# Work that takes time and changes nothing the world can see. Stands in for the
+# body of an action this scene only ever scores — it is never satisfied, so a
+# character who picks it simply keeps at it.
+class Busy:
+	extends Step
+
+	var what: String
+
+	func _init(new_what: String = "busy") -> void:
+		what = new_what
+
+	func is_satisfied(_who) -> bool:
+		return false
+
+	func advance(_who, _delta: float) -> bool:
+		return false
+
+	func describe(_who) -> String:
+		return what
+
+
+# Real work, with its progress kept where progress belongs: on the field, not
+# in the Step. Satisfaction is re-derived from that — hand this Step to a
+# second peasant and it reads their field, not this one's.
+class Ploughing:
+	extends Step
+
+	const RATE := 25.0   # percent of the field turned per second
+
+	func is_satisfied(who) -> bool:
+		return who.stats.ploughed >= 100.0
+
+	func advance(who, delta: float) -> bool:
+		who.stats.ploughed = minf(100.0, who.stats.ploughed + RATE * delta)
+		return is_satisfied(who)
+
+	func describe(who) -> String:
+		return "ploughing the north field (%.0f%%)" % who.stats.ploughed

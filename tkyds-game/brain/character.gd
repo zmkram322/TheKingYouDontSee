@@ -63,20 +63,29 @@ func decide_action() -> Action:
 # something happens — a fright, a passer-by, the work finishing — not sixty
 # times a second, which would be both wasteful and twitchy. Everything else
 # pokes decide_action() when it has a reason to.
+#
+# The work is asked about exactly once per slice. Asking twice — once before
+# advancing and once after — re-runs the whole tree over world state the
+# advance has just changed, so the answer can come back from a different option
+# than the one that did the work.
 func act(delta: float) -> void:
 	if brain.active_action == null:
 		decide_action()
 		if brain.active_action == null:
 			return   # nothing open to them at all
 
-	var doing := brain.active_action
-	if doing.body == null:
-		return   # nothing to carry it out with yet
+	var body := brain.active_action.body
 
-	if not doing.body.is_satisfied(self):
-		doing.body.advance(self, delta)
+	# There's no way to get on with it — every inn shut, no grain to be had.
+	# Stop pursuing it without settling it: an obligation stays owed, and a
+	# need stays unmet. Nothing is re-decided this slice, because the world
+	# hasn't changed since the decision that landed here; the next poke will
+	# find something else, or the same thing once it becomes possible again.
+	if not body.is_possible(self):
+		brain.abandon_active_action()
+		return
 
-	if doing.body.is_satisfied(self):
+	if body.advance(self, delta):
 		brain.finish_active_action()
 		decide_action()
 
@@ -86,6 +95,4 @@ func doing_label() -> String:
 	var doing := brain.active_action
 	if doing == null:
 		return "deciding…"
-	if doing.body == null:
-		return doing.label
 	return doing.body.describe(self)

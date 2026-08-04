@@ -222,7 +222,7 @@ func build_goal(actor: Actor, option: ActionOption) -> Goal:
 		var here: StringName = stats.get_primary(actor, Stat.PLACE)
 		var already_there: bool = here == option.place and v.position == places[option.place]
 		if not already_there:
-			steps.append(WalkTo.new(v, self, option.place))
+			steps.append(SandboxWalkTo.new(v, self, option.place))
 	steps.append(Perform.new(v, self, option))
 	var sequence := SequenceState.new()
 	sequence.children = steps

@@ -24,14 +24,15 @@ func is_satisfied(who) -> bool:
 	return who.stats.position.distance_to(target) <= ARRIVE_EPSILON
 
 
-func advance(who, delta: float) -> void:
+func advance(who, delta: float) -> bool:
 	var here: Vector2 = who.stats.position
 	var to_target := target - here
 	var stride := speed * delta
 	if to_target.length() <= stride:
 		who.stats.position = target
-		return
+		return true
 	who.stats.position = here + to_target.normalized() * stride
+	return is_satisfied(who)
 
 
 func describe(_who) -> String:

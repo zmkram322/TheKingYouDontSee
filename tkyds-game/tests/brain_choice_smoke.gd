@@ -18,11 +18,14 @@ extends SceneTree
 #   3) The Dragon closes while she's walking to it. Nothing is torn down and
 #      nothing restarts: the next tick simply re-ranks, the Boar's Head wins,
 #      and she turns for it from exactly where she's standing.
+#   4) Every inn closes while she is under orders to fetch supper. Being unable
+#      to get on with work is not the same as having done it: the errand stays
+#      owed, she stays hungry, and when a door opens again she finishes it.
 #
 # Usage: godot --headless --path tkyds-game --script res://tests/brain_choice_smoke.gd
 
 const SLICE := 0.05
-const EXPECTED_CHECKS := 11
+const EXPECTED_CHECKS := 17
 
 var _failures: Array[String] = []
 var _checks := 0
@@ -36,6 +39,7 @@ func _initialize() -> void:
 	_walks_past_what_she_cannot_afford()
 	_generator_keeps_identity_stable()
 	_reroutes_when_the_inn_closes()
+	_thwarted_is_not_finished()
 
 	if _checks < EXPECTED_CHECKS:
 		_failures.append("only %d of %d checks ran — something bailed out early" % [_checks, EXPECTED_CHECKS])
@@ -113,6 +117,53 @@ func _reroutes_when_the_inn_closes() -> void:
 	_expect(berta.brain.active_action != null or berta.stats.hunger <= 0.0, "she should never have been left stuck with nothing to pursue")
 
 
+# --- 4. Being unable to is not the same as being done -------------------------
+
+# The sharpest version of the failure, because a debt is involved. Berta has
+# been told to fetch supper; then every inn in the region shuts. A Choice with
+# nothing to pick used to report itself satisfied, which read as the errand
+# being finished — so the order was struck off having never been carried out,
+# and nothing anywhere said so.
+func _thwarted_is_not_finished() -> void:
+	print("")
+	print("--- Berta is sent for supper, and then every door shuts ---")
+	_reset_world()
+	var berta := _hungry_someone(Vector2.ZERO, 5)
+	var errand := Obligation.new("fetch supper",
+		func(_who: Character) -> bool: return true,
+		func(_who: Character) -> float: return 90.0,
+		Choice.new(_food_options),
+		&"supper", "the innkeeper")
+	berta.brain.assign_action(errand)
+
+	berta.act(SLICE)
+	_expect(berta.brain.active_action == errand, "she should set about the errand first, it outscores her own hunger")
+
+	for inn in _inns:
+		inn.open = false
+	var hunger_when_shut: float = berta.stats.hunger
+	var moved_to: Vector2 = berta.stats.position
+
+	for i in 20:
+		berta.act(SLICE)
+
+	print("  every inn shut — owes %d, hunger %.0f, doing: %s" % [berta.brain.assigned_count(), berta.stats.hunger, berta.doing_label()])
+	_expect(berta.brain.assigned_count() == 1, "the errand must still be owed — she never carried it out")
+	_expect(berta.stats.hunger >= hunger_when_shut, "she should not have been fed by an inn that is shut")
+	_expect(berta.stats.position.distance_to(moved_to) < 1.0, "with nowhere to go she should not be walking anywhere")
+
+	print("")
+	print("--- the Boar's Head opens up again ---")
+	for inn in _inns:
+		if inn.name == "Boar's Head":
+			inn.open = true
+	var fed := _act_until(berta, func() -> bool: return berta.stats.hunger <= 0.0, 30.0)
+	print("  ends at %s, hunger %.0f, owes %d" % [_at(berta), berta.stats.hunger, berta.brain.assigned_count()])
+	_expect(fed, "she should get her supper once somewhere will serve her")
+	_expect(berta.brain.assigned_count() == 0, "carrying the errand out should settle it")
+	_expect(berta.stats.position.distance_to(_where("Boar's Head")) <= 4.0, "she should have gone to the one inn that reopened")
+
+
 # --- The world ----------------------------------------------------------------
 
 func _reset_world() -> void:
@@ -172,8 +223,9 @@ class Eat:
 	func is_satisfied(who) -> bool:
 		return who.stats.hunger <= 0.0
 
-	func advance(who, delta: float) -> void:
+	func advance(who, delta: float) -> bool:
 		who.stats.hunger = maxf(0.0, who.stats.hunger - RATE * delta)
+		return is_satisfied(who)
 
 	func describe(_who) -> String:
 		return "eating"
