@@ -41,6 +41,31 @@ func _init(new_name: String, new_stats: Dictionary, known_actions: Array[Action]
 	brain = DecisionBrain.new()
 
 
+# --- The facts about them ---------------------------------------------------
+
+# Every read and write of a character's state goes through these two, and the
+# Dictionary behind them is an implementation detail nobody outside should
+# reach past them to touch.
+#
+# It is a Dictionary today because that is the simplest thing that works, and
+# the loop has not yet earned anything more. What it will eventually need is
+# derived values — "how hungry does she look to someone watching" — computed on
+# read and never served stale. That is a change to these two methods and to
+# nothing else, but only while everything goes through them. Every gate and
+# curve in the world is about to be written against this, and each one that
+# reaches into the Dictionary directly is one more call site a later swap has
+# to find.
+#
+# `fallback` is the seam's other half: an unset stat reads as its default
+# rather than as an error, so only what actually differs has to be stored.
+func stat(what: StringName, fallback = 0.0) -> Variant:
+	return stats.get(what, fallback)
+
+
+func set_stat(what: StringName, value) -> void:
+	stats[what] = value
+
+
 # --- What they know how to do -----------------------------------------------
 
 func has_action(action: Action) -> bool:

@@ -61,12 +61,12 @@ func _scoring_and_availability() -> void:
 	# they can read subject.stats directly while the brain never does.
 	var actions: Array[Action] = [
 		Action.new("eat",
-			func(who: Character) -> bool: return who.stats.coin >= 5,
-			func(who: Character) -> float: return who.stats.hunger,
+			func(who: Character) -> bool: return who.stat(&"coin") >= 5,
+			func(who: Character) -> float: return who.stat(&"hunger"),
 			Busy.new("eating")),
 		Action.new("rest",
 			func(_who: Character) -> bool: return true,
-			func(who: Character) -> float: return 100.0 - who.stats.energy,
+			func(who: Character) -> float: return 100.0 - who.stat(&"energy"),
 			Busy.new("resting")),
 		Action.new("idle",
 			func(_who: Character) -> bool: return true,
@@ -99,7 +99,7 @@ func _scoring_and_availability() -> void:
 
 	print("")
 	print("--- Cole gets paid; nothing rebuilt ---")
-	cole.stats.coin = 10
+	cole.set_stat(&"coin", 10)
 	var cole_paid := cole.decide_action()
 	_print_why(cole, cole_paid)
 	_expect(cole_paid != null and cole_paid.label == "eat", "Cole should now choose eat (got %s)" % _label_of(cole_paid))
@@ -128,11 +128,11 @@ func _the_innkeeper() -> void:
 	# has — they're work handed to him, and they compete on their own merits.
 	var doze := Action.new("doze by the fire",
 		func(_who: Character) -> bool: return true,
-		func(who: Character) -> float: return 100.0 - who.stats.energy,
+		func(who: Character) -> float: return 100.0 - who.stat(&"energy"),
 		Busy.new("dozing"))
 	var flee := Action.new("flee out the back",
 		func(_who: Character) -> bool: return true,
-		func(who: Character) -> float: return 3.0 * who.stats.fear,
+		func(who: Character) -> float: return 3.0 * who.stat(&"fear"),
 		Busy.new("running"))
 	var known: Array[Action] = [doze, flee]
 	var hal := Character.new("Hal", {"energy": 90.0, "fear": 0.0}, known)
@@ -160,7 +160,7 @@ func _the_innkeeper() -> void:
 	print("")
 	print("--- someone kicks the door in ---")
 	# Nothing grants fear special status. It simply outscores a full house.
-	hal.stats.fear = 40.0
+	hal.set_stat(&"fear", 40.0)
 	var hal_scared := hal.decide_action()
 	_print_why(hal, hal_scared)
 	_expect(hal_scared == flee, "fear should outbid every waiting order (got %s)" % _label_of(hal_scared))
@@ -168,7 +168,7 @@ func _the_innkeeper() -> void:
 
 	print("")
 	print("--- it passes; he picks the stew back up and finishes it ---")
-	hal.stats.fear = 0.0
+	hal.set_stat(&"fear", 0.0)
 	_expect(hal.decide_action() == stew, "Hal should resume the stew with nothing re-queued and nothing restored")
 	hal.clear_assigned_action(stew)
 	var hal_after := hal.decide_action()
@@ -191,7 +191,7 @@ func _the_peasant() -> void:
 
 	print("")
 	print("--- worked to the bone ---")
-	tam.stats.energy = 5.0
+	tam.set_stat(&"energy", 5.0)
 	var tam_spent := tam.decide_action()
 	_print_why(tam, tam_spent)
 	_expect(tam_spent != null and tam_spent.label == "sleep", "exhaustion should outbid the lord's order (got %s)" % _label_of(tam_spent))
@@ -199,7 +199,7 @@ func _the_peasant() -> void:
 
 	print("")
 	print("--- rested, and it's still owed ---")
-	tam.stats.energy = 100.0
+	tam.set_stat(&"energy", 100.0)
 	var tam_rested := tam.decide_action()
 	_print_why(tam, tam_rested)
 	_expect(tam_rested == plough, "he should go back to the field on waking (got %s)" % _label_of(tam_rested))
@@ -227,8 +227,8 @@ func _the_peasant_finishes() -> void:
 		tam.act(SLICE)
 		worked += SLICE
 
-	print("  after %.1fs the field is %.0f%% ploughed" % [worked, tam.stats.ploughed])
-	_expect(tam.stats.ploughed >= 100.0, "the field should actually get ploughed (got %.0f)" % tam.stats.ploughed)
+	print("  after %.1fs the field is %.0f%% ploughed" % [worked, tam.stat(&"ploughed")])
+	_expect(tam.stat(&"ploughed") >= 100.0, "the field should actually get ploughed (got %.0f)" % tam.stat(&"ploughed"))
 	_expect(tam.assigned_count() == 0, "finishing the work should settle the debt")
 	_expect(tam.active_action != plough, "he should not still be pursuing a discharged order")
 
@@ -248,7 +248,7 @@ func _protected_cannot_be_gated_away() -> void:
 	# The gate says never, in as many words. Being protected outranks it.
 	var flee := Action.new("flee",
 		func(_who: Character) -> bool: return false,
-		func(who: Character) -> float: return 3.0 * who.stats.fear,
+		func(who: Character) -> float: return 3.0 * who.stat(&"fear"),
 		Busy.new("running")).always_available()
 	var known: Array[Action] = [hold, flee]
 	var guard := Character.new("Guard", {"fear": 0.0}, known)
@@ -260,7 +260,7 @@ func _protected_cannot_be_gated_away() -> void:
 
 	print("")
 	print("--- and then something worth running from ---")
-	guard.stats.fear = 40.0
+	guard.set_stat(&"fear", 40.0)
 	var scared := guard.decide_action()
 	_print_why(guard, scared)
 	# Protected buys a place in the pass, not a win. It still has to outbid.
@@ -304,7 +304,7 @@ func _order(label: String, worth: float) -> Obligation:
 func _tam() -> Character:
 	var sleep := Action.new("sleep",
 		func(_who: Character) -> bool: return true,
-		func(who: Character) -> float: return 100.0 - who.stats.energy,
+		func(who: Character) -> float: return 100.0 - who.stat(&"energy"),
 		Busy.new("sleeping"))
 	var known: Array[Action] = [sleep]
 	var tam := Character.new("Tam", {"energy": 100.0, "ploughed": 0.0}, known)
@@ -373,11 +373,11 @@ class Ploughing:
 	const RATE := 25.0   # percent of the field turned per second
 
 	func is_satisfied(who) -> bool:
-		return who.stats.ploughed >= 100.0
+		return who.stat(&"ploughed") >= 100.0
 
 	func advance(who, delta: float) -> bool:
-		who.stats.ploughed = minf(100.0, who.stats.ploughed + RATE * delta)
+		who.set_stat(&"ploughed", minf(100.0, who.stat(&"ploughed") + RATE * delta))
 		return is_satisfied(who)
 
 	func describe(who) -> String:
-		return "ploughing the north field (%.0f%%)" % who.stats.ploughed
+		return "ploughing the north field (%.0f%%)" % who.stat(&"ploughed")

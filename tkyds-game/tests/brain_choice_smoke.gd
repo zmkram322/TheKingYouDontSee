@@ -63,12 +63,12 @@ func _walks_past_what_she_cannot_afford() -> void:
 	var berta := _hungry_someone(Vector2.ZERO, 5)
 
 	print("  starts at %s, doing: %s" % [_at(berta), berta.doing_label()])
-	var fed := _act_until(berta, func() -> bool: return berta.stats.hunger <= 0.0, 30.0)
-	print("  ends at %s, hunger %.0f" % [_at(berta), berta.stats.hunger])
+	var fed := _act_until(berta, func() -> bool: return berta.stat(&"hunger") <= 0.0, 30.0)
+	print("  ends at %s, hunger %.0f" % [_at(berta), berta.stat(&"hunger")])
 
 	_expect(fed, "Berta should end up fed")
-	_expect(berta.stats.position.distance_to(_where("Green Dragon")) <= 4.0, "she should have eaten at the Green Dragon — nearest of the ones she can afford")
-	_expect(berta.stats.position.distance_to(_where("Golden Swan")) > 4.0, "she should not have gone to the Golden Swan she can't afford, despite it being closest")
+	_expect(berta.stat(&"position").distance_to(_where("Green Dragon")) <= 4.0, "she should have eaten at the Green Dragon — nearest of the ones she can afford")
+	_expect(berta.stat(&"position").distance_to(_where("Golden Swan")) > 4.0, "she should not have gone to the Golden Swan she can't afford, despite it being closest")
 	# Fed, so "get some food" is off her menu and she pursues nothing.
 	_expect(berta.active_action == null, "once fed she should be pursuing nothing")
 
@@ -99,8 +99,8 @@ func _reroutes_when_the_inn_closes() -> void:
 	_reset_world()
 	var berta := _hungry_someone(Vector2.ZERO, 5)
 
-	_act_until(berta, func() -> bool: return berta.stats.position.x >= 60.0, 10.0)
-	var when_it_closed: Vector2 = berta.stats.position
+	_act_until(berta, func() -> bool: return berta.stat(&"position").x >= 60.0, 10.0)
+	var when_it_closed: Vector2 = berta.stat(&"position")
 	print("  on her way: %s, doing: %s" % [_at(berta), berta.doing_label()])
 	_expect(berta.doing_label().contains("Green Dragon"), "she should be heading for the Dragon before it closes")
 
@@ -109,12 +109,12 @@ func _reroutes_when_the_inn_closes() -> void:
 	print("  it closes — now doing: %s" % berta.doing_label())
 	_expect(berta.doing_label().contains("Boar's Head"), "the next tick should re-rank to the Boar's Head")
 
-	var fed := _act_until(berta, func() -> bool: return berta.stats.hunger <= 0.0, 30.0)
-	print("  ends at %s, hunger %.0f" % [_at(berta), berta.stats.hunger])
+	var fed := _act_until(berta, func() -> bool: return berta.stat(&"hunger") <= 0.0, 30.0)
+	print("  ends at %s, hunger %.0f" % [_at(berta), berta.stat(&"hunger")])
 	_expect(fed, "she should still end up fed")
-	_expect(berta.stats.position.distance_to(_where("Boar's Head")) <= 4.0, "she should have eaten at the Boar's Head")
+	_expect(berta.stat(&"position").distance_to(_where("Boar's Head")) <= 4.0, "she should have eaten at the Boar's Head")
 	_expect(when_it_closed.x > 0.0, "she should genuinely have been partway to the Dragon when it closed")
-	_expect(berta.active_action != null or berta.stats.hunger <= 0.0, "she should never have been left stuck with nothing to pursue")
+	_expect(berta.active_action != null or berta.stat(&"hunger") <= 0.0, "she should never have been left stuck with nothing to pursue")
 
 
 # --- 4. Being unable to is not the same as being done -------------------------
@@ -141,27 +141,27 @@ func _thwarted_is_not_finished() -> void:
 
 	for inn in _inns:
 		inn.open = false
-	var hunger_when_shut: float = berta.stats.hunger
-	var moved_to: Vector2 = berta.stats.position
+	var hunger_when_shut: float = berta.stat(&"hunger")
+	var moved_to: Vector2 = berta.stat(&"position")
 
 	for i in 20:
 		berta.act(SLICE)
 
-	print("  every inn shut — owes %d, hunger %.0f, doing: %s" % [berta.assigned_count(), berta.stats.hunger, berta.doing_label()])
+	print("  every inn shut — owes %d, hunger %.0f, doing: %s" % [berta.assigned_count(), berta.stat(&"hunger"), berta.doing_label()])
 	_expect(berta.assigned_count() == 1, "the errand must still be owed — she never carried it out")
-	_expect(berta.stats.hunger >= hunger_when_shut, "she should not have been fed by an inn that is shut")
-	_expect(berta.stats.position.distance_to(moved_to) < 1.0, "with nowhere to go she should not be walking anywhere")
+	_expect(berta.stat(&"hunger") >= hunger_when_shut, "she should not have been fed by an inn that is shut")
+	_expect(berta.stat(&"position").distance_to(moved_to) < 1.0, "with nowhere to go she should not be walking anywhere")
 
 	print("")
 	print("--- the Boar's Head opens up again ---")
 	for inn in _inns:
 		if inn.name == "Boar's Head":
 			inn.open = true
-	var fed := _act_until(berta, func() -> bool: return berta.stats.hunger <= 0.0, 30.0)
-	print("  ends at %s, hunger %.0f, owes %d" % [_at(berta), berta.stats.hunger, berta.assigned_count()])
+	var fed := _act_until(berta, func() -> bool: return berta.stat(&"hunger") <= 0.0, 30.0)
+	print("  ends at %s, hunger %.0f, owes %d" % [_at(berta), berta.stat(&"hunger"), berta.assigned_count()])
 	_expect(fed, "she should get her supper once somewhere will serve her")
 	_expect(berta.assigned_count() == 0, "carrying the errand out should settle it")
-	_expect(berta.stats.position.distance_to(_where("Boar's Head")) <= 4.0, "she should have gone to the one inn that reopened")
+	_expect(berta.stat(&"position").distance_to(_where("Boar's Head")) <= 4.0, "she should have gone to the one inn that reopened")
 
 
 # --- The world ----------------------------------------------------------------
@@ -204,8 +204,8 @@ func _eat_at(inn: Dictionary) -> Action:
 	if _built.has(inn.name):
 		return _built[inn.name]
 	var action := Action.new("eat at the %s" % inn.name,
-		func(who: Character) -> bool: return inn.open and who.stats.coin >= inn.price,
-		func(who: Character) -> float: return 400.0 - who.stats.position.distance_to(inn.at),
+		func(who: Character) -> bool: return inn.open and who.stat(&"coin") >= inn.price,
+		func(who: Character) -> float: return 400.0 - who.stat(&"position").distance_to(inn.at),
 		Sequence.new([WalkTo.new(inn.at), Eat.new()] as Array[Step]))
 	_built[inn.name] = action
 	return action
@@ -221,10 +221,10 @@ class Eat:
 	const RATE := 40.0   # hunger cleared per second
 
 	func is_satisfied(who) -> bool:
-		return who.stats.hunger <= 0.0
+		return who.stat(&"hunger") <= 0.0
 
 	func advance(who, delta: float) -> bool:
-		who.stats.hunger = maxf(0.0, who.stats.hunger - RATE * delta)
+		who.set_stat(&"hunger", maxf(0.0, who.stat(&"hunger") - RATE * delta))
 		return is_satisfied(who)
 
 	func describe(_who) -> String:
@@ -235,8 +235,8 @@ class Eat:
 
 func _hungry_someone(where: Vector2, coin: int) -> Character:
 	var get_food := Action.new("get some food",
-		func(who: Character) -> bool: return who.stats.hunger > 0.0,
-		func(who: Character) -> float: return who.stats.hunger,
+		func(who: Character) -> bool: return who.stat(&"hunger") > 0.0,
+		func(who: Character) -> float: return who.stat(&"hunger"),
 		Choice.new(_food_options))
 	var knows: Array[Action] = [get_food]
 	return Character.new("Berta", {"position": where, "hunger": 60.0, "coin": coin}, knows)
@@ -253,7 +253,7 @@ func _act_until(who: Character, done: Callable, limit: float) -> bool:
 
 
 func _at(who: Character) -> String:
-	return "(%.0f, %.0f)" % [who.stats.position.x, who.stats.position.y]
+	return "(%.0f, %.0f)" % [who.stat(&"position").x, who.stat(&"position").y]
 
 
 func _expect(ok: bool, what: String) -> void:

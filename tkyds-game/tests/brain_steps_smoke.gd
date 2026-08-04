@@ -56,7 +56,7 @@ func _walks_home() -> void:
 	print("  ends at %s" % _at(berta))
 
 	_expect(arrived, "Berta should reach home")
-	_expect(berta.stats.position.distance_to(HOME) <= ARRIVED, "she should be standing at home")
+	_expect(berta.stat(&"position").distance_to(HOME) <= ARRIVED, "she should be standing at home")
 	# Her gate is "not already home", so once she is, there's nothing open to
 	# her at all and she stops pursuing anything.
 	_expect(berta.active_action == null, "having arrived, she should no longer be pursuing going home")
@@ -79,9 +79,9 @@ func _steps_are_shareable() -> void:
 		far.act(SLICE)
 		near.act(SLICE)
 		elapsed += SLICE
-		if near_arrived_at < 0.0 and near.stats.position.distance_to(HOME) <= ARRIVED:
+		if near_arrived_at < 0.0 and near.stat(&"position").distance_to(HOME) <= ARRIVED:
 			near_arrived_at = elapsed
-		if far_arrived_at < 0.0 and far.stats.position.distance_to(HOME) <= ARRIVED:
+		if far_arrived_at < 0.0 and far.stat(&"position").distance_to(HOME) <= ARRIVED:
 			far_arrived_at = elapsed
 
 	print("  Near started 150 away, arrived at t=%.2fs" % near_arrived_at)
@@ -100,30 +100,30 @@ func _frightened_then_carries_on() -> void:
 	var go_home := _go_home()
 	var flee := Action.new("flee to the woods",
 		func(_who: Character) -> bool: return true,
-		func(who: Character) -> float: return 3.0 * who.stats.fear,
+		func(who: Character) -> float: return 3.0 * who.stat(&"fear"),
 		Sequence.new([WalkTo.new(WOODS)] as Array[Step]))
 	var berta := _someone("Berta", Vector2.ZERO, [go_home, flee])
 
-	var started_from: Vector2 = berta.stats.position
-	_act_until(berta, func() -> bool: return berta.stats.position.x >= 120.0, 10.0)
-	var when_frightened: Vector2 = berta.stats.position
+	var started_from: Vector2 = berta.stat(&"position")
+	_act_until(berta, func() -> bool: return berta.stat(&"position").x >= 120.0, 10.0)
+	var when_frightened: Vector2 = berta.stat(&"position")
 	print("  got as far as %s, doing: %s" % [_at(berta), berta.doing_label()])
 	_expect(berta.active_action == go_home, "she should be heading home before the fright")
 
-	berta.stats.fear = 40.0
+	berta.set_stat(&"fear", 40.0)
 	berta.decide_action()
 	print("  something moves in the hedge — now doing: %s" % berta.doing_label())
 	_expect(berta.active_action == flee, "fear should outbid going home")
 
-	_act_until(berta, func() -> bool: return berta.stats.position.y <= -60.0, 5.0)
+	_act_until(berta, func() -> bool: return berta.stat(&"position").y <= -60.0, 5.0)
 	print("  bolted to %s" % _at(berta))
 	# Nothing had to be told the walk was unfinished. It re-derives that from
 	# where she is standing, and would say the same if she'd been carried here.
 	_expect(not go_home.body.is_satisfied(berta), "the walk home should still read as unfinished, purely from where she is")
 
-	berta.stats.fear = 0.0
+	berta.set_stat(&"fear", 0.0)
 	berta.decide_action()
-	var resumed_from: Vector2 = berta.stats.position
+	var resumed_from: Vector2 = berta.stat(&"position")
 	print("  it passes — resuming from %s, doing: %s" % [_at(berta), berta.doing_label()])
 	_expect(berta.active_action == go_home, "she should go back to heading home")
 	_expect(resumed_from.distance_to(started_from) > 100.0, "she should carry on from where she stands, not restart from where she set off")
@@ -141,7 +141,7 @@ func _frightened_then_carries_on() -> void:
 # rather than built into the brain, same as every other bit of judgment.
 func _go_home() -> Action:
 	return Action.new("go home",
-		func(who: Character) -> bool: return who.stats.position.distance_to(HOME) > ARRIVED,
+		func(who: Character) -> bool: return who.stat(&"position").distance_to(HOME) > ARRIVED,
 		func(_who: Character) -> float: return 50.0,
 		Sequence.new([WalkTo.new(HOME)] as Array[Step]))
 
@@ -161,7 +161,7 @@ func _act_until(who: Character, done: Callable, limit: float) -> bool:
 
 
 func _at(who: Character) -> String:
-	return "(%.0f, %.0f)" % [who.stats.position.x, who.stats.position.y]
+	return "(%.0f, %.0f)" % [who.stat(&"position").x, who.stat(&"position").y]
 
 
 func _expect(ok: bool, what: String) -> void:

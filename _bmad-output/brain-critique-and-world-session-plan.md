@@ -1,5 +1,11 @@
 # Session Plan — Critique the Brain, then Build a World
 
+> **CLOSED 2026-08-03. This file is history — do not work from it.**
+>
+> - **Part 1** ran as a four-voice party-mode critique and was ruled. Outcome: **`_bmad-output/brain-critique-decisions.md`**. All six accepted design fixes are landed and all nine suites are green. Several of the seed critiques below were **struck** — a large share of the room's findings turned out to be the unbuilt world layer rather than defects, and the decisions doc records which and why, so they don't get re-raised as architecture bugs.
+> - **Part 2** is replanned in full against what actually landed: **`_bmad-output/world-session-plan.md`**. Start there.
+> - One correction worth carrying: the note below about FR numbering was wrong. The next free FR was **FR100**, not FR88 — FR88–FR99 are the board group.
+
 **Written** 2026-08-03, branch `poc-v2`, at the close of the session that built `tkyds-game/brain/`.
 **Two parts, run in order.** Part 1 is a party-mode critique that must finish before Part 2 is planned in detail, because Part 1 can change what Part 2 builds.
 
