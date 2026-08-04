@@ -80,7 +80,7 @@ func _scoring_and_availability() -> void:
 	var berta_choice := berta.decide_action()
 	_print_why(berta, berta_choice)
 	_expect(berta_choice != null and berta_choice.label == "eat", "Berta should choose eat (got %s)" % _label_of(berta_choice))
-	_expect(berta.brain.active_action == berta_choice, "deciding should leave the winner as Berta's active action")
+	_expect(berta.active_action == berta_choice, "deciding should leave the winner as Berta's active action")
 
 	print("")
 	print("--- Cole: can't afford to eat despite the higher score ---")
@@ -88,13 +88,13 @@ func _scoring_and_availability() -> void:
 	var cole_choice := cole.decide_action()
 	_print_why(cole, cole_choice)
 	_expect(cole_choice != null and cole_choice.label == "rest", "Cole should choose rest (got %s)" % _label_of(cole_choice))
-	_expect(not cole.brain.is_available(eat), "Cole should show eat as unavailable")
+	_expect(not cole.brain.is_available(cole, eat), "Cole should show eat as unavailable")
 
 	print("")
 	print("--- the two halves stay separate ---")
 	# Ranking the unfiltered list still picks eat: highest_scoring ranks
 	# whatever it's handed and never gates. Availability is a separate step.
-	var ungated := cole.brain.highest_scoring(cole.actions)
+	var ungated := cole.brain.highest_scoring(cole, cole.actions)
 	_expect(ungated != null and ungated.label == "eat", "highest_scoring over the full list should still pick eat, gating nothing (got %s)" % _label_of(ungated))
 
 	print("")
@@ -148,14 +148,14 @@ func _the_innkeeper() -> void:
 	var stew := _order("stew for table four", 25.0)
 	var pie := _order("pie for the traveller", 22.0)
 	var ale := _order("ale for the corner", 20.0)
-	hal.brain.assign_action(stew)
-	hal.brain.assign_action(pie)
-	hal.brain.assign_action(ale)
+	hal.assign_action(stew)
+	hal.assign_action(pie)
+	hal.assign_action(ale)
 	var hal_busy := hal.decide_action()
 	_print_why(hal, hal_busy)
-	_expect(hal.brain.assigned_count() == 3, "Hal should owe three orders")
+	_expect(hal.assigned_count() == 3, "Hal should owe three orders")
 	_expect(hal_busy == stew, "the most urgent order should win outright (got %s)" % _label_of(hal_busy))
-	_expect(hal.brain.queue.has(stew), "working on the stew must not take it out of the queue — owed and being-worked-on are separate facts")
+	_expect(hal.queue.has(stew), "working on the stew must not take it out of the queue — owed and being-worked-on are separate facts")
 
 	print("")
 	print("--- someone kicks the door in ---")
@@ -164,16 +164,16 @@ func _the_innkeeper() -> void:
 	var hal_scared := hal.decide_action()
 	_print_why(hal, hal_scared)
 	_expect(hal_scared == flee, "fear should outbid every waiting order (got %s)" % _label_of(hal_scared))
-	_expect(hal.brain.assigned_count() == 3, "all three orders should survive the interruption")
+	_expect(hal.assigned_count() == 3, "all three orders should survive the interruption")
 
 	print("")
 	print("--- it passes; he picks the stew back up and finishes it ---")
 	hal.stats.fear = 0.0
 	_expect(hal.decide_action() == stew, "Hal should resume the stew with nothing re-queued and nothing restored")
-	hal.brain.clear_assigned_action(stew)
+	hal.clear_assigned_action(stew)
 	var hal_after := hal.decide_action()
 	_print_why(hal, hal_after)
-	_expect(hal.brain.assigned_count() == 2, "discharging the stew should leave two orders")
+	_expect(hal.assigned_count() == 2, "discharging the stew should leave two orders")
 	_expect(hal_after == pie, "the next most urgent order should take over (got %s)" % _label_of(hal_after))
 
 
@@ -181,7 +181,7 @@ func _the_innkeeper() -> void:
 
 func _the_peasant() -> void:
 	var tam := _tam()
-	var plough: Obligation = tam.brain.queue[0]
+	var plough: Obligation = tam.queue[0]
 
 	print("")
 	print("--- Tam has a lord's order and energy to spare ---")
@@ -195,7 +195,7 @@ func _the_peasant() -> void:
 	var tam_spent := tam.decide_action()
 	_print_why(tam, tam_spent)
 	_expect(tam_spent != null and tam_spent.label == "sleep", "exhaustion should outbid the lord's order (got %s)" % _label_of(tam_spent))
-	_expect(tam.brain.queue.has(plough), "the field is still owed while he sleeps")
+	_expect(tam.queue.has(plough), "the field is still owed while he sleeps")
 
 	print("")
 	print("--- rested, and it's still owed ---")
@@ -216,21 +216,21 @@ func _the_peasant_finishes() -> void:
 	print("")
 	print("--- Tam works the field to the end ---")
 	var tam := _tam()
-	var plough: Obligation = tam.brain.queue[0]
+	var plough: Obligation = tam.queue[0]
 
 	tam.act(SLICE)
-	_expect(tam.brain.active_action == plough, "he should be at the field (got %s)" % _label_of(tam.brain.active_action))
+	_expect(tam.active_action == plough, "he should be at the field (got %s)" % _label_of(tam.active_action))
 	print("  doing: %s" % tam.doing_label())
 
 	var worked := 0.0
-	while worked < 20.0 and tam.brain.assigned_count() > 0:
+	while worked < 20.0 and tam.assigned_count() > 0:
 		tam.act(SLICE)
 		worked += SLICE
 
 	print("  after %.1fs the field is %.0f%% ploughed" % [worked, tam.stats.ploughed])
 	_expect(tam.stats.ploughed >= 100.0, "the field should actually get ploughed (got %.0f)" % tam.stats.ploughed)
-	_expect(tam.brain.assigned_count() == 0, "finishing the work should settle the debt")
-	_expect(tam.brain.active_action != plough, "he should not still be pursuing a discharged order")
+	_expect(tam.assigned_count() == 0, "finishing the work should settle the debt")
+	_expect(tam.active_action != plough, "he should not still be pursuing a discharged order")
 
 
 # --- The protected set --------------------------------------------------------
@@ -255,7 +255,7 @@ func _protected_cannot_be_gated_away() -> void:
 
 	var calm := guard.decide_action()
 	_print_why(guard, calm)
-	_expect(guard.brain.is_available(flee), "a protected action must stay available however its gate is written")
+	_expect(guard.brain.is_available(guard, flee), "a protected action must stay available however its gate is written")
 	_expect(calm == hold, "with nothing to fear he should hold the post (got %s)" % _label_of(calm))
 
 	print("")
@@ -279,12 +279,12 @@ func _work_already_owed_is_recognised() -> void:
 	print("--- the same errand, asked for twice ---")
 	var tam := _tam()
 
-	_expect(tam.brain.owes_anything_about(&"plough the north field"), "the field should read as owed")
-	_expect(not tam.brain.owes_anything_about(&"mend the fence"), "work nobody asked for should not read as owed")
+	_expect(tam.owes_anything_about(&"plough the north field"), "the field should read as owed")
+	_expect(not tam.owes_anything_about(&"mend the fence"), "work nobody asked for should not read as owed")
 
-	var found := tam.brain.find_obligation_about(&"plough the north field")
+	var found := tam.find_obligation_about(&"plough the north field")
 	_expect(found != null and found.asked_by == "the lord", "the obligation should still know who asked (got %s)" % (found.asked_by if found != null else "nothing"))
-	_expect(found == tam.brain.queue[0], "matching on what it's about should find the very obligation that was handed over")
+	_expect(found == tam.queue[0], "matching on what it's about should find the very obligation that was handed over")
 
 
 # --- Helpers -----------------------------------------------------------------
@@ -316,16 +316,16 @@ func _tam() -> Character:
 		func(_who: Character) -> float: return 80.0,
 		Ploughing.new(),
 		&"plough the north field", "the lord")
-	tam.brain.assign_action(plough)
+	tam.assign_action(plough)
 	return tam
 
 
 func _print_why(who: Character, winner: Action) -> void:
-	for action in who.brain.candidate_actions(who.actions):
+	for action in who.candidate_actions():
 		var marker := "->" if action == winner else "  "
-		var owed := "   (owed)" if who.brain.queue.has(action) else ""
-		if who.brain.is_available(action):
-			print("%s %6.1f  %s%s" % [marker, who.brain.score(action), action.label, owed])
+		var owed := "   (owed)" if who.queue.has(action) else ""
+		if who.brain.is_available(who, action):
+			print("%s %6.1f  %s%s" % [marker, who.brain.score(who, action), action.label, owed])
 		else:
 			print("%s    -   %s  (not available)%s" % [marker, action.label, owed])
 

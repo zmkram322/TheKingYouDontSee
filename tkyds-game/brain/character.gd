@@ -2,18 +2,32 @@ class_name Character
 extends RefCounted
 
 # Someone the world can hold: a name, the facts about them actions read, the
-# actions they know how to do, and a brain to pick between those actions.
+# actions they know how to do, what they owe, what they're pursuing, and a
+# brain to pick between it all.
 #
-# The split is worth stating plainly. What a character knows how to do is part
-# of who they are, so the catalog lives here and is edited here. Which of
-# those they'd pick right now is a judgment, so that lives in the brain. The
-# character hands its actions over when it asks — the brain never reaches in
-# for them, which is what keeps the brain usable by any subject at all.
+# The split is worth stating plainly. What a character knows how to do, what
+# they owe, and what they're getting on with are all facts about this person,
+# so they live here. Which of them wins right now is a judgment, so that lives
+# in the brain — which holds nothing and could be shared by everyone in the
+# world, the same way a Step is.
 
 var character_name: String
 var stats := {}                    # the readable facts actions gate and score on
 var actions: Array[Action] = []    # what this character knows how to do
 var brain: DecisionBrain
+
+# Obligations handed in from outside — an order taken, an errand given. Only
+# things scoring can't regenerate belong here: a self-directed choice is never
+# queued, because re-deciding brings it back on its own. Deliberately a plain
+# array so it can be reordered, cancelled, or inserted into later (a lord
+# re-prioritising someone's work) without fighting a wrapper.
+var queue: Array[Action] = []
+
+# What they're pursuing right now. May be one of their own capabilities or one
+# of the obligations in the queue — a queued action being active does NOT
+# remove it from the queue, because owing something and working on it are
+# separate facts. It leaves the queue when it's discharged, not when it starts.
+var active_action: Action = null
 
 
 # Known actions are copied, not adopted: characters are commonly seeded from
@@ -24,7 +38,7 @@ func _init(new_name: String, new_stats: Dictionary, known_actions: Array[Action]
 	character_name = new_name
 	stats = new_stats
 	actions = known_actions.duplicate()
-	brain = DecisionBrain.new(self)
+	brain = DecisionBrain.new()
 
 
 # --- What they know how to do -----------------------------------------------
@@ -47,11 +61,94 @@ func drop_action(action: Action) -> void:
 
 # --- Deciding ---------------------------------------------------------------
 
-# Re-decide and commit: the best of everything open to them right now, whether
-# that's something they know how to do or something they owe. Poke this
-# whenever the world changes in a way that might change their mind.
+# Everything that could win right now: what they know how to do, plus what they
+# owe. An obligation isn't worked off by some separate mechanism — it competes
+# directly, on its own merits, against every ordinary need. That's what lets
+# exhaustion outbid a lord's order without anything granting sleep special
+# status, and lets the order still be owed afterwards.
+func candidate_actions() -> Array[Action]:
+	var candidates: Array[Action] = actions.duplicate()
+	candidates.append_array(queue)
+	return candidates
+
+
+# Re-decide from scratch and commit to the winner: the best of everything open
+# to them, whether that's something they know how to do or something they owe.
+# Poke this whenever the world changes in a way that might change their mind —
+# a fright, someone walking past, the work finishing. Re-deciding is always
+# safe: it's a fresh pass over current facts, so a winner that's still winning
+# simply stays.
 func decide_action() -> Action:
-	return brain.reconsider(actions)
+	active_action = brain.choose_action(self, candidate_actions())
+	return active_action
+
+
+# --- What they owe ----------------------------------------------------------
+
+# Being queued is not a way to jump the scoring — it's only a way to be
+# remembered. The queue holds what they owe; whether they're working on it
+# right now is a separate fact, held by active_action. An obligation stays
+# queued while it's being worked on, so an interruption costs nothing: it's
+# still owed, and re-deciding picks it up again on its own.
+
+# Take on an obligation, behind whatever's already waiting.
+func assign_action(action: Action) -> void:
+	queue.append(action)
+
+
+# The obligation that's been waiting longest, or null if there are none. Note
+# this is not "the one they'll do next" — that's whatever scores highest, which
+# may well be a fresher obligation that's grown more urgent.
+func next_assigned_action() -> Action:
+	return queue[0] if not queue.is_empty() else null
+
+
+func assigned_count() -> int:
+	return queue.size()
+
+
+# Is this work already owed? Asked by whoever is about to hand work over, so
+# they don't hand it over twice. This is the reason an Obligation says what
+# it's about: without it the only way to answer would be to remember having
+# asked, and a remembered intention is the one thing the design refuses to
+# keep. Looking at what someone currently owes is reading the world, not
+# remembering.
+func owes_anything_about(about: StringName) -> bool:
+	return find_obligation_about(about) != null
+
+
+func find_obligation_about(about: StringName) -> Obligation:
+	for action in queue:
+		if action is Obligation and action.about == about:
+			return action
+	return null
+
+
+# Called off from outside — a lord changing his mind, an order withdrawn. It
+# stops being owed whether or not it was ever carried out; the queue only ever
+# knew that it was waiting.
+func clear_assigned_action(action: Action) -> void:
+	queue.erase(action)
+	if active_action == action:
+		active_action = null
+
+
+# The active action is done. Discharges it if it was owed — finishing a lord's
+# errand should settle the debt — and stops pursuing it either way, leaving
+# them free to decide afresh.
+func finish_active_action() -> void:
+	if active_action == null:
+		return
+	queue.erase(active_action)
+	active_action = null
+
+
+# The active action can't be got on with — every inn shut, no grain to be had.
+# Deliberately NOT the same as finishing: the work was never done, so an
+# obligation stays owed and only stops being pursued. Collapsing the two would
+# let a debt nobody could serve quietly pay itself off.
+func abandon_active_action() -> void:
+	active_action = null
 
 
 # --- Doing ------------------------------------------------------------------
@@ -69,12 +166,12 @@ func decide_action() -> Action:
 # advance has just changed, so the answer can come back from a different option
 # than the one that did the work.
 func act(delta: float) -> void:
-	if brain.active_action == null:
+	if active_action == null:
 		decide_action()
-		if brain.active_action == null:
+		if active_action == null:
 			return   # nothing open to them at all
 
-	var body := brain.active_action.body
+	var body := active_action.body
 
 	# There's no way to get on with it — every inn shut, no grain to be had.
 	# Stop pursuing it without settling it: an obligation stays owed, and a
@@ -82,17 +179,21 @@ func act(delta: float) -> void:
 	# hasn't changed since the decision that landed here; the next poke will
 	# find something else, or the same thing once it becomes possible again.
 	if not body.is_possible(self):
-		brain.abandon_active_action()
+		abandon_active_action()
 		return
 
 	if body.advance(self, delta):
-		brain.finish_active_action()
+		finish_active_action()
 		decide_action()
 
 
-# What they'd be seen doing right now.
+# What they'd be seen doing right now. Both halves are wanted: the action says
+# WHY — "flee to the woods" — and the body says WHAT, "walking to (0, -220)".
+# Reporting only the body throws the reason away and leaves a coordinate pair,
+# which is the one thing a reader can't do anything with. Same shape a nested
+# Choice already uses, so a decision at any depth reads as one sentence.
 func doing_label() -> String:
-	var doing := brain.active_action
-	if doing == null:
+	if active_action == null:
 		return "deciding…"
-	return doing.body.describe(self)
+	var inner := active_action.body.describe(self)
+	return active_action.label if inner.is_empty() else "%s — %s" % [active_action.label, inner]

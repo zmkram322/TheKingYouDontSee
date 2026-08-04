@@ -70,7 +70,7 @@ func _walks_past_what_she_cannot_afford() -> void:
 	_expect(berta.stats.position.distance_to(_where("Green Dragon")) <= 4.0, "she should have eaten at the Green Dragon — nearest of the ones she can afford")
 	_expect(berta.stats.position.distance_to(_where("Golden Swan")) > 4.0, "she should not have gone to the Golden Swan she can't afford, despite it being closest")
 	# Fed, so "get some food" is off her menu and she pursues nothing.
-	_expect(berta.brain.active_action == null, "once fed she should be pursuing nothing")
+	_expect(berta.active_action == null, "once fed she should be pursuing nothing")
 
 
 # --- 2. Generated options must not churn identity ----------------------------
@@ -87,7 +87,7 @@ func _generator_keeps_identity_stable() -> void:
 	_expect(first.size() == 3, "all three inns should be offered before gating (got %d)" % first.size())
 	_expect(first[0] == second[0] and first[1] == second[1], "the same inn should yield the same Action object each pass")
 	# Gating happens after generation — the Swan is offered, then ruled out.
-	var open_to_her := berta.brain.determine_available_actions(first)
+	var open_to_her := berta.brain.determine_available_actions(berta, first)
 	_expect(open_to_her.size() == 2, "only two of the three should be open to her (got %d)" % open_to_her.size())
 
 
@@ -114,7 +114,7 @@ func _reroutes_when_the_inn_closes() -> void:
 	_expect(fed, "she should still end up fed")
 	_expect(berta.stats.position.distance_to(_where("Boar's Head")) <= 4.0, "she should have eaten at the Boar's Head")
 	_expect(when_it_closed.x > 0.0, "she should genuinely have been partway to the Dragon when it closed")
-	_expect(berta.brain.active_action != null or berta.stats.hunger <= 0.0, "she should never have been left stuck with nothing to pursue")
+	_expect(berta.active_action != null or berta.stats.hunger <= 0.0, "she should never have been left stuck with nothing to pursue")
 
 
 # --- 4. Being unable to is not the same as being done -------------------------
@@ -134,10 +134,10 @@ func _thwarted_is_not_finished() -> void:
 		func(_who: Character) -> float: return 90.0,
 		Choice.new(_food_options),
 		&"supper", "the innkeeper")
-	berta.brain.assign_action(errand)
+	berta.assign_action(errand)
 
 	berta.act(SLICE)
-	_expect(berta.brain.active_action == errand, "she should set about the errand first, it outscores her own hunger")
+	_expect(berta.active_action == errand, "she should set about the errand first, it outscores her own hunger")
 
 	for inn in _inns:
 		inn.open = false
@@ -147,8 +147,8 @@ func _thwarted_is_not_finished() -> void:
 	for i in 20:
 		berta.act(SLICE)
 
-	print("  every inn shut — owes %d, hunger %.0f, doing: %s" % [berta.brain.assigned_count(), berta.stats.hunger, berta.doing_label()])
-	_expect(berta.brain.assigned_count() == 1, "the errand must still be owed — she never carried it out")
+	print("  every inn shut — owes %d, hunger %.0f, doing: %s" % [berta.assigned_count(), berta.stats.hunger, berta.doing_label()])
+	_expect(berta.assigned_count() == 1, "the errand must still be owed — she never carried it out")
 	_expect(berta.stats.hunger >= hunger_when_shut, "she should not have been fed by an inn that is shut")
 	_expect(berta.stats.position.distance_to(moved_to) < 1.0, "with nowhere to go she should not be walking anywhere")
 
@@ -158,9 +158,9 @@ func _thwarted_is_not_finished() -> void:
 		if inn.name == "Boar's Head":
 			inn.open = true
 	var fed := _act_until(berta, func() -> bool: return berta.stats.hunger <= 0.0, 30.0)
-	print("  ends at %s, hunger %.0f, owes %d" % [_at(berta), berta.stats.hunger, berta.brain.assigned_count()])
+	print("  ends at %s, hunger %.0f, owes %d" % [_at(berta), berta.stats.hunger, berta.assigned_count()])
 	_expect(fed, "she should get her supper once somewhere will serve her")
-	_expect(berta.brain.assigned_count() == 0, "carrying the errand out should settle it")
+	_expect(berta.assigned_count() == 0, "carrying the errand out should settle it")
 	_expect(berta.stats.position.distance_to(_where("Boar's Head")) <= 4.0, "she should have gone to the one inn that reopened")
 
 

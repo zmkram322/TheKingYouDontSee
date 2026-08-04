@@ -38,6 +38,19 @@ Also struck: **findings about how the smoke tests wire the brain, as distinct fr
 
 ---
 
+## Status — all six landed 2026-08-03
+
+Code done, all nine suites green (`brain_smoke`, `brain_steps_smoke`, `brain_choice_smoke`, `sandbox_smoke`, `board_smoke`, `placement_smoke`, `settlement_smoke`, `terrain_smoke`, `town_smoke`). The three brain suites now run **leak-free** — defect 4 removed the cycle. The PRD edit list below has **not** been applied yet.
+
+Two things found while building that weren't in the plan:
+
+- **`sandbox/walk_to.gd` and `brain/walk_to.gd` both declared `class_name WalkTo`.** Godot does not report this; one silently wins, and which one depends on the order the project was scanned in. A reimport flipped it, and both step suites failed with a constructor from the wrong class. Renamed the sandbox one to `SandboxWalkTo` (two lines) so `brain/` keeps the plain name. **This was a live landmine, not something the changes introduced** — it would have fired on any future reimport.
+- **`Character.act` now re-decides nothing when the work is impossible.** It abandons and returns, so the next tick re-asks. That means an actor with an impossible obligation re-picks it each tick and abandons it again — no work done, same cost as any idle actor, and it stops entirely once the world changes. The real fix is expiry (FR103, Part 2). Commented at the call site so it reads as a decision.
+
+New proofs added: an obligation carried through to completion and discharged (`brain_smoke` §7 — the flagship scene was previously only ever *scored*, never run); a protected action surviving a gate that says `return false` (§8); work already owed being recognised (§9); and an errand staying owed when every inn shuts (`brain_choice_smoke` §4 — the failure that would have eaten Part 2).
+
+---
+
 ## The six design defects to fix
 
 Real regardless of what world gets wired up.

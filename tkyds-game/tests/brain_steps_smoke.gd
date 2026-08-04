@@ -59,7 +59,7 @@ func _walks_home() -> void:
 	_expect(berta.stats.position.distance_to(HOME) <= ARRIVED, "she should be standing at home")
 	# Her gate is "not already home", so once she is, there's nothing open to
 	# her at all and she stops pursuing anything.
-	_expect(berta.brain.active_action == null, "having arrived, she should no longer be pursuing going home")
+	_expect(berta.active_action == null, "having arrived, she should no longer be pursuing going home")
 
 
 # --- 2. One Step, many characters --------------------------------------------
@@ -108,12 +108,12 @@ func _frightened_then_carries_on() -> void:
 	_act_until(berta, func() -> bool: return berta.stats.position.x >= 120.0, 10.0)
 	var when_frightened: Vector2 = berta.stats.position
 	print("  got as far as %s, doing: %s" % [_at(berta), berta.doing_label()])
-	_expect(berta.brain.active_action == go_home, "she should be heading home before the fright")
+	_expect(berta.active_action == go_home, "she should be heading home before the fright")
 
 	berta.stats.fear = 40.0
 	berta.decide_action()
 	print("  something moves in the hedge — now doing: %s" % berta.doing_label())
-	_expect(berta.brain.active_action == flee, "fear should outbid going home")
+	_expect(berta.active_action == flee, "fear should outbid going home")
 
 	_act_until(berta, func() -> bool: return berta.stats.position.y <= -60.0, 5.0)
 	print("  bolted to %s" % _at(berta))
@@ -125,7 +125,7 @@ func _frightened_then_carries_on() -> void:
 	berta.decide_action()
 	var resumed_from: Vector2 = berta.stats.position
 	print("  it passes — resuming from %s, doing: %s" % [_at(berta), berta.doing_label()])
-	_expect(berta.brain.active_action == go_home, "she should go back to heading home")
+	_expect(berta.active_action == go_home, "she should go back to heading home")
 	_expect(resumed_from.distance_to(started_from) > 100.0, "she should carry on from where she stands, not restart from where she set off")
 	_expect(when_frightened.x > 0.0, "the fright should genuinely have caught her partway")
 

@@ -1,42 +1,28 @@
 class_name DecisionBrain
 extends RefCounted
 
-# How one subject decides: which of the actions it's handed are open to them,
-# what each is worth, and which one wins. Belongs to a single subject — it
-# holds that subject, so nothing has to keep passing it in — but it owns no
-# catalog of its own: what a character knows how to do belongs to the
-# character, and gets handed in when they ask.
+# How a subject decides: which of the actions it's handed are open to them,
+# what each is worth, and which one wins. It holds nothing — every method takes
+# the subject it is deciding for. That is what makes it shareable in exactly
+# the way a Step is: it's a description of how to judge, not a record of anyone
+# having judged.
 #
-# The subject is deliberately opaque here: this class never reads a field off
-# it, it only hands it to an action's own gate and curve. Actions are allowed
-# to know what a subject is — they're world-specific content. This file isn't.
+# It deliberately does NOT hold the subject. An earlier version did, which made
+# a brain and its character point at each other, and two RefCounted objects
+# pointing at each other never reach zero — every headless run leaked them. The
+# fix isn't a weak reference, which would put a dereference on the hot path to
+# patch a construction-time mistake; it's noticing that this class was two
+# things wearing one name. What a subject owes and what they're pursuing are
+# facts about that subject, and now live on them. What's left here is judgment,
+# which belongs to nobody.
+#
+# The subject is opaque here: this class never reads a field off it, it only
+# hands it to an action's own gate and curve. Actions are allowed to know what
+# a subject is — they're world-specific content. This file isn't.
 #
 # Availability and ranking are kept apart on purpose: determine_available_actions
 # never scores, highest_scoring never gates. choose_action is just the two of
 # them composed, so either half can be used — or tested — on its own.
-#
-# The brain also keeps the queue of assigned work (see the bottom of this
-# file). It holds what you intend and what you owe; it never advances time or
-# touches the world.
-
-var subject   # who this brain decides for
-
-# Obligations handed in from outside — an order taken, an errand given. Only
-# things scoring can't regenerate belong here: a self-directed choice is never
-# queued, because re-deciding brings it back on its own. Deliberately a plain
-# array so it can be reordered, cancelled, or inserted into later (a lord
-# re-prioritising someone's work) without fighting a wrapper.
-var queue: Array[Action] = []
-
-# What the subject is pursuing right now. May be one of their own capabilities
-# or one of the obligations in the queue — a queued action being active does
-# NOT remove it from the queue, because owing something and working on it are
-# separate facts. It leaves the queue when it's discharged, not when it starts.
-var active_action: Action = null
-
-
-func _init(new_subject) -> void:
-	subject = new_subject
 
 
 # --- Availability -----------------------------------------------------------
@@ -50,20 +36,20 @@ func _init(new_subject) -> void:
 # undone by authoring, only outbid by weight. Note this protects the category,
 # never the instance: a starving man must always be able to attempt to eat, but
 # he is not owed a scoring pass over every inn in the region.
-func is_available(action: Action) -> bool:
+func is_available(who, action: Action) -> bool:
 	if action.protected:
 		return true
-	return action.eligible.call(subject)
+	return action.eligible.call(who)
 
 
 # The subset of a list that's open to the subject right now. Worked out fresh
 # each time it's asked rather than stored, because availability moves with the
 # subject: coin earned, fear risen, somewhere new stood — any of those can
 # change the answer between one moment and the next.
-func determine_available_actions(from: Array[Action]) -> Array[Action]:
+func determine_available_actions(who, from: Array[Action]) -> Array[Action]:
 	var open: Array[Action] = []
 	for action in from:
-		if is_available(action):
+		if is_available(who, action):
 			open.append(action)
 	return open
 
@@ -72,115 +58,36 @@ func determine_available_actions(from: Array[Action]) -> Array[Action]:
 
 # What is this action worth to the subject right now? The whole of "how much
 # do I want this" lives in the action's own curve; this just asks it.
-func score(action: Action) -> float:
-	return action.score.call(subject)
+func score(who, action: Action) -> float:
+	return action.score.call(who)
 
 
 # The highest-scoring action in a list, or null if the list is empty. Ranks
 # whatever it's handed and asks no questions about availability — filtering
 # happened before this, or not at all. Deterministic: ties go to the earlier
 # action, so the same subject in the same state always lands the same winner.
-func highest_scoring(from: Array[Action]) -> Action:
+#
+# A score that isn't a real number is refused rather than ranked. Two ways that
+# happens and both are bugs worth being loud about: a curve reading a stat that
+# was never set produces NaN, and every comparison against NaN is false, so the
+# action loses silently forever and the subject stands there with nothing said.
+# Minus infinity is the same story from the other end — it's the idiomatic
+# "never do this", and it should lose to a real score rather than sneak past
+# the opening -INF and win an otherwise empty list.
+func highest_scoring(who, from: Array[Action]) -> Action:
 	var best: Action = null
 	var best_score := -INF
 	for action in from:
-		var value := score(action)
-		if value > best_score:
+		var value := score(who, action)
+		if not is_finite(value):
+			push_warning("%s scored %f — a stat is missing or a curve is broken" % [action.label, value])
+			continue
+		if best == null or value > best_score:
 			best_score = value
 			best = action
 	return best
 
 
 # The best of what's open to the subject, out of the actions handed in.
-func choose_action(from: Array[Action]) -> Action:
-	return highest_scoring(determine_available_actions(from))
-
-
-# --- Deciding what to pursue ------------------------------------------------
-
-# Everything that could win right now: what the subject knows how to do, plus
-# what they owe. An obligation isn't worked off by some separate mechanism —
-# it competes directly, on its own merits, against every ordinary need. That's
-# what lets exhaustion outbid a lord's order without anything granting sleep
-# special status, and lets the order still be owed afterwards.
-func candidate_actions(known: Array[Action]) -> Array[Action]:
-	var candidates: Array[Action] = known.duplicate()
-	candidates.append_array(queue)
-	return candidates
-
-
-# Re-decide from scratch and keep the winner. This is the one entry point
-# anything outside pokes — a fright, someone walking past, the runner finishing
-# a step. Re-deciding is always safe: it's a fresh pass over current facts, so
-# a winner that's still winning simply stays.
-func reconsider(known: Array[Action]) -> Action:
-	active_action = choose_action(candidate_actions(known))
-	return active_action
-
-
-# --- Assigned work ----------------------------------------------------------
-
-# Being queued is not a way to jump the scoring — it's only a way to be
-# remembered. The queue holds what the subject owes; whether they're working on
-# it right now is a separate fact, held by active_action. An obligation stays
-# queued while it's being worked on, so an interruption costs nothing: it's
-# still owed, and re-deciding picks it up again on its own.
-
-# Take on an obligation, behind whatever's already waiting.
-func assign_action(action: Action) -> void:
-	queue.append(action)
-
-
-# The obligation that's been waiting longest, or null if there are none. Note
-# this is not "the one they'll do next" — that's whatever scores highest, which
-# may well be a fresher obligation that's grown more urgent.
-func next_assigned_action() -> Action:
-	return queue[0] if not queue.is_empty() else null
-
-
-func assigned_count() -> int:
-	return queue.size()
-
-
-# Is this work already owed? Asked by whoever is about to hand work over, so
-# they don't hand it over twice. This is the reason an Obligation says what
-# it's about: without it the only way to answer would be to remember having
-# asked, and a remembered intention is the one thing the design refuses to
-# keep. Looking at what the subject currently owes is reading the world, not
-# remembering.
-func owes_anything_about(about: StringName) -> bool:
-	return find_obligation_about(about) != null
-
-
-func find_obligation_about(about: StringName) -> Obligation:
-	for action in queue:
-		if action is Obligation and action.about == about:
-			return action
-	return null
-
-
-# Called off from outside — a lord changing his mind, an order withdrawn. It
-# stops being owed whether or not it was ever carried out; the queue only ever
-# knew that it was waiting.
-func clear_assigned_action(action: Action) -> void:
-	queue.erase(action)
-	if active_action == action:
-		active_action = null
-
-
-# The runner reporting the active action is done. Discharges it if it was owed
-# — finishing a lord's errand should settle the debt — and stops pursuing it
-# either way, leaving the subject free to decide afresh.
-func finish_active_action() -> void:
-	if active_action == null:
-		return
-	queue.erase(active_action)
-	active_action = null
-
-
-# The runner reporting it can't be got on with — every inn shut, no grain to be
-# had. Deliberately NOT the same as finishing: the work was never done, so an
-# obligation stays owed and only stops being pursued. Collapsing the two would
-# let a debt nobody could serve quietly pay itself off.
-func abandon_active_action() -> void:
-	active_action = null
+func choose_action(who, from: Array[Action]) -> Action:
+	return highest_scoring(who, determine_available_actions(who, from))

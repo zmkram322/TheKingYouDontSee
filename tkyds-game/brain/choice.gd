@@ -71,8 +71,8 @@ func describe(who) -> String:
 
 
 # Borrows the subject's own brain purely as a scorer. Note this is the plain
-# ranking path, not reconsider() — a nested decision must never disturb what
+# ranking path, not decide_action() — a nested decision must never disturb what
 # the character is pursuing at the top level. It answers "which of these",
 # not "what should I be doing with my life".
 func _pick(who) -> Action:
-	return who.brain.choose_action(options.call(who))
+	return who.brain.choose_action(who, options.call(who))
