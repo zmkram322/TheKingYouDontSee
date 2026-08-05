@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/actions/stay_up.gd" id="1_stay_up"]
+[ext_resource type="Script" path="res://game/actions/be_up.gd" id="2_be_up"]
+
+[node name="StayUp" type="Node"]
+script = ExtResource("1_stay_up")
+label = "stay up"
+pull = 45.0
+
+[node name="BeUp" type="Node" parent="."]
+script = ExtResource("2_be_up")
+per_second = 1.0
+ceiling = 100.0

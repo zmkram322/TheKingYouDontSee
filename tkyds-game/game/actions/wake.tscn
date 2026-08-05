@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/actions/wake.gd" id="1_wake"]
+[ext_resource type="Script" path="res://game/actions/wake_up.gd" id="2_wake_up"]
+
+[node name="Wake" type="Node"]
+script = ExtResource("1_wake")
+label = "wake"
+pull = 10.0
+
+[node name="WakeUp" type="Node" parent="."]
+script = ExtResource("2_wake_up")

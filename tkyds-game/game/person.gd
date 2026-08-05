@@ -25,6 +25,7 @@ extends CharacterBody3D
 @export var tint := Color(0.78, 0.74, 0.68)
 
 @onready var stats: Stats = $Stats
+@onready var brain: Brain = $Brain
 @onready var readout: Label3D = $Readout
 
 @onready var _shape: MeshInstance3D = $Shape
@@ -34,7 +35,13 @@ func _ready() -> void:
 	_apply_tint()
 
 
-func _process(_delta: float) -> void:
+# The one place a person's thinking is driven from. It sits here rather than in
+# Brain's own _process so that later, when there are more people than a frame
+# can afford to think for, one driver can take this over and spread them out —
+# turning off a Person's processing is a smaller change than unpicking a
+# _process from every Brain in the world.
+func _process(delta: float) -> void:
+	brain.tick(delta)
 	readout.text = _readout_text()
 
 
@@ -45,12 +52,22 @@ func _apply_tint() -> void:
 	_shape.material_override = material
 
 
-# What's floating over his head. Right now that's his name and every stat he
-# has, because with one stat and no decisions yet, the stats ARE the whole of
-# what there is to watch. Once there's a brain under him this is where what
-# he's doing goes too.
+# What's floating over his head: his name, what he's doing, and every stat he
+# has. The stats are listed rather than named one by one so that adding one to
+# Stats makes it show up here without this file changing.
 func _readout_text() -> String:
-	var lines := [person_name]
+	var lines := [person_name, brain.doing_label()]
 	for what in stats.names():
-		lines.append("%s %.1f" % [what, stats.value_of(what)])
+		var value: Variant = stats.value_of(what)
+		lines.append("%s %s" % [what, _read(value)])
 	return "\n".join(lines)
+
+
+# Numbers get a decimal place; yes/no stats read as words. Anything else falls
+# back to however it prints itself.
+func _read(value: Variant) -> String:
+	if value is float or value is int:
+		return "%.1f" % value
+	if value is bool:
+		return "yes" if value else "no"
+	return str(value)

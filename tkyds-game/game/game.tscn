@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
-[ext_resource type="PackedScene" path="res://game/person.tscn" id="3_person"]
+[ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)

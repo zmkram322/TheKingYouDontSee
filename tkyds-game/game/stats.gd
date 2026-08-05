@@ -40,9 +40,25 @@ extends Node
 @export var adenosine := 0.0
 
 
-# What a stat currently reads. An unknown name comes back as `fallback` rather
-# than erroring, so only what differs from nothing has to be set.
-func value_of(what: StringName, fallback := 0.0) -> float:
+# --- Awake --------------------------------------------------------------------
+# Yes or no. There is no half — if grogginess ever matters it gets its own
+# stat, derived off adenosine; being awake stays a plain fact.
+#
+# Nobody sets this from outside. It's set by the *doing* — Rest holds it false
+# while he's actually sleeping, WakeUp puts it back — so being asleep is a
+# consequence of sleeping rather than a flag someone has to remember to clear.
+@export var awake := true
+
+
+# What a stat currently reads, in whatever type it was declared as: a number
+# comes back a number, a yes/no comes back a yes/no. An unknown name comes back
+# as `fallback` rather than erroring, so only what differs from nothing has to
+# be set.
+#
+# Callers should say what they expect — `var tired: float = stats.value_of(...)`
+# — which both documents the stat and catches the day someone changes its type
+# underneath them.
+func value_of(what: StringName, fallback = 0.0) -> Variant:
 	if what in self:
 		return get(what)
 	return fallback
@@ -51,7 +67,7 @@ func value_of(what: StringName, fallback := 0.0) -> float:
 # Setting a stat nobody declared is a typo, not a new stat — the fields here
 # are the whole list, so inventing one silently would give you a value that
 # never shows up in the inspector and never gets plotted.
-func set_value(what: StringName, value: float) -> void:
+func set_value(what: StringName, value) -> void:
 	if not (what in self):
 		push_warning("no stat called \"%s\" — a stat name is misspelled or was never added" % what)
 		return
