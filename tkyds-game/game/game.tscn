@@ -1,0 +1,44 @@
+[gd_scene load_steps=7 format=3 uid="uid://skyjyprv51gs"]
+
+[ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
+[ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
+[ext_resource type="PackedScene" path="res://game/person.tscn" id="3_person"]
+
+[sub_resource type="Environment" id="Environment_sky"]
+background_color = Color(0.55, 0.68, 0.78, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.55, 0.68, 0.78, 1)
+ambient_light_energy = 0.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.36, 0.52, 0.32, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(40, 40)
+
+[node name="Game" type="Node3D"]
+
+[node name="Clock" type="Node" parent="."]
+script = ExtResource("1_clock")
+
+[node name="Sky" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_sky")
+
+[node name="Daylight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+shadow_enabled = true
+script = ExtResource("2_daylight")
+clock = NodePath("../Clock")
+environment = NodePath("../Sky")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+material_override = SubResource("StandardMaterial3D_ground")
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="Zoogs" parent="." instance=ExtResource("3_person")]
+person_name = "Zoogs"
+tint = Color(0.82, 0.46, 0.3, 1)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.87, 0.5, 0, -0.5, 0.87, 0, 4.5, 8)
+fov = 55.0
