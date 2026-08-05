@@ -56,3 +56,12 @@ func describe(who) -> String:
 		if not child.is_satisfied(who):
 			return child.describe(who)
 	return ""
+
+
+# Same frontier-child search as describe(), because the verb is a fact about
+# whichever child is currently being worked on, and that is never stored.
+func verb(who) -> StringName:
+	for child in children:
+		if not child.is_satisfied(who):
+			return child.verb(who)
+	return &""

@@ -70,6 +70,15 @@ func describe(who) -> String:
 	return winner.label if inner.is_empty() else "%s — %s" % [winner.label, inner]
 
 
+# Re-picks the same way describe() does, and asks the winner's body — never
+# stores which option won, same reasoning as everywhere else in this file.
+func verb(who) -> StringName:
+	var winner := _pick(who)
+	if winner == null:
+		return &""
+	return winner.body.verb(who)
+
+
 # Borrows the subject's own brain purely as a scorer. Note this is the plain
 # ranking path, not decide_action() — a nested decision must never disturb what
 # the character is pursuing at the top level. It answers "which of these",

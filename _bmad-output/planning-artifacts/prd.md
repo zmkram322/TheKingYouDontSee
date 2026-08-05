@@ -518,7 +518,7 @@ Single-player, systemic simulation RPG built in **Godot 4** (GDScript authoring;
 - FR4: The Simulation never serves a stale derived stat — a derived value read at time T reflects the primaries as of T.
 - FR5: The Player enters the world as a low-status actor subject to the same needs as any NPC.
 - FR6: An actor's motivation is a composite of competing drives; no drive categorically overrides another, and no state is unrecoverable (no hard-fail, no permadeath).
-- FR7: Survival drives are weighted to dominate in the common case — an actor with an unmet survival drive abandons lower-priority pursuits and resumes them when the drive normalises — achieved by weighting, not by an override rule.
+- FR7: Survival drives are weighted to dominate in the common case — an actor with an unmet survival drive abandons lower-priority pursuits and resumes them when the drive normalises — achieved by weighting, not by an override rule. The weights sit in one shared tuning table, so "dominates" is a checkable relation between named constants rather than a property smeared across individual action definitions.
 
 ### Behaviour, Goals & Arbitration
 

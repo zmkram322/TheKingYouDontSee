@@ -37,3 +37,7 @@ func advance(who, delta: float) -> bool:
 
 func describe(_who) -> String:
 	return "walking to (%.0f, %.0f)" % [target.x, target.y]
+
+
+func verb(_who) -> StringName:
+	return &"walking"

@@ -67,6 +67,18 @@ func score(who, action: Action) -> float:
 # happened before this, or not at all. Deterministic: ties go to the earlier
 # action, so the same subject in the same state always lands the same winner.
 #
+# `incumbent` is what the subject is already pursuing, passed in rather than
+# read off the subject — the opacity rule holds here too, so the caller who
+# owns that fact hands it over instead of this class going looking for it. If
+# one of the candidates IS the incumbent, its score is raised by its own
+# interrupt_threshold for this comparison only: a fresh pass over current
+# facts would otherwise be blind to the fact that one candidate is already
+# under way, and a score that falls as it's pursued (eating drains the very
+# hunger it's scored on) would lose to whatever it was ahead of the instant it
+# dipped, before ever getting to finish. Judgment still lives entirely here —
+# the caller supplies the fact, this method is the only place that fact is
+# ever weighed.
+#
 # A score that isn't a real number is refused rather than ranked. Two ways that
 # happens and both are bugs worth being loud about: a curve reading a stat that
 # was never set produces NaN, and every comparison against NaN is false, so the
@@ -74,11 +86,13 @@ func score(who, action: Action) -> float:
 # Minus infinity is the same story from the other end — it's the idiomatic
 # "never do this", and it should lose to a real score rather than sneak past
 # the opening -INF and win an otherwise empty list.
-func highest_scoring(who, from: Array[Action]) -> Action:
+func highest_scoring(who, from: Array[Action], incumbent: Action = null) -> Action:
 	var best: Action = null
 	var best_score := -INF
 	for action in from:
 		var value := score(who, action)
+		if action == incumbent:
+			value += action.interrupt_threshold
 		if not is_finite(value):
 			push_warning("%s scored %f — a stat is missing or a curve is broken" % [action.label, value])
 			continue
@@ -89,5 +103,9 @@ func highest_scoring(who, from: Array[Action]) -> Action:
 
 
 # The best of what's open to the subject, out of the actions handed in.
-func choose_action(who, from: Array[Action]) -> Action:
-	return highest_scoring(who, determine_available_actions(who, from))
+# `incumbent`, if given, gets its interrupt_threshold weighed in — see
+# highest_scoring. Availability is checked first and knows nothing of the
+# incumbent, so an action gated shut cannot be defended back into contention
+# by a bonus it never gets the chance to receive.
+func choose_action(who, from: Array[Action], incumbent: Action = null) -> Action:
+	return highest_scoring(who, determine_available_actions(who, from), incumbent)

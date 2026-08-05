@@ -53,3 +53,14 @@ func advance(_who, _delta: float) -> bool:
 # everything else here.
 func describe(_who) -> String:
 	return ""
+
+
+# The machine-readable counterpart of describe() — a verb a skin can switch
+# animation on without ever learning what a Step is. describe() is prose for
+# a human; verb() is a fixed vocabulary a 3D skin can poll every frame. Same
+# re-derivation discipline as everything else here: a composite forwards to
+# whichever child is actually being worked on, never stores which one that
+# was. Defaults to nothing, because most Steps are composites with no verb of
+# their own — only a leaf knows what it looks like to do it.
+func verb(_who) -> StringName:
+	return &""

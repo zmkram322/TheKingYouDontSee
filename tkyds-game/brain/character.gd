@@ -103,8 +103,14 @@ func candidate_actions() -> Array[Action]:
 # a fright, someone walking past, the work finishing. Re-deciding is always
 # safe: it's a fresh pass over current facts, so a winner that's still winning
 # simply stays.
+#
+# Whatever is already active goes in as the incumbent — a fact this class
+# owns and simply hands over, not a rule it enforces. Whether that fact is
+# worth anything is the brain's judgment alone: an incumbent with no
+# interrupt_threshold is exactly as easy to unseat as if it had never been
+# passed at all.
 func decide_action() -> Action:
-	active_action = brain.choose_action(self, candidate_actions())
+	active_action = brain.choose_action(self, candidate_actions(), active_action)
 	return active_action
 
 
