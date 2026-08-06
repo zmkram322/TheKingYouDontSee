@@ -14,6 +14,24 @@ extends RefCounted
 # to look at them separately.
 
 
+# What the last full pass made of each action, keyed by node name: its score,
+# or NAN if it wasn't on the ballot at all.
+#
+# Purely a readout — the graph draws it and nothing else touches it. Keeping it
+# doesn't break the rule about storing nothing you can work out again, because
+# nothing reads it back: it's a record of a pass that already happened, not a
+# memory that changes the next one. Delete it and every decision comes out
+# identical.
+#
+# Both halves write into it, which is also why it's only trustworthy after a
+# full choose() — that's where it gets cleared.
+var _last_scores := {}
+
+
+func get_last_scores() -> Dictionary:
+	return _last_scores
+
+
 # The ones open to him right now. Worked out fresh every time rather than kept,
 # because it moves with him — falling asleep changes the answer.
 #
@@ -25,6 +43,11 @@ func get_available(person: Person, actions: Array[Action]) -> Array[Action]:
 	for action in actions:
 		if action.is_available_to(person):
 			open.append(action)
+		else:
+			# Recorded as "wasn't on the ballot" rather than scored, because
+			# scoring something that was gated shut would be work nobody asked
+			# for and an answer nobody used. The graph draws it as a gap.
+			_last_scores[action.name] = NAN
 	return open
 
 
@@ -41,6 +64,7 @@ func get_highest_scoring(person: Person, actions: Array[Action]) -> Action:
 	var winning_score := -INF
 	for action in actions:
 		var score := action.get_utility_score(person)
+		_last_scores[action.name] = score
 		if not is_finite(score):
 			push_warning("\"%s\" scored %f — a stat is missing or the sum is broken" % [action.label, score])
 			continue
@@ -51,4 +75,5 @@ func get_highest_scoring(person: Person, actions: Array[Action]) -> Action:
 
 
 func choose(person: Person, actions: Array[Action]) -> Action:
+	_last_scores.clear()
 	return get_highest_scoring(person, get_available(person, actions))

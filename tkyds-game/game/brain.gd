@@ -83,6 +83,13 @@ func reload_known_actions() -> void:
 #
 # Doing nothing counts as awake. On the very first tick he hasn't decided
 # anything yet, and "hasn't decided" must not read as "unconscious".
+# What each action was worth in the last pass, by name — NAN for anything that
+# wasn't on the ballot. For watching a decision get made rather than inferring
+# it from the outcome. Nothing reads this back.
+func get_last_scores() -> Dictionary:
+	return decision_engine.get_last_scores()
+
+
 func is_awake() -> bool:
 	return current_action == null or not current_action.counts_as_asleep
 
