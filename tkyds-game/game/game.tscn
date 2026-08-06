@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=8 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
+[ext_resource type="PackedScene" path="res://game/ui/stat_graph.tscn" id="4_stat_graph"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
@@ -42,3 +43,8 @@ tint = Color(0.82, 0.46, 0.3, 1)
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.87, 0.5, 0, -0.5, 0.87, 0, 4.5, 8)
 fov = 55.0
+
+[node name="Screen" type="CanvasLayer" parent="."]
+
+[node name="StatGraph" parent="Screen" instance=ExtResource("4_stat_graph")]
+person = NodePath("../../Zoogs")
