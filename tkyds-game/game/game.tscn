@@ -50,6 +50,16 @@ fov = 55.0
 [node name="StatGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
 layout_mode = 3
 person = NodePath("../../Zoogs")
+show_utilities = false
+title = "Zoogs — stats"
+
+[node name="UtilityGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
+layout_mode = 3
+offset_top = -424.0
+offset_bottom = -224.0
+person = NodePath("../../Zoogs")
+show_stats = false
+title = "Zoogs — what he's weighing"
 
 [node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
 watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Zoogs/Brain"), NodePath("../../Zoogs/Brain/StayUp"), NodePath("../../Zoogs/Brain/StayUp/BeUp"), NodePath("../../Zoogs/Brain/Wake")])

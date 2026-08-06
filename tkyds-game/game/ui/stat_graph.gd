@@ -54,6 +54,20 @@ const ASLEEP_BAND := Color(0.35, 0.42, 0.70, 0.22)
 
 @export var person: Person
 
+# What's shown. Both on by default, so one panel gives you the crossings — the
+# adenosine line rising through StayUp's flat 45 is the decision itself.
+#
+# Turning one off is how you get two panels instead: instance this twice, one
+# with utilities off and one with stats off. Worth doing once there are enough
+# lines that they crowd each other, since the two answer different questions —
+# stats are what's true about him, utilities are what he's weighing.
+@export var show_stats := true
+@export var show_utilities := true
+
+# What the panel calls itself. Blank means his name, which is right when
+# there's one panel and ambiguous the moment there are two.
+@export var title := ""
+
 # How much history is on screen at once. Fills up over this many seconds, then
 # scrolls.
 @export_range(5.0, 600.0, 1.0, "or_greater") var window_seconds := 60.0
@@ -61,10 +75,6 @@ const ASLEEP_BAND := Color(0.35, 0.42, 0.70, 0.22)
 # How often a reading is taken. Higher is smoother and costs more memory;
 # what's stored is window_seconds × this, per line.
 @export_range(1.0, 60.0, 1.0) var samples_per_second := 10.0
-
-# Plot what each action was worth, alongside what's true about him. This is
-# where the flat pull lines come from, and where you see them get crossed.
-@export var show_utilities := true
 
 # Shade the background while he's asleep. Being awake isn't a stat he carries
 # (it's worked out from what he's doing), so it can't be drawn as a line off
@@ -101,13 +111,15 @@ func _process(delta: float) -> void:
 func _take_sample() -> void:
 	var capacity := int(window_seconds * samples_per_second)
 
-	for stat_name in person.stats.get_stat_names():
-		var value: Variant = person.stats.get_stat(stat_name)
-		# Yes/no stats have no place on a line — they'd read as a square wave
-		# between 0 and 1 and squash every real number against the axis.
-		if not (value is float or value is int):
-			continue
-		_push(_stats, stat_name, float(value), capacity)
+	if show_stats:
+		for stat_name in person.stats.get_stat_names():
+			var value: Variant = person.stats.get_stat(stat_name)
+			# Yes/no stats have no place on a line — they'd read as a square
+			# wave between 0 and 1 and squash every real number against the
+			# axis.
+			if not (value is float or value is int):
+				continue
+			_push(_stats, stat_name, float(value), capacity)
 
 	if show_utilities:
 		var scores := person.brain.get_last_scores()
@@ -245,8 +257,10 @@ func _draw_track(plot: Rect2, samples: Array, top: float, color: Color, width: f
 # second row rather than running off the edge.
 func _draw_labels() -> void:
 	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(MARGIN_LEFT, 14.0),
-		person.person_name if person != null else "(nobody)",
+	var heading := title
+	if heading.is_empty():
+		heading = person.person_name if person != null else "(nobody)"
+	draw_string(font, Vector2(MARGIN_LEFT, 14.0), heading,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, AXIS_TEXT)
 
 	var x := MARGIN_LEFT
