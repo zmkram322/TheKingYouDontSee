@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
 [ext_resource type="PackedScene" path="res://game/ui/stat_graph.tscn" id="4_stat_graph"]
+[ext_resource type="PackedScene" path="res://game/ui/tuning_board.tscn" id="5_tuning_board"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
@@ -48,3 +49,6 @@ fov = 55.0
 
 [node name="StatGraph" parent="Screen" instance=ExtResource("4_stat_graph")]
 person = NodePath("../../Zoogs")
+
+[node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
+watching = [NodePath("../../Clock"), NodePath("../../Zoogs/Brain"), NodePath("../../Zoogs/Brain/StayUp"), NodePath("../../Zoogs/Brain/StayUp/BeUp"), NodePath("../../Zoogs/Brain/Wake")]

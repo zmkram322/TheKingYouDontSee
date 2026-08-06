@@ -10,6 +10,7 @@ something needs it.
 |---|---|
 | `game/` | **The build.** Substrate: `person`, `stats`, `brain`, `action`, `action_step`, `decision_engine`, `clock`, `daylight`. |
 | `game/actions/` | The action library. One scene per action, instanced under a person's Brain. |
+| `game/ui/` | Watching and tuning. `stat_graph` plots a person's stats over time; `tuning_board` puts a slider on every exported number of whatever nodes you point it at. Both are their own scenes, both need a `CanvasLayer` parent in a 3D scene, both discover what to show by reflection so neither needs a line per stat or per knob. |
 | `assets/` | Art. `quaternius/` is 3D, `tiny_town`/`tiny_dungeon` are 2D. |
 | `board/`, `town/`, `sandbox/`, `sim/`, `behavior/` | Earlier studies. Not built on. Don't extend them; don't import from them. |
 | `_bmad-output/planning-artifacts/prd.md` | The requirements contract. FR numbers are stable identifiers. |

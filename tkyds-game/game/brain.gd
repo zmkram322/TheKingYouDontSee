@@ -129,17 +129,56 @@ func think_and_act(delta: float) -> void:
 # Every drift that arrives later — hunger, fear fading, a wound — is one more
 # line here, and every action ever written inherits all of them for free.
 @export_group("Body")
-@export var adenosine_per_second := 1.0              # while awake
-@export var adenosine_cleared_per_second := 2.5      # while asleep
+# `base_` because these are inputs to a sum, not the answer. What actually gets
+# applied comes out of the two getters below.
+@export var base_adenosine_per_second := 1.0            # while awake
+@export var base_adenosine_cleared_per_second := 2.5    # while asleep
 @export var adenosine_ceiling := 100.0
 
 func _update_body(delta: float) -> void:
 	var tired: float = person.stats.get_stat(&"adenosine")
 	if is_awake():
-		tired += adenosine_per_second * delta
+		tired += get_adenosine_accumulation() * delta
 	else:
-		tired -= adenosine_cleared_per_second * delta
+		tired -= get_adenosine_recovery() * delta
 	person.stats.set_stat(&"adenosine", clampf(tired, 0.0, adenosine_ceiling))
+
+
+# How fast he's tiring right now, per second, after everything that affects it.
+#
+# This is a seam, and worth having one even though there's a single modifier
+# behind it today. Everything that will ever change how fast someone tires —
+# illness, age, cold, a stimulant, a wound — goes in here as one more factor,
+# and no caller anywhere changes. It also means the rate is a number you can
+# plot, so "why is he tiring so fast today" is something you look at rather
+# than reason about.
+#
+# It is a function doing arithmetic, deliberately, and should stay one. If it
+# ever grows a list of registered modifiers with priorities and stacking rules,
+# that's a system, and systems built before they're needed get thrown away.
+#
+# Modifiers multiply rather than add: they compose in any order and can't drive
+# the rate negative. Watch the stacking though — three 2× modifiers is 8×, not
+# 6×. At four factors, revisit; not before.
+func get_adenosine_accumulation() -> float:
+	return base_adenosine_per_second * get_exertion()
+
+
+# How fast he's recovering, per second. The mirror of the above, with nothing
+# behind it yet — sleeping in a bed versus a ditch, sleeping ill, sleeping cold
+# all belong here when they exist. Present now so the pair is obvious to
+# whoever reads this next.
+func get_adenosine_recovery() -> float:
+	return base_adenosine_cleared_per_second
+
+
+# How strenuous what he's doing right now is. 1.0 when he isn't doing anything
+# in particular, which is also the default on every step — so an unconsidered
+# action costs a normal amount rather than nothing.
+func get_exertion() -> float:
+	if current_action == null or current_action.step == null:
+		return 1.0
+	return current_action.step.exertion
 
 
 # What he'd be seen doing, both halves. The Action says why — "sleep" — and the

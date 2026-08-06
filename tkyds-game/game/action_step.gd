@@ -20,6 +20,20 @@ extends Node
 #   IS, not what anyone's mid-way through.
 
 
+# How hard this is on the body. A multiplier the brain feeds into its own
+# tiredness sum — it never touches a stat itself, it just declares how
+# strenuous the work is and lets the brain decide what that costs.
+#
+# It sits on the step rather than the action because that's where the truth is:
+# in a walk-there-then-dig sequence, walking and digging are not equally hard,
+# and only the step knows which one is happening.
+#
+# **Default 1.0, never 0.0.** An action nobody thought about should tire you a
+# normal amount. If the default were zero, forgetting to set this would quietly
+# make the work free, which is the failure you'd never go looking for.
+@export var exertion := 1.0
+
+
 # Is this already done, as far as the world is concerned? Default true, so a
 # step that does nothing doesn't hold anyone up.
 func is_done(_person: Person) -> bool:

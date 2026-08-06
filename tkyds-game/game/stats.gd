@@ -71,9 +71,16 @@ func set_stat(stat_name: StringName, value) -> void:
 
 # Every stat there is, by name. This is what a graph panel asks so it can offer
 # you something to plot without anyone having to list them twice.
+# Exported only — a stat is something declared for the world to see, so an
+# internal working variable added here later shouldn't quietly become one and
+# turn up on the graph. (PROPERTY_USAGE_SCRIPT_VARIABLE on its own catches
+# both; PROPERTY_USAGE_EDITOR is what tells an @export from a plain var.)
 func get_stat_names() -> Array[StringName]:
 	var found: Array[StringName] = []
 	for property in get_script().get_script_property_list():
-		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-			found.append(property.name)
+		if not (property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		if not (property.usage & PROPERTY_USAGE_EDITOR):
+			continue
+		found.append(property.name)
 	return found
