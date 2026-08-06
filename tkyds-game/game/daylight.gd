@@ -41,6 +41,22 @@ extends DirectionalLight3D
 @export var night_ambient := 0.08
 
 
+# Says so out loud if it was never wired up. Without this the sun simply never
+# moves and nothing anywhere complains — which is exactly what happened, and it
+# survived two atoms and a commit before anyone noticed. A guard that turns a
+# broken link into silence is worse than no guard.
+#
+# Note for whoever wires this in a .tscn by hand: a node reference needs
+# `node_paths=PackedStringArray("clock", "environment")` on the node's own
+# header line, or the loader assigns the raw NodePath to a typed field and you
+# get null. The editor writes that for you; hand-written scenes don't.
+func _ready() -> void:
+	if clock == null:
+		push_warning("Daylight has no Clock — the sun will not move")
+	if environment == null:
+		push_warning("Daylight has no WorldEnvironment — the sky and ambient will not change")
+
+
 func _process(_delta: float) -> void:
 	if clock == null:
 		return

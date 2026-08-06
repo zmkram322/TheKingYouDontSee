@@ -61,6 +61,18 @@ var _asleep: Array[bool] = []
 var _seconds_owed := 0.0
 
 
+# Same reasoning as Daylight's: an unwired graph draws an empty panel forever
+# and says nothing, which reads as "the numbers aren't moving" rather than "you
+# didn't point me at anybody".
+#
+# Wiring `person` in a hand-written .tscn needs
+# `node_paths=PackedStringArray("person")` on the node's header line — without
+# it the loader hands the typed field a raw NodePath and it lands as null.
+func _ready() -> void:
+	if person == null:
+		push_warning("StatGraph has nobody to watch — set `person`")
+
+
 func _process(delta: float) -> void:
 	if person == null:
 		return

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=9 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
@@ -26,7 +26,7 @@ script = ExtResource("1_clock")
 [node name="Sky" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_sky")
 
-[node name="Daylight" type="DirectionalLight3D" parent="."]
+[node name="Daylight" type="DirectionalLight3D" parent="." node_paths=PackedStringArray("clock", "environment")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
 shadow_enabled = true
 script = ExtResource("2_daylight")
@@ -47,8 +47,9 @@ fov = 55.0
 
 [node name="Screen" type="CanvasLayer" parent="."]
 
-[node name="StatGraph" parent="Screen" instance=ExtResource("4_stat_graph")]
+[node name="StatGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
+layout_mode = 3
 person = NodePath("../../Zoogs")
 
 [node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
-watching = [NodePath("../../Clock"), NodePath("../../Zoogs/Brain"), NodePath("../../Zoogs/Brain/StayUp"), NodePath("../../Zoogs/Brain/StayUp/BeUp"), NodePath("../../Zoogs/Brain/Wake")]
+watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Zoogs/Brain"), NodePath("../../Zoogs/Brain/StayUp"), NodePath("../../Zoogs/Brain/StayUp/BeUp"), NodePath("../../Zoogs/Brain/Wake")])

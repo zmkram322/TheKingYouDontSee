@@ -87,6 +87,13 @@ ported yet; port them from git history when something needs them.
 
 ## Godot gotchas already hit here
 
+- **A node reference in a hand-written `.tscn` needs `node_paths` on the node header**, or it silently loads as `null`:
+  ```
+  [node name="Daylight" type="DirectionalLight3D" parent="." node_paths=PackedStringArray("clock", "environment")]
+  clock = NodePath("../Clock")
+  ```
+  The editor writes that for you; writing the file by hand does not. This shipped a day/night cycle that never ran for two atoms. **Corollary: never guard a missing wire with a silent `return`.** Warn in `_ready` if a required reference is null — otherwise a broken link is indistinguishable from "nothing is happening yet", and "it runs without errors" stops meaning anything.
+- **`@export var x: Array[Node]` does not resolve its paths at all**, even with `node_paths`. Use `Array[NodePath]` and `get_node_or_null()`.
 - **`class_name` is project-global.** A name used anywhere in the project is taken everywhere. Check before naming.
 - **Ternaries infer `Variant`** when the branches are different types — `String` and `StringName` will fail the build under warnings-as-errors. Annotate the variable.
 - **`var x = something_returning_Variant`** fails the same way. Write `var x: Variant = ...` or the concrete type.
