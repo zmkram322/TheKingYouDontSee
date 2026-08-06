@@ -19,9 +19,9 @@ extends Action
 @export var pull := 10.0
 
 
-func can_do(who: Person) -> bool:
-	return not who.stats.value_of(&"awake")
+func is_available_to(person: Person) -> bool:
+	return not person.brain.is_awake()
 
 
-func wants(_who: Person) -> float:
+func get_utility_score(_person: Person) -> float:
 	return pull

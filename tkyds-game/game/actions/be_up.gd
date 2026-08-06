@@ -1,30 +1,25 @@
 class_name BeUp
-extends Step
+extends ActionStep
 
-# Being awake, and paying for it. The waking half of adenosine: the brain
-# spends energy all day and this is the waste piling up behind it.
+# Being up, and nothing more specific than that. The placeholder every real
+# waking action will eventually outbid.
 #
-# Never done — there is no end to being up. It stops because something outbids
-# it, which here means adenosine climbing past StayUp's pull and Sleep winning.
-# That's the day ending because he got tired, not because a timer said so.
-
-@export var per_second := 1.0
-
-# A backstop, not a tuned number. Nothing should ever sit here — if it does,
-# something is stopping him sleeping and you want the graph to flatline
-# visibly rather than the number running away.
-@export var ceiling := 100.0
+# It does no work — the tiredness that used to be added here now happens in the
+# brain's drift, because getting tired is a consequence of being awake, not of
+# this particular way of being awake. That's what stops "work the field" from
+# needing to remember it too.
+#
+# Never done. There's no end to being up; it stops because something outbids
+# it, which for now means adenosine climbing past StayUp's pull.
 
 
-func is_done(_who: Person) -> bool:
+func is_done(_person: Person) -> bool:
 	return false
 
 
-func work_on(who: Person, delta: float) -> bool:
-	var tired: float = who.stats.value_of(&"adenosine")
-	who.stats.set_value(&"adenosine", minf(ceiling, tired + per_second * delta))
+func advance(_person: Person, _delta: float) -> bool:
 	return false
 
 
-func describe(_who: Person) -> String:
+func describe(_person: Person) -> String:
 	return "up and about"

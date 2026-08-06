@@ -6,7 +6,7 @@
 [node name="Sleep" type="Node"]
 script = ExtResource("1_sleep")
 label = "sleep"
+counts_as_asleep = true
 
 [node name="Rest" type="Node" parent="."]
 script = ExtResource("2_rest")
-cleared_per_second = 2.5

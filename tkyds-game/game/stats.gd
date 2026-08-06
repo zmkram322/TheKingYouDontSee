@@ -1,28 +1,27 @@
 class_name Stats
 extends Node
 
-# Everything true about one character that anything else is allowed to read.
+# Everything true about one person that anything else is allowed to read.
 # Lives as its own Node under them, so you can select Zoogs in the running
 # scene and watch his numbers move in the inspector without printing anything.
 #
-# A plain Node rather than a Resource on purpose: this is per-Zoogs runtime
-# state that changes every frame and means nothing outside this run. Resources
-# earn their keep for authored data you want to save, preset, and swap — which
-# is what the tuning block will be, and why it will be a different object from
-# this one. Runtime state and authored constants don't share a box.
+# A plain Node rather than a Resource on purpose: this is per-person state that
+# changes every frame and means nothing outside this run. Resources earn their
+# keep for authored data you want to save, preset, and swap. Runtime state and
+# authored constants don't share a box.
 #
 # Two ways in:
 #
 #   The @export below is the one you look at and drag. Named, typed, visible,
 #   and editable live while the game runs.
 #
-#   value_of() / set_value() are the one everything else uses. They take a
-#   stat's NAME rather than touching the field, which is what lets a graph
-#   panel plot "adenosine" without being written to know what adenosine is,
-#   and what lets a stat later become a derived reading — "how tired does he
-#   LOOK to someone watching" — by changing these two methods and nothing
-#   else. That only stays true while everything goes through them, so nothing
-#   outside this file should reach for the field directly.
+#   get_stat / set_stat are the one everything else uses. They take a stat's
+#   NAME rather than touching the field, which is what lets a graph panel plot
+#   "adenosine" without being written to know what adenosine is, and what lets
+#   a stat later become a worked-out reading — "how tired does he LOOK to
+#   someone watching" — by changing those two methods and nothing else. That
+#   only stays true while everything goes through them, so nothing outside this
+#   file should reach for the field directly.
 
 
 # --- Adenosine ----------------------------------------------------------------
@@ -40,14 +39,10 @@ extends Node
 @export var adenosine := 0.0
 
 
-# --- Awake --------------------------------------------------------------------
-# Yes or no. There is no half — if grogginess ever matters it gets its own
-# stat, derived off adenosine; being awake stays a plain fact.
-#
-# Nobody sets this from outside. It's set by the *doing* — Rest holds it false
-# while he's actually sleeping, WakeUp puts it back — so being asleep is a
-# consequence of sleeping rather than a flag someone has to remember to clear.
-@export var awake := true
+# Note what is NOT here: whether he's awake. That's not a fact he carries, it's
+# a fact about what he's currently doing, so it's read off the brain
+# (Brain.is_awake) rather than stored. A stored copy could disagree with what
+# he's actually doing; a worked-out one can't.
 
 
 # What a stat currently reads, in whatever type it was declared as: a number
@@ -55,28 +50,28 @@ extends Node
 # as `fallback` rather than erroring, so only what differs from nothing has to
 # be set.
 #
-# Callers should say what they expect — `var tired: float = stats.value_of(...)`
+# Callers should say what they expect — `var tired: float = stats.get_stat(...)`
 # — which both documents the stat and catches the day someone changes its type
 # underneath them.
-func value_of(what: StringName, fallback = 0.0) -> Variant:
-	if what in self:
-		return get(what)
+func get_stat(stat_name: StringName, fallback = 0.0) -> Variant:
+	if stat_name in self:
+		return get(stat_name)
 	return fallback
 
 
 # Setting a stat nobody declared is a typo, not a new stat — the fields here
 # are the whole list, so inventing one silently would give you a value that
 # never shows up in the inspector and never gets plotted.
-func set_value(what: StringName, value) -> void:
-	if not (what in self):
-		push_warning("no stat called \"%s\" — a stat name is misspelled or was never added" % what)
+func set_stat(stat_name: StringName, value) -> void:
+	if not (stat_name in self):
+		push_warning("no stat called \"%s\" — a stat name is misspelled or was never added" % stat_name)
 		return
-	set(what, value)
+	set(stat_name, value)
 
 
 # Every stat there is, by name. This is what a graph panel asks so it can offer
 # you something to plot without anyone having to list them twice.
-func names() -> Array[StringName]:
+func get_stat_names() -> Array[StringName]:
 	var found: Array[StringName] = []
 	for property in get_script().get_script_property_list():
 		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:

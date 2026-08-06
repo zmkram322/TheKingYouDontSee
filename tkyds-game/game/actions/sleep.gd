@@ -11,6 +11,6 @@ extends Action
 # the sleep/wake cycle — see stay_up.gd for how the gap between them works.
 
 
-func wants(who: Person) -> float:
-	var tired: float = who.stats.value_of(&"adenosine")
+func get_utility_score(person: Person) -> float:
+	var tired: float = person.stats.get_stat(&"adenosine")
 	return tired

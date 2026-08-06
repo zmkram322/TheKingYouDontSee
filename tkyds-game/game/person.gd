@@ -41,7 +41,7 @@ func _ready() -> void:
 # turning off a Person's processing is a smaller change than unpicking a
 # _process from every Brain in the world.
 func _process(delta: float) -> void:
-	brain.tick(delta)
+	brain.think_and_act(delta)
 	readout.text = _readout_text()
 
 
@@ -56,16 +56,19 @@ func _apply_tint() -> void:
 # has. The stats are listed rather than named one by one so that adding one to
 # Stats makes it show up here without this file changing.
 func _readout_text() -> String:
-	var lines := [person_name, brain.doing_label()]
-	for what in stats.names():
-		var value: Variant = stats.value_of(what)
-		lines.append("%s %s" % [what, _read(value)])
+	var lines := [person_name, brain.describe_current_action()]
+	# Asked for by name rather than picked up off the stat list, because being
+	# awake isn't a stat he carries — see Brain.is_awake.
+	lines.append("awake %s" % ["yes" if brain.is_awake() else "no"])
+	for stat_name in stats.get_stat_names():
+		var value: Variant = stats.get_stat(stat_name)
+		lines.append("%s %s" % [stat_name, _as_text(value)])
 	return "\n".join(lines)
 
 
 # Numbers get a decimal place; yes/no stats read as words. Anything else falls
 # back to however it prints itself.
-func _read(value: Variant) -> String:
+func _as_text(value: Variant) -> String:
 	if value is float or value is int:
 		return "%.1f" % value
 	if value is bool:

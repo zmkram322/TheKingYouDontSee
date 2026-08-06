@@ -1,22 +1,21 @@
 class_name WakeUp
-extends Step
+extends ActionStep
 
-# Getting up. One tick's worth — flip awake and it's done.
+# Getting up. Does nothing, because winning IS waking up — the brain reads
+# whether he's awake off what he's doing, and this isn't sleeping, so choosing
+# it is the whole of it.
 #
-# It doesn't have to tell anyone it finished. Next tick `awake` is true, so
-# Wake's own can_do says no, and it simply isn't on the ballot any more. That's
-# the whole shape of this substrate: things stop because they stop winning, not
-# because something reported success.
+# Done immediately, so it never holds him for more than the tick he chose it.
+# The next tick he's awake, Wake's own gate says no, and StayUp takes over.
 
 
-func is_done(who: Person) -> bool:
-	return who.stats.value_of(&"awake")
-
-
-func work_on(who: Person, _delta: float) -> bool:
-	who.stats.set_value(&"awake", true)
+func is_done(_person: Person) -> bool:
 	return true
 
 
-func describe(_who: Person) -> String:
+func advance(_person: Person, _delta: float) -> bool:
+	return true
+
+
+func describe(_person: Person) -> String:
 	return "getting up"

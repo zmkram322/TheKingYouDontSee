@@ -42,7 +42,7 @@ func day() -> int:
 
 
 # "day 3 — 14:20", for anything that wants to show the time to a human.
-# Derived like everything else here; nothing is stored to make it.
-func reading() -> String:
+# Worked out like everything else here; nothing is stored to make it.
+func get_text() -> String:
 	var total_minutes := int(time_of_day() * 24.0 * 60.0)
 	return "day %d — %02d:%02d" % [day(), total_minutes / 60, total_minutes % 60]
