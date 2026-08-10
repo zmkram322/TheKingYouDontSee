@@ -1737,3 +1737,57 @@ Not yet applied.
 | Rung 3 | The two farmers differ by `strength`, authored per instance. Nothing else about them differs — same actions, same numbers on those actions. |
 | Rung 3 (Moment) | The loser loses because the winner *got there first*, and got there first because he needed less sleep. That is the causal chain to watch, and it is visible on the readout. |
 | Rung 9d | Thirteen people can be thirteen different bodies with one stat each, and no new code. Standing check #2 gets cheaper. |
+
+---
+
+## Decision 13 — The rung-3 Moment reads
+
+**Closed 2026-08-10 by the author, at the keyboard, by watching it.** Not a
+disagreement — this is the one question Decision 2 deliberately left open, and
+it could only ever be settled by looking.
+
+### The question, as Decision 2 left it
+
+> *"Whether the rung-3 Moment still reads. Day-long claims mean the loser's
+> utility scrambles once at dawn and then goes flat, where the plan promises a
+> live scramble watchable in eight seconds… Unresolved until it can actually be
+> watched."*
+
+The concern was real: a day-long tenancy trades a twitchy contest for one
+decisive beat per day, and a beat you have to wait a full day for is not a
+Moment. Link's proposed answer — shorten the day on the tuning board so the
+dawn beat repeats every few seconds — was **blocked by Decision 5** at the time
+it was proposed, because before world time was denominated in hours, dragging
+that slider left the farmer awake for four days.
+
+### What settled it
+
+Decision 5 shipped at rung 0 and unblocked the slider. Rung 3 shipped the
+contention. **The author ran it and confirms the Moment lands.**
+
+So the chain closes: hours made the day shortenable, a shortened day made the
+dawn beat repeat, and the repeating beat is what makes one decisive contest per
+day watchable as a rhythm rather than as an event you wait for.
+
+### What this licenses for the rungs above
+
+**Shortening the day is now a proven instrument, not just a tuning
+convenience.** Any rung whose Moment is a once-a-day crossing can be watched
+the same way — 6a's three drives competing, 6b's work falling off the graph at
+quota, 6d's first full day. That is worth knowing before those rungs are built,
+because each of them was written expecting to be watched at normal speed.
+
+It also means the day-long tenancy needs no softening. If the beat ever wants
+adjusting, it is the day length or a curve — **never a fairness rule, a
+rotation, or a priority scheme**, all of which Decision 2 already refused and
+none of which the Moment turned out to need.
+
+### Plan edits this implies
+
+Not yet applied.
+
+| Section | Change |
+|---|---|
+| Rung 3 (Moment) | Mark the open question closed: the day-long Moment reads, watched at a shortened day. |
+| Decision 2 → *Deliberately left open* | The single item there is closed by this section. |
+| Rungs 6a / 6b / 6d | Note that their Moments are once-a-day crossings and are meant to be watched at a shortened day, the same instrument rung 3 proved. |
