@@ -38,6 +38,7 @@ extends SceneTree
 
 
 const GAME_SCENE_PATH := "res://game/game.tscn"
+const PERSON_SCENE_PATH := "res://game/person.tscn"
 
 # Where the .tscn scan starts. The whole project, not just the scene under the
 # probe — the node_paths trap is textual, so this catches it in files nothing
@@ -69,6 +70,7 @@ var _checks := 0
 var _game: Node
 var _person: Person
 var _clock: Clock
+var _population: Population
 
 # Kept only so the report can say what the cycle actually did. Nothing asserts
 # against these directly — they are here so a human reading a PASS can still
@@ -78,14 +80,25 @@ var _woke_at_hour := -1.0
 
 
 func _initialize() -> void:
+	_game = _add_a_disabled_game_scene()
+
+
+# One instance of the real game scene, disabled and in the tree. Used more than
+# once: a check that needs a person at a known starting state gets his own
+# world rather than picking through whatever the last check left behind, which
+# is what keeps the checks in this file independent of each other's order.
+#
+# process_mode is set BEFORE add_child so not one frame ticks itself — see the
+# header. Never set_process(false).
+func _add_a_disabled_game_scene() -> Node:
 	var scene: PackedScene = load(GAME_SCENE_PATH) as PackedScene
 	if scene == null:
 		push_error("probe: could not load %s" % GAME_SCENE_PATH)
-		return
-	_game = scene.instantiate()
-	# Before add_child, so not one frame ticks itself. See the header.
-	_game.process_mode = Node.PROCESS_MODE_DISABLED
-	root.add_child(_game)
+		return null
+	var instanced := scene.instantiate()
+	instanced.process_mode = Node.PROCESS_MODE_DISABLED
+	root.add_child(instanced)
+	return instanced
 
 
 # Everything happens in the first frame and then the probe leaves. By now the
@@ -97,6 +110,8 @@ func _process(_delta: float) -> bool:
 		quit(1)
 		return true
 	_pump_one_day()
+	_check_everyone_is_ticked_once_per_call()
+	_check_the_town_survives_losing_somebody()
 	_check_every_scene_is_wired()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
@@ -111,13 +126,17 @@ func _is_scene_ready_to_pump() -> bool:
 	if _game == null:
 		push_error("probe: the game scene never instantiated")
 		return false
-	_person = _game.get_node_or_null("Zoogs") as Person
+	_person = _game.get_node_or_null("Population/Zoogs") as Person
 	_clock = _game.get_node_or_null("Clock") as Clock
+	_population = _game.get_node_or_null("Population") as Population
 	if _person == null:
-		push_error("probe: no Person called \"Zoogs\" under the game scene")
+		push_error("probe: no Person called \"Zoogs\" under Population")
 		return false
 	if _clock == null:
 		push_error("probe: no Clock under the game scene")
+		return false
+	if _population == null:
+		push_error("probe: no Population under the game scene")
 		return false
 	return true
 
@@ -152,7 +171,11 @@ func _pump_one_day() -> void:
 		var tired_before: float = _person.stats.get_stat(&"adenosine")
 
 		_clock.advance(TICK_HOURS)
-		_person.think_and_act(TICK_HOURS)
+		# Driven through Population rather than by poking the Person, so these
+		# three assertions cover the real call site the game uses. Reaching
+		# past the driver would leave the one thing rung 1 added untested by
+		# the three checks most likely to notice it misbehaving.
+		_population.think_for_everyone(TICK_HOURS)
 
 		var tired_after: float = _person.stats.get_stat(&"adenosine")
 		var is_awake_now: bool = _person.brain.is_awake()
@@ -208,6 +231,111 @@ func _pump_one_day() -> void:
 	_require(has_woken_again,
 		"1 — over 24 simulated hours he sleeps at least once and wakes at least once",
 		"slept at hour %.2f and was still under at hour %.0f" % [_fell_asleep_at_hour, HOURS_IN_A_DAY])
+
+
+# --- Assertion 5: exactly one tick each, per call --------------------------------
+
+# The hazard this catches is specific and was measured: if Person._process is
+# still calling think_and_act, or if a node the harness meant to disable is
+# ticking anyway, the man advances TWICE per pumped tick. Nothing errors.
+# Adenosine simply climbs at double the rate and it reads as a tuning problem,
+# which is how it costs a day to find.
+#
+# Asserted on an observable — how far he actually moved — rather than on a
+# counter the probe installs. A counter would need a fixture and would only
+# ever prove the fixture was called.
+#
+# On a FRESH world, so the numbers are exact: adenosine starts at 0, he is
+# awake, nothing is clamped, and one hour must move him by exactly one hour's
+# worth of accumulation. The claim is per think_for_everyone CALL, not per
+# frame — there are no frames in a pumped harness.
+func _check_everyone_is_ticked_once_per_call() -> void:
+	var claim := "5 — Population moves each person exactly once per call"
+	var world := _add_a_disabled_game_scene()
+	var person := world.get_node_or_null("Population/Zoogs") as Person
+	var population := world.get_node_or_null("Population") as Population
+	if person == null or population == null:
+		_require(false, claim, "a second game scene came up without a Population and a Zoogs in it")
+		return
+
+	var tired_before: float = person.stats.get_stat(&"adenosine")
+	population.think_for_everyone(1.0)
+	var moved: float = person.stats.get_stat(&"adenosine") - tired_before
+	var expected: float = person.brain.get_adenosine_accumulation()
+
+	var ticks_worth := moved / expected if expected != 0.0 else 0.0
+	_require(absf(moved - expected) < 0.001, claim,
+		"one hour moved adenosine by %.4f where one tick's worth is %.4f — that is %.2f ticks, so something besides Population is moving him" % [
+			moved, expected, ticks_worth])
+
+	world.queue_free()
+
+
+# --- Assertion 6: losing somebody mid-run ----------------------------------------
+
+# Standing check #1, made mechanical: delete a person mid-run and the town must
+# return a verdict rather than a stack trace.
+#
+# Two hazards, both real. A freed node does NOT null your reference —
+# `== null` stays false and the next property read errors — which is why the
+# loop asks is_instance_valid rather than trusting the list. And get_children()
+# hands back a SNAPSHOT, so somebody freed part-way through a tick is still in
+# the list being walked.
+#
+# Also checks the loop tolerates a child that isn't a Person at all. Somebody
+# will drop a marker or a spawn point under Population eventually, and a driver
+# that crashes on it is a trap laid for a future rung.
+func _check_the_town_survives_losing_somebody() -> void:
+	var claim := "6 — losing a person mid-run leaves the rest of the town ticking"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	var survivor := world.get_node_or_null("Population/Zoogs") as Person
+	if population == null or survivor == null:
+		_require(false, claim, "a second game scene came up without a Population and a Zoogs in it")
+		return
+
+	var person_scene: PackedScene = load(PERSON_SCENE_PATH) as PackedScene
+	if person_scene == null:
+		_require(false, claim, "could not load %s" % PERSON_SCENE_PATH)
+		return
+	var doomed := person_scene.instantiate() as Person
+	doomed.name = "Doomed"
+	doomed.person_name = "Doomed"
+	population.add_child(doomed)
+	# Not a Person. The loop must walk straight past it.
+	#
+	# Moved to the FRONT deliberately. A loop that doesn't skip it calls
+	# think_and_act on a plain Node, which aborts think_for_everyone where it
+	# stands — so with the marker last, everybody has already ticked and this
+	# check passes while broken. First, the abort happens before Zoogs moves at
+	# all, and the survivor's numbers below go wrong. Order is the only thing
+	# making this assertion able to fail.
+	var bystander := Node.new()
+	bystander.name = "SomeMarker"
+	population.add_child(bystander)
+	population.move_child(bystander, 0)
+
+	population.think_for_everyone(1.0)
+	_require(population.get_people().size() == 2, claim,
+		"expected 2 people under Population and found %d — the marker node was counted as one" % [
+			population.get_people().size()])
+
+	# Freed outright rather than queue_free()d: queued deletion doesn't land
+	# until the end of the frame, so within one pumped tick the node is still
+	# perfectly valid and the guard this is here to exercise never runs.
+	doomed.free()
+
+	var tired_before: float = survivor.stats.get_stat(&"adenosine")
+	population.think_for_everyone(1.0)
+	var moved: float = survivor.stats.get_stat(&"adenosine") - tired_before
+	var expected: float = survivor.brain.get_adenosine_accumulation()
+
+	_require(absf(moved - expected) < 0.001, claim,
+		"after a death the survivor moved %.4f where one tick's worth is %.4f" % [moved, expected])
+	_require(population.get_people().size() == 1, claim,
+		"expected 1 person left and found %d" % population.get_people().size())
+
+	world.queue_free()
 
 
 # --- Assertion 4: the node_paths trap -------------------------------------------

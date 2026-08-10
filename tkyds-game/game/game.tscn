@@ -1,6 +1,7 @@
-[gd_scene load_steps=9 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=10 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
+[ext_resource type="Script" path="res://game/population.gd" id="6_population"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
 [ext_resource type="PackedScene" path="res://game/ui/stat_graph.tscn" id="4_stat_graph"]
@@ -37,10 +38,13 @@ environment = NodePath("../Sky")
 material_override = SubResource("StandardMaterial3D_ground")
 mesh = SubResource("PlaneMesh_ground")
 
-[node name="Zoogs" parent="." node_paths=PackedStringArray("clock") instance=ExtResource("3_person")]
+[node name="Population" type="Node" parent="." node_paths=PackedStringArray("clock")]
+script = ExtResource("6_population")
+clock = NodePath("../Clock")
+
+[node name="Zoogs" parent="Population" instance=ExtResource("3_person")]
 person_name = "Zoogs"
 tint = Color(0.82, 0.46, 0.3, 1)
-clock = NodePath("../Clock")
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.87, 0.5, 0, -0.5, 0.87, 0, 4.5, 8)
@@ -50,7 +54,7 @@ fov = 55.0
 
 [node name="StatGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
 layout_mode = 3
-person = NodePath("../../Zoogs")
+person = NodePath("../../Population/Zoogs")
 show_utilities = false
 title = "Zoogs — stats"
 
@@ -58,9 +62,9 @@ title = "Zoogs — stats"
 layout_mode = 3
 offset_top = -424.0
 offset_bottom = -224.0
-person = NodePath("../../Zoogs")
+person = NodePath("../../Population/Zoogs")
 show_stats = false
 title = "Zoogs — what he's weighing"
 
 [node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
-watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Zoogs/Brain"), NodePath("../../Zoogs/Brain/StayUp"), NodePath("../../Zoogs/Brain/StayUp/BeUp"), NodePath("../../Zoogs/Brain/Wake")])
+watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake")])
