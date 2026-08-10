@@ -57,6 +57,17 @@ const PROJECT_ROOT_DIR := "res://"
 const TICK_HOURS := 0.01
 const HOURS_IN_A_DAY := 24.0
 
+# Two days, not one, for the per-tick assertions. The cycle is anchored to the
+# sun now: he turns in around 22:00 and is up around 06:00, so a probe that
+# starts at midnight with an empty tank and stops at hour 24 catches him going
+# to bed and quits before he gets up. Nothing was wrong with the assertion; the
+# window was cut to a free-running cycle that no longer exists.
+const PUMPED_HOURS := 48.0
+
+# Long enough for a disturbed sleeper to be pulled back onto the town's hours —
+# measured at about three days — with room to see him hold there afterwards.
+const ANCHOR_DAYS := 6
+
 
 # Every claim the probe made, in the order it first made them, and the first
 # failing detail for each. Only the FIRST failure per claim is kept: a per-tick
@@ -77,6 +88,12 @@ var _population: Population
 # see whether the schedule moved.
 var _fell_asleep_at_hour := -1.0
 var _woke_at_hour := -1.0
+
+# The settled schedule, once the sun has finished pulling him onto it. Reported,
+# never asserted against — an assertion naming an hour would be an assertion
+# about the tuning board.
+var _kept_bedtime := -1.0
+var _kept_night := -1.0
 
 
 func _initialize() -> void:
@@ -109,12 +126,13 @@ func _process(_delta: float) -> bool:
 		_report()
 		quit(1)
 		return true
-	_pump_one_day()
+	_pump_the_opening_days()
 	_check_everyone_is_ticked_once_per_call()
 	_check_the_town_survives_losing_somebody()
 	_check_a_man_carries_his_place()
 	_check_who_is_where_is_asked_not_remembered()
 	_check_travel_cost_is_read_and_never_bars()
+	_check_the_cycle_is_anchored_to_the_sun()
 	_check_every_scene_is_wired()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
@@ -146,12 +164,12 @@ func _is_scene_ready_to_pump() -> bool:
 
 # --- The pumped day -------------------------------------------------------------
 
-# One simulated day, one tick at a time, with assertions 1, 2 and 3 riding
+# The opening stretch, one tick at a time, with assertions 1, 2 and 3 riding
 # along. They share a loop because they are three questions about the same
-# 2400 ticks, and pumping him three times would be three different days.
-func _pump_one_day() -> void:
+# ticks, and pumping him three times would be three different runs.
+func _pump_the_opening_days() -> void:
 	var ceiling: float = _person.brain.adenosine_ceiling
-	var tick_count := int(round(HOURS_IN_A_DAY / TICK_HOURS))
+	var tick_count := int(round(PUMPED_HOURS / TICK_HOURS))
 	var has_slept := false
 	var has_woken_again := false
 
@@ -228,12 +246,12 @@ func _pump_one_day() -> void:
 	# ASSERTION 1. Stated in simulated hours and nowhere near a real second, so
 	# dragging day_length_seconds on the tuning board cannot turn it red.
 	_require(has_slept,
-		"1 — over 24 simulated hours he sleeps at least once and wakes at least once",
+		"1 — he sleeps at least once and wakes at least once",
 		"never slept in %.0f simulated hours — adenosine reached %.2f against StayUp's pull" % [
-			HOURS_IN_A_DAY, _person.stats.get_stat(&"adenosine")])
+			PUMPED_HOURS, _person.stats.get_stat(&"adenosine")])
 	_require(has_woken_again,
-		"1 — over 24 simulated hours he sleeps at least once and wakes at least once",
-		"slept at hour %.2f and was still under at hour %.0f" % [_fell_asleep_at_hour, HOURS_IN_A_DAY])
+		"1 — he sleeps at least once and wakes at least once",
+		"slept at hour %.2f and was still under at hour %.0f" % [_fell_asleep_at_hour, PUMPED_HOURS])
 
 
 # --- Assertion 5: exactly one tick each, per call --------------------------------
@@ -496,6 +514,112 @@ func _check_travel_cost_is_read_and_never_bars() -> void:
 	world.queue_free()
 
 
+# --- Assertions 10 and 11: the sun holds the cycle in place ----------------------
+
+# Adenosine alone gives a cycle whose length is whatever the two rates happen to
+# add up to. Measured before this landed: 19.6 hours, so bedtime slid 4.4 hours
+# earlier every day and by day two he was asleep at nine in the morning. Tuning
+# the rates to sum to 24 would fix the PERIOD and not the PHASE — nothing would
+# pull him back, so one disturbed night would move him permanently.
+#
+# Both claims below are about the RESTORING FORCE and neither mentions a tuned
+# number. "Bedtime is around 22:00" would be an assertion about the tuning board
+# and would go red the first time anybody dragged a slider, which is the
+# flakiness rung 0 spent its time removing. So: he goes to bed in the DARK
+# (semantic, survives any retune), his hours STOP MOVING (structural), and two
+# men who start from different histories end up keeping the SAME hours
+# (structural, and the thing the anchor is actually for). The measured schedule
+# is printed in the report instead, where a human can see it change.
+func _check_the_cycle_is_anchored_to_the_sun() -> void:
+	var anchored := "10 — the cycle holds its hour instead of drifting round the clock"
+	var together := "11 — two people who start from different histories keep the same hours"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	if population == null or clock == null or zoogs == null:
+		_require(false, anchored, "the scene came up without a Population, a Clock and a Zoogs")
+		return
+
+	# A second man with a very different history — most of a day's tiredness
+	# already on him at midnight, so his first night lands in the afternoon. If
+	# the sun is doing anything, it drags him onto the same hours as Zoogs.
+	var stranger := _add_a_person(population, "Stranger")
+	if stranger == null:
+		_require(false, anchored, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+	stranger.stats.set_stat(&"adenosine", 44.0)
+
+	var watched: Array[Person] = [zoogs, stranger]
+	var diary := {}
+	for person in watched:
+		diary[person] = {
+			"awake": person.brain.is_awake(),
+			"asleep_since": 0.0,
+			"bedtimes": [],     # hour of day he turned in, one per night
+			"nights": [],       # how long each night lasted, in hours
+		}
+
+	for tick in int(round(ANCHOR_DAYS * HOURS_IN_A_DAY / TICK_HOURS)):
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+		for person in watched:
+			var entry: Dictionary = diary[person]
+			var awake_now: bool = person.brain.is_awake()
+			if awake_now == entry["awake"]:
+				continue
+			if awake_now:
+				entry["nights"].append(clock.hours_elapsed - float(entry["asleep_since"]))
+			else:
+				entry["bedtimes"].append(clock.time_of_day() * HOURS_IN_A_DAY)
+				entry["asleep_since"] = clock.hours_elapsed
+			entry["awake"] = awake_now
+
+	var his_bedtimes: Array = diary[zoogs]["bedtimes"]
+	var his_nights: Array = diary[zoogs]["nights"]
+	_require(his_bedtimes.size() >= 4, anchored,
+		"only %d nights in %d simulated days — he is barely sleeping" % [
+			his_bedtimes.size(), ANCHOR_DAYS])
+	if his_bedtimes.size() < 4:
+		world.queue_free()
+		return
+
+	# He goes to bed in the dark. Stated as sun height rather than as an hour, so
+	# it survives every retune and still means what it says.
+	for bedtime: float in his_bedtimes.slice(1):
+		_require(_get_sun_height_at(bedtime) < 0.0, anchored,
+			"turned in at %s, with the sun still up" % _as_clock_text(bedtime))
+
+	# And stops moving. A free-running cycle slips hours per day; an anchored one
+	# lands on the same minute.
+	var last: float = his_bedtimes[his_bedtimes.size() - 1]
+	var before_last: float = his_bedtimes[his_bedtimes.size() - 2]
+	_require(absf(last - before_last) < 0.25, anchored,
+		"bedtime moved from %s to %s between the last two nights — it is still drifting" % [
+			_as_clock_text(before_last), _as_clock_text(last)])
+	_kept_bedtime = last
+	if not his_nights.is_empty():
+		_kept_night = his_nights[his_nights.size() - 1]
+
+	# ASSERTION 11. Two histories, one town, one set of hours.
+	var stranger_bedtimes: Array = diary[stranger]["bedtimes"]
+	_require(not stranger_bedtimes.is_empty(), together,
+		"the stranger never slept at all in %d simulated days" % ANCHOR_DAYS)
+	if not stranger_bedtimes.is_empty():
+		var his: float = stranger_bedtimes[stranger_bedtimes.size() - 1]
+		_require(absf(his - last) < 0.5, together,
+			"after %d days Zoogs turns in at %s and the stranger at %s — the sun is not pulling them together" % [
+				ANCHOR_DAYS, _as_clock_text(last), _as_clock_text(his)])
+
+	world.queue_free()
+
+
+# The same shape the Clock uses, worked out for an arbitrary hour of day so a
+# bedtime that already happened can be asked about after the fact.
+func _get_sun_height_at(hour_of_day: float) -> float:
+	return sin((hour_of_day / HOURS_IN_A_DAY - 0.25) * TAU)
+
+
 # --- Assertion 4: the node_paths trap -------------------------------------------
 
 # Two halves, because the trap has two halves and only one of them is visible
@@ -592,6 +716,13 @@ func _list_names(people: Array[Person]) -> PackedStringArray:
 	return names
 
 
+# An hour as a human reads it. Hours elapsed and hours of the day both land
+# here; anything past the first day wraps, which is what you want either way.
+func _as_clock_text(hour: float) -> String:
+	var minutes := int(round(fmod(hour, HOURS_IN_A_DAY) * 60.0))
+	return "%02d:%02d" % [minutes / 60, minutes % 60]
+
+
 # Nowhere is a real answer, so it reads as a word rather than as "<null>".
 func _describe_place(place: Place) -> String:
 	if place == null:
@@ -613,10 +744,15 @@ func _require(is_true: bool, claim: String, detail: String) -> void:
 func _report() -> void:
 	print("")
 	print("probe — %d checks over %.0f simulated hours at %.2f-hour ticks" % [
-		_checks, HOURS_IN_A_DAY, TICK_HOURS])
+		_checks, PUMPED_HOURS, TICK_HOURS])
 	if _fell_asleep_at_hour >= 0.0:
-		print("        turned in at hour %.2f, up again at hour %.2f" % [
-			_fell_asleep_at_hour, _woke_at_hour])
+		print("        from a cold start: turned in at hour %.2f (%s), up at %.2f (%s)" % [
+			_fell_asleep_at_hour, _as_clock_text(_fell_asleep_at_hour),
+			_woke_at_hour, _as_clock_text(_woke_at_hour)])
+	if _kept_bedtime >= 0.0:
+		print("        once settled:      turns in %s, sleeps %.2f h, up %s" % [
+			_as_clock_text(_kept_bedtime), _kept_night,
+			_as_clock_text(_kept_bedtime + _kept_night)])
 	print("")
 	for claim in _claims:
 		if _first_failure.has(claim):

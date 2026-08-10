@@ -11,8 +11,9 @@ extends Control
 # They belong on one chart, not two, because they're on the same scale on
 # purpose: Sleep's utility IS his adenosine, and a pull is priced against the
 # same points. So "he fell asleep" stops being a state change you infer and
-# becomes a crossing you watch — adenosine rising through StayUp's flat 45, and
-# later falling through Wake's flat 10. Splitting them across two panels would
+# becomes a crossing you watch — adenosine rising through StayUp's line, which
+# now rises and falls with the sun, and later falling through Wake's flat 10.
+# Splitting them across two panels would
 # mean eyeballing between charts to see the one thing worth seeing.
 #
 # It is not a debug tool. Reading a number move and knowing why is the whole
@@ -55,7 +56,7 @@ const ASLEEP_BAND := Color(0.35, 0.42, 0.70, 0.22)
 @export var person: Person
 
 # What's shown. Both on by default, so one panel gives you the crossings — the
-# adenosine line rising through StayUp's flat 45 is the decision itself.
+# adenosine line rising through StayUp's sun-driven line is the decision itself.
 #
 # Turning one off is how you get two panels instead: instance this twice, one
 # with utilities off and one with stats off. Worth doing once there are enough

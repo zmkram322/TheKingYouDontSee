@@ -6,7 +6,8 @@
 [node name="StayUp" type="Node"]
 script = ExtResource("1_stay_up")
 label = "stay up"
-pull = 45.0
+pull = 67.3
+daylight_pull = 20.0
 
 [node name="BeUp" type="Node" parent="."]
 script = ExtResource("2_be_up")

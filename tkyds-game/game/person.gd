@@ -49,6 +49,17 @@ extends CharacterBody3D
 # new arrivals.
 var town: Town
 
+# The time of day, for anything that cares what hour it is. Pulled off
+# Population in the same breath as the town, for the same reasons.
+#
+# It is NOT here to interpret a real-time delta — that stays the one line in
+# Clock, and nothing below Population ever sees a real second. It is here
+# because an Action scoring itself has the person and nothing else, and some of
+# them need to know whether the sun is up. Rung 3 wants it too: a workstation's
+# tenancy is stamped with `clock.day()`, and reading that off the person means
+# not one station needs a wire of its own.
+var clock: Clock
+
 @onready var stats: Stats = $Stats
 @onready var brain: Brain = $Brain
 @onready var readout: Label3D = $Readout
@@ -68,8 +79,11 @@ func _ready() -> void:
 		push_warning("%s has no Population above him — he will never think" % person_name)
 	else:
 		town = population.town
+		clock = population.clock
 	if town == null:
 		push_warning("%s has no Town — he can never be asked who else is here" % person_name)
+	if clock == null:
+		push_warning("%s has no Clock — for him the sun never rises" % person_name)
 	# Nobody is born on the road. Null is a legitimate state for a man WALKING
 	# once rung 4 exists, but at birth it means his place was never authored —
 	# and a man standing nowhere is invisible to every place query in the game,
@@ -129,6 +143,22 @@ func get_travel_cost_to(place: Place) -> float:
 		push_error("%s was asked what it costs to reach nowhere" % person_name)
 		return INF
 	return global_position.distance_to(place.global_position)
+
+
+# How high the sun is FOR HIM: -1 at midnight, 0 at dawn and dusk, +1 at midday.
+#
+# Asked of the person rather than of the Clock directly, because every caller is
+# an Action scoring itself and an Action has the person and nothing else. It is
+# also the honest place for it to graduate: a man in a cellar, down a mine or
+# inside at rung 6 sees no sun at noon, and that is a fact about where HE is.
+# The day that matters, it changes in this body and no caller moves.
+#
+# Flat nothing with no clock. He has already said so in _ready, and a person who
+# cannot tell the time should be neither more nor less inclined to be up.
+func get_sun_height() -> float:
+	if clock == null:
+		return 0.0
+	return clock.get_sun_height()
 
 
 # What's over his head, and nothing else. The readout deliberately does NOT

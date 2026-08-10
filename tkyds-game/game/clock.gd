@@ -60,6 +60,21 @@ func time_of_day() -> float:
 	return fmod(hours_elapsed, 24.0) / 24.0
 
 
+# How high the sun is: -1 at midnight, 0 at dawn and dusk, +1 at midday.
+#
+# ONE definition, here, because two would drift. The sky already derives its
+# light from this shape, and now the body does too — being up is worth more
+# while the sun is up. If Daylight kept its own sine and StayUp wrote a second
+# one, they would agree today and disagree the first time anybody changed the
+# length of a season, and the failure would read as "he sleeps at odd hours"
+# rather than as two schedules.
+#
+# It is a pure function of time_of_day(), so it stores nothing and cannot fall
+# out of step with the calendar.
+func get_sun_height() -> float:
+	return sin((time_of_day() - 0.25) * TAU)
+
+
 # Which day it is, counting from day 0.
 func day() -> int:
 	return int(hours_elapsed / 24.0)

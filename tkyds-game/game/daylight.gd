@@ -63,7 +63,11 @@ func _process(_delta: float) -> void:
 	# -1 at midnight, 0 at dawn and dusk, +1 at midday. Everything below is a
 	# function of this one number, which is why the sky, the sun and the
 	# ambient can never disagree about what time it is.
-	var height := sin((clock.time_of_day() - 0.25) * TAU)
+	#
+	# Asked of the Clock rather than worked out here, because the BODY reads it
+	# too now — being up is worth more while the sun is up. Two sines would
+	# agree today and part company the first time one of them changed.
+	var height := clock.get_sun_height()
 	_aim_sun(height)
 	_light_the_sky(height)
 

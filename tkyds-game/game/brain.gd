@@ -158,18 +158,22 @@ func think_and_act(hours: float) -> void:
 #
 # PER WORLD HOUR, like every rate in game/ — not per real second. That matters
 # twice over. It makes the numbers sentences you can reason about ("2.5 an
-# hour, turns in at 45, so he is up about eighteen hours") where "1.0 per real
-# second" silently meant something different at every day length. And it is
+# hour, turns in around 50, so he is up about sixteen hours") where "1.0 per
+# real second" silently meant something different at every day length. And it is
 # what ties the body to the sun: drag day_length_seconds and both move
 # together, which is what that slider always claimed to do.
 #
-# These two are the per-second values that shipped, multiplied by the
-# behaviour-preserving factor day_length_seconds / 24 = 60 / 24 = 2.5. Getting
-# that factor wrong is the one way this change breaks a working system, and it
-# presents as "he never sleeps" or "he naps constantly" rather than as a units
-# error — so if the cycle ever looks off, suspect these before the actions.
-@export var base_adenosine_per_hour := 2.5              # while awake  (was 1.0/s)
-@export var base_adenosine_cleared_per_hour := 6.25     # while asleep (was 2.5/s)
+# These two set the SHAPE of the cycle and StayUp's daylight term sets its
+# PHASE. Sixteen hours awake at 2.5 is a swing of 40, and clearing that 40 at
+# 5.0 is the eight hours asleep — so their ratio is the ratio of the day, and
+# changing one without the other changes how much of the day he spends in bed.
+# Where in the day that bed sits is not decided here; see stay_up.gd.
+#
+# A wrong value here presents as "he never sleeps" or "he naps constantly"
+# rather than as a units error, so if the cycle ever looks off, suspect these
+# before the actions.
+@export var base_adenosine_per_hour := 2.5              # while awake
+@export var base_adenosine_cleared_per_hour := 5.0      # while asleep
 @export var adenosine_ceiling := 100.0
 
 func _update_body(hours: float) -> void:
