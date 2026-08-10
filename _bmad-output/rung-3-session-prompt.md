@@ -14,7 +14,7 @@ the proving-scene ladder. One rung, then stop at the gate.
 Godot 4.4 project in `Z:\TheKingYouDontSee\tkyds-game`. Solo dev. The build is
 `game/` — a substrate running one person (Zoogs) through a **sun-anchored** sleep
 cycle, with places and travel cost, a live stat/utility graph, a tuning board, an
-on-screen clock, and a standing probe harness of **eleven claims** that gates
+on-screen clock, and a standing probe harness of **twelve claims** that gates
 every rung.
 
 **Rung 3 is the rung the whole plan is built around.** Everything the roundtable
@@ -48,6 +48,8 @@ a4c38fd          the .tscn wiring scan lifted into scene_wiring.gd
 d10afa6          PersonReadout + an on-screen clock; camera pulled back
 cd5fc7c          the sleep cycle hung on the sun
 fab7c1b          Decision 11 recorded
+850d5e6          this prompt
+57b1594          a strength stat, so two farmers do not wake at the same instant
 ```
 
 ```
@@ -71,7 +73,11 @@ cold start   turns in hour 21.11 (21:07), up at 29.67 (05:40)
 settled      turns in 22:01, sleeps 8.00 h, up 06:01   <- day 3 onward, to the minute
 ```
 
-The probe pumps **48 hours**, not 24. Eleven claims. Exits non-zero on any
+```
+a strong man (strength 1.15) is up at 04:41 instead
+```
+
+The probe pumps **48 hours**, not 24. **Twelve claims.** Exits non-zero on any
 failure.
 
 **`Workstation`, `WorkTheField`, `WorkStep` and `Linger` are all free as
@@ -119,42 +125,41 @@ day the town runs out of work looks exactly like the day it runs out of workers.
 They are **decaying accumulators, never histories** — one number, not a list of
 nights.
 
-## FOUR CALLS THE SESSION MUST MAKE — do not let these be decided by drift
+## THREE CALLS THE SESSION MUST MAKE — do not let these be decided by drift
 
-### 1. The dawn tie. THE SUN ANCHOR BROKE "EARLY BIRD CATCHES THE WORM."
+### 1. The dawn tie — ALREADY SOLVED, do not re-solve it, but know why it exists.
 
-Decision 2 rules the positive-feedback loop a **feature**, not a starvation bug:
+Decision 2 rules the *early bird catches the worm* loop a **feature**, and it ran
+on waking order coming out of adenosine. **The sun anchor removed that
+mechanism**: two farmers from one scene now wake on the same tick, at 06:00,
+forever, and the plot would go to whoever sits higher in `Population`'s child
+order — the hazard Decision 2 was glad to have narrowed.
 
-> waking order decides who farms → waking order comes from adenosine →
-> adenosine comes from when he went to sleep → the early riser gets a plot,
-> works, tires, sleeps early, rises early, gets a plot again.
+**Fixed 2026-08-10 in `57b1594`, before this rung.** There is now a `strength`
+stat, 1.0 for an ordinary man, read inside `Brain.get_adenosine_recovery()`. A
+stronger body clears the same debt in fewer hours and is up first. Measured:
+strength **1.15 rises at 04:41** against 06:01 — eighty minutes of clear
+daylight in which to walk onto the plot and claim it.
 
-**That mechanism no longer exists.** Since 2026-08-10 the cycle is anchored to
-the sun, and the probe's own claim 11 asserts that *two people who start from
-different histories keep the same hours*. Two farmers from the same scene with
-the same numbers now wake **on the same tick, at 06:00, forever.** There is no
-early bird.
+**So: author the two farmers with different `strength`, and change nothing
+else.** Not a different `StayUp.pull` — that would make the ACTION differ by who
+you are, which is a branch on identity wearing a number's clothes. The formula
+stays the same for everybody; only the body differs.
 
-So the contest is decided by **`Population`'s child order** — which Decision 2
-explicitly names as the hazard it was glad to have narrowed: *"scene order
-silently deciding every contest."* It will work, the probe will pass, and the
-Moment will be a coin flip that lands the same way every morning.
+**Two things about that stat you must not rediscover, both measured:**
 
-Two ways out:
+- **It hangs on RECOVERY and never on how fast he tires.** Bedtime is where
+  rising tiredness crosses the sun's line, so a man who tires *slowly* reaches it
+  LATER and gets up later — 2.25/hr put him to bed at 23:57 and out at 07:21. The
+  intuition "less tired, so up earlier" assumes a fixed bedtime, and bedtime has
+  not been fixed since the anchor landed.
+- **The tiring direction runs at a cliff.** 2.30/hr still locks; 2.25 slips; 2.10
+  collapses into **thirty-nine hours awake at a stretch**. Recovery has no such
+  trap in the useful direction — it holds from 4.5/hr up to at least 8.0. Keep
+  strength in roughly **0.9 – 1.6**; below 0.9 he unhooks from the sun.
 
-- **(a) Differentiate the two farmers.** One authored number on one instance —
-  a slightly lower `StayUp.pull`, or a slightly higher `base_adenosine_per_hour`
-  — and he wakes minutes earlier, every day, for a reason you can point at.
-  Restores the early-bird loop *inside* the anchored rhythm, and it is exactly
-  what `person.gd` already documents: *"what makes an instance somebody in
-  particular is the exports."*
-- **(b) Accept scene order at rung 3** and let rung 4 fix it, when the two stand
-  in different places and arrival order decides.
-
-**Recommendation: (a).** It is one number, it makes the Moment watchable, and
-(b) is what happens by default if nobody chooses — which is the drift this
-section exists to prevent. **Whichever is chosen, say so in the scene and in the
-commit**, because a later reader will otherwise "fix" the asymmetry.
+Claim 12 already guards both halves — that he rises earlier, *and* that he is
+still anchored. Do not weaken it.
 
 ### 2. The idleness counters are a WRITE, and GATE is supposed to be a read.
 
@@ -230,8 +235,8 @@ say why in the commit.
 
 ## THE GATE
 
-**Probe, then Moment. All eleven existing claims stay green.** New claims start
-at 12.
+**Probe, then Moment. All twelve existing claims stay green.** New claims start
+at 13.
 
 1. **Two persons, one station: one `claim` returns `true`, the other `false`** —
    and `WorkTheField` is **off the loser's ballot entirely.** He is never scored,
@@ -326,7 +331,7 @@ probe claims.
 
 ## BEFORE YOU CLAIM DONE
 
-- Both commands run; **all seventeen claims print PASS**; probe exits 0.
+- Both commands run; **all eighteen claims print PASS** (twelve standing, six new); probe exits 0.
 - **Every new claim has been seen to FAIL.** Break the thing it guards, confirm
   exit 1, restore. A claim never observed failing is decoration — **four
   assertions in this plan have already turned out vacuous when checked this
@@ -334,7 +339,8 @@ probe claims.
 - The pre-existing claims that had to change for the second farmer are updated
   **deliberately**, with the reason in the commit — not quietly renumbered.
 - **The sleep cycle has not moved.** Settled schedule still turns in 22:01,
-  sleeps 8.00 h, up 06:01. Adding a farmer must not shift Zoogs.
+  sleeps 8.00 h, up 06:01, and a strength-1.15 man still rises at 04:41. Adding a
+  farmer must not shift Zoogs.
 - Report the probe output, then **STOP**. Do not begin rung 4.
 
 ## STANDING HAZARDS

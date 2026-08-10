@@ -1616,3 +1616,124 @@ Not yet applied.
 | Rung 0 / everywhere | The regression fingerprint is no longer 18.01 / 23.62. Use the pair above. |
 | Rung 3 (`Workstation`) | Drop the per-station `clock` reference from Decision 2's snippet — read `person.clock.day()` instead. No station carries a wire. |
 | Rung 6a | The "expect assertion 1 to go red when hunger and social join the ballot" note still stands, but the window is now 48 h and the cycle is anchored, so there is more headroom than the old 0.38 h. |
+
+---
+
+## Decision 12 — How two people differ
+
+**Settled 2026-08-10, at the author's direction. Shipped in `57b1594`.** Falls
+out of Decision 11 and has to be settled before rung 3, because rung 3's whole
+Moment depends on it.
+
+### The problem Decision 11 created
+
+Decision 2 rules *early bird catches the worm* a **feature**: waking order
+decides who farms, and waking order comes out of adenosine. **Decision 11
+removed that mechanism.** The sun anchors everybody to the same hour — the
+probe's own claim 11 asserts it — so two farmers instanced from one scene wake
+**on the same tick, forever**, and the one plot goes to whoever sits higher in
+`Population`'s child order. That is *"scene order silently deciding every
+contest"*, the hazard Decision 2 was relieved to have narrowed. It would pass its
+probe, and the Moment would be a coin flip landing the same way every morning.
+
+### What was rejected
+
+**Giving one farmer a different `StayUp.pull`.** It works, and it puts the
+difference in the wrong place: the *action* would differ by who you are, which is
+a branch on identity wearing a number's clothes, and the plan's own doctrine says
+*a number is authoring; a branch on who you are is a script.* An action's utility
+should be formulaic and identical for everybody.
+
+### What was settled
+
+> **The difference lives on the body, not on the action.** A `strength` stat,
+> 1.0 for an ordinary man, read inside `Brain.get_adenosine_recovery()`.
+
+Same formula for everyone; a different body running it. A stronger man clears the
+same debt in fewer hours and is up first. **Measured: strength 1.15 rises at
+04:41 against 06:01** — eighty minutes of daylight in which to reach the plot.
+
+`get_adenosine_recovery()` was already the documented seam for *"a bed versus a
+ditch, sleeping ill, sleeping cold."* Sleeping in a strong body is simply the
+first modifier to arrive there. **No call site moved.**
+
+### It hangs on RECOVERY and never on how fast he tires — measured
+
+The natural reading is *strong man exerts himself less, tires more slowly, needs
+less sleep, wakes earlier.* **The middle steps are right and the conclusion is
+backwards**, because it quietly assumes a fixed bedtime — and bedtime has not
+been fixed since Decision 11. Bedtime is where rising tiredness crosses the sun's
+line, so a man who tires slowly reaches it LATER:
+
+```
+  up/hr  down/hr   turns in   gets up   night
+   2.50    5.00     22:01      06:01    8.00 h    ordinary
+   2.25    5.00     23:57      07:21    7.40 h    "strong" — up 80 min LATER
+   2.75    5.00     21:11      05:41    8.51 h    tires fast — up EARLIEST
+   2.50    6.00     21:14      04:18    7.06 h    recovers fast — what we want
+```
+
+### And that direction runs at a cliff
+
+```
+  2.50  22:01 locked    2.20  drifting
+  2.40  22:29 locked    2.15  drifting
+  2.30  23:11 locked    2.10  COLLAPSED — 39 hours awake at a stretch
+  2.25  00:01 slipping  2.00  COLLAPSED
+```
+
+The sun's line bottoms out at 47.3 around midnight and its **slope there is
+zero**, so a bedtime pushed toward midnight is weakly anchored, and one pushed
+past it is never caught at all — he waits for the following evening. **A trait on
+tiring walks straight at that edge.**
+
+Recovery has no such trap in the useful direction:
+
+```
+  4.00  00:05 / 09:25  DRIFTING     6.00  21:15 / 04:19  locked
+  4.50  22:40 / 07:14  locked       7.00  20:45 / 03:04  locked
+  5.00  22:01 / 06:01  locked       8.00  20:22 / 02:05  locked
+```
+
+Only the *poor sleeper* below ~4.0 unhooks. **The wanted direction runs away from
+the cliff.** Keep `strength` in roughly **0.9 – 1.6**.
+
+Recovery also has the better *shape*: 5.0 → 5.5 moves bedtime 26 minutes but
+waking 56. It reads as *"how much sleep does he need"*, which is the everyday
+intuition, where tiring reads as *"when does he crash"* and drags waking behind
+it in the wrong direction.
+
+### Why one stat and not two
+
+`strength` will mean more without a second stat: **rung 3's work step wants a rate
+of work done per hour, and rung 5 wants how much a man can carry.** Both are the
+same capacity. A strong body that both works more and shrugs off a day is honest
+fiction, so the name hides nothing.
+
+It is a **stat** rather than an authored number on `Brain` because it will have to
+*change* during a run — a wound, age, a winter — and because it then shows up on
+the graph and over his head with no extra code.
+
+### Probe
+
+**Claim 12, in two halves, because one is not enough.** The strong man rises
+before the ordinary one, **and** he is still anchored.
+
+Both were broken on purpose:
+
+- Make `strength` inert → the **first** half catches it (both rise at 06:01).
+- Move `strength` onto tiring instead → **the first half still passes** (he does
+  rise earlier, at 05:25) and the **second** half catches him drifting.
+
+A single-sign assertion would have shipped the exact mistake this decision
+exists to prevent.
+
+### Plan edits this implies
+
+Not yet applied.
+
+| Section | Change |
+|---|---|
+| Rung 3 | The two farmers differ by `strength`, authored per instance. Nothing else about them differs — same actions, same numbers on those actions. |
+| Rung 3 (Moment) | The loser loses because the winner *got there first*, and got there first because he needed less sleep. That is the causal chain to watch, and it is visible on the readout. |
+| Rung 9d | Thirteen people can be thirteen different bodies with one stat each, and no new code. Standing check #2 gets cheaper. |
