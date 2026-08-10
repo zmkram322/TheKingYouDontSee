@@ -64,12 +64,18 @@ func get_place() -> Place:
 # him must be able to see a free plot from there, or rung 4's "walk there and
 # work" could never score. Standing here is claim()'s question alone.
 func is_free_for(person: Person) -> bool:
-	# A holder who has been freed is not a holder. Freeing a node does not null
-	# your reference — `claimed_by == null` stays false and the next property
-	# read errors — so without this the town reserves a plot for a dead man,
-	# and "delete somebody mid-run" produces a stack trace instead of a
-	# verdict. This is the first spot in the build where the guard is genuinely
-	# reachable: one person can now hold a reference to another across ticks.
+	# A holder who has been freed is not a holder.
+	#
+	# UNREACHABLE TODAY — measured 2026-08-10 by deleting it: the probe stayed
+	# green with zero errors, because a TRULY freed reference already compares
+	# `== null` as true in this engine. (The trap CLAUDE.md documents is the
+	# queue_free() case, where the node survives to end-of-frame and `== null`
+	# stays false — but a claim is only ever read on a later tick, by which
+	# time the deletion has landed either way.) Third guard in the codebase
+	# standing unreachable for this same engine reason; kept like the others,
+	# because freed-compares-null is an undocumented quirk where
+	# is_instance_valid is the documented contract, and one line is cheap
+	# insurance against the quirk moving under a future engine.
 	if not is_instance_valid(claimed_by):
 		claimed_by = null
 	if claimed_by == null:

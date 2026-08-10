@@ -856,11 +856,25 @@ func _check_a_plot_cannot_be_claimed_from_the_wrong_place() -> void:
 
 
 # Standing check #1 (the probe's own name for it), made to run against
-# Workstation specifically. free() rather than queue_free(): queued deletion
-# doesn't land until end of frame, so inside a pumped tick the node would still
-# be perfectly valid and is_free_for's is_instance_valid guard — genuinely
-# reachable for the first time in this codebase, now that one person can hold a
-# reference to another across ticks — would never actually run. See claim 8.
+# Workstation specifically: delete the holder mid-run and the town must return
+# a verdict — the plot frees — rather than a stack trace. free() rather than
+# queue_free(): queued deletion doesn't land until end of frame, so inside a
+# pumped tick the node would still be perfectly valid and nothing stale would
+# exist to survive. See claim 8.
+#
+# WHAT THIS DOES NOT PROVE — measured 2026-08-10, the same day it was written.
+# It was expected to be the first claim to exercise is_free_for's
+# is_instance_valid guard, rung 3 being the first rung where one person holds a
+# reference to another across ticks. It cannot: a TRULY freed reference already
+# compares `== null` as true in this engine (unlike a queue_free()d one inside
+# its final frame, which is the case CLAUDE.md warns about), so is_free_for's
+# own null branch produces the passing answer with the guard deleted — the
+# break was tried, and the probe stayed green with zero errors. That makes
+# THREE is_instance_valid guards standing unreachable in this codebase for the
+# same engine reason, all kept: `== null` catching freed objects is an
+# undocumented quirk, is_instance_valid is the documented contract, and the
+# guard is one line. The claim keeps its behavioural teeth (13a, 15, 16 and 18
+# all went red on cue in the same session); it just doesn't have THESE teeth.
 func _check_freeing_the_holder_frees_the_plot_within_two_ticks() -> void:
 	var claim := "17 — free the holder and the plot frees within two ticks"
 	var world := _add_a_disabled_game_scene()
@@ -879,7 +893,9 @@ func _check_freeing_the_holder_frees_the_plot_within_two_ticks() -> void:
 	hobb.free()
 
 	# Zoogs' own gate walks is_free_for over the now-freed claimed_by on each of
-	# these ticks — the first place that guard is genuinely exercised.
+	# these ticks. Not, it turns out, to exercise the is_instance_valid guard —
+	# see the header — but the walk itself still matters: a crash anywhere in
+	# gate, score or step while a freed man is on the books would surface here.
 	for tick in 2:
 		clock.advance(TICK_HOURS)
 		population.think_for_everyone(TICK_HOURS)
