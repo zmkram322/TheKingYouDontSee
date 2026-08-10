@@ -41,4 +41,15 @@ extends Node3D
 # the sacks in the barn are a fact about the barn and nowhere else. Where a man
 # is, is true of the man.
 
+# A NOTE ON THE NODE TYPE, so nobody "corrects" it back. This script extends
+# Node3D, which is all a place needs — but in game.tscn the place nodes are
+# MeshInstance3D, carrying their own ground pad instead of parenting a marker
+# child. Godot accepts a Node3D script on any Node3D descendant, and it is worth
+# doing: with a child marker, clicking the pad in the viewport selects the
+# MARKER, so you drag the decoration while the place stays where it was and the
+# travel cost never moves. Standing check #3 then looks broken when it isn't.
+# Mesh on the place itself means clicking it selects the place. The transform's
+# scale is the pad's size and does not touch its origin, so the position stays
+# exactly where a man would stand.
+
 @export var place_name := "Somewhere"
