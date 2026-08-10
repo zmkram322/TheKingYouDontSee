@@ -39,6 +39,37 @@ extends Node
 @export var adenosine := 0.0
 
 
+# --- Strength -----------------------------------------------------------------
+# How much body he has. A multiplier around 1.0, where 1.0 is an ordinary man.
+#
+# Today it does one thing: he clears adenosine faster while asleep, so a strong
+# man needs less sleep and is up before everyone else. That is the whole of the
+# difference between two farmers racing for one plot at dawn — not a different
+# opinion about being awake, which would be the action differing by who you are,
+# but a different body running the same formula everybody else runs.
+#
+# It goes on RECOVERY and deliberately not on how fast he tires, and that is a
+# measurement rather than a preference. Bedtime is where rising tiredness
+# crosses the sun's line, so a man who tires slowly reaches it LATER and gets up
+# later — 2.25/hr put him to bed at 23:57 and out of it at 07:21, an hour and a
+# half after everybody else. Worse, it runs at a cliff: below about 2.15/hr the
+# sun's line never catches him at all and he stays awake for thirty-nine hours
+# at a stretch. Recovery has no such trap in this direction. Measured
+# 2026-08-10; see Decision 11.
+#
+# THE SAFE BAND, also measured: recovery holds its hour down to about 4.5/hr and
+# starts drifting at 4.0 — so strength below roughly 0.9 unhooks him from the
+# sun. Upward there is room to spare; 8.0/hr (strength 1.6) still locks, and
+# puts him up at 02:05.
+#
+# It will mean more than this. Rung 3's work step wants a rate of work done per
+# hour and rung 5 wants how much a man can carry; both are the same capacity and
+# neither needs a second stat. And when strength has to CHANGE during a run — a
+# wound, age, a winter — it already does, because it is a stat rather than a
+# number typed into a scene.
+@export var strength := 1.0
+
+
 # Note what is NOT here: whether he's awake. That's not a fact he carries, it's
 # a fact about what he's currently doing, so it's read off the brain
 # (Brain.is_awake) rather than stored. A stored copy could disagree with what

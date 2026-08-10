@@ -205,12 +205,23 @@ func get_adenosine_accumulation() -> float:
 	return base_adenosine_per_hour * get_exertion()
 
 
-# How fast he's recovering, per world hour. The mirror of the above, with nothing
-# behind it yet — sleeping in a bed versus a ditch, sleeping ill, sleeping cold
-# all belong here when they exist. Present now so the pair is obvious to
-# whoever reads this next.
+# How fast he's recovering, per world hour. The mirror of the above, and the
+# seam every future modifier lands in — sleeping in a bed versus a ditch,
+# sleeping ill, sleeping cold. Sleeping in a strong body is the first of them.
+#
+# STRENGTH IS WHY TWO FARMERS DON'T WAKE AT THE SAME MOMENT. The sun anchors
+# everybody's cycle to the same hour, so two men from the same scene wake on the
+# same tick forever — and then who gets the one plot is decided by the order
+# they happen to sit in the scene tree, which is nobody's design. A stronger man
+# clears the same debt in fewer hours, so he is up first, every day, for a
+# reason you can point at. The formula is the same for both of them; only the
+# body differs. See stats.gd for why this hangs on recovery and not on how fast
+# he tires — that direction inverts the answer and runs at a cliff.
 func get_adenosine_recovery() -> float:
-	return base_adenosine_cleared_per_hour
+	if person == null:
+		return base_adenosine_cleared_per_hour
+	var strength: float = person.stats.get_stat(&"strength")
+	return base_adenosine_cleared_per_hour * strength
 
 
 # How strenuous what he's doing right now is. 1.0 when he isn't doing anything

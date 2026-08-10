@@ -94,6 +94,7 @@ var _woke_at_hour := -1.0
 # about the tuning board.
 var _kept_bedtime := -1.0
 var _kept_night := -1.0
+var _kept_strong_morning := -1.0
 
 
 func _initialize() -> void:
@@ -545,18 +546,23 @@ func _check_the_cycle_is_anchored_to_the_sun() -> void:
 	# already on him at midnight, so his first night lands in the afternoon. If
 	# the sun is doing anything, it drags him onto the same hours as Zoogs.
 	var stranger := _add_a_person(population, "Stranger")
-	if stranger == null:
+	# And a strong one. Same scene, same sun, same formula — a bigger body, so
+	# he clears the same debt in fewer hours and is up before the others.
+	var ox := _add_a_person(population, "Ox")
+	if stranger == null or ox == null:
 		_require(false, anchored, "could not instance %s" % PERSON_SCENE_PATH)
 		return
 	stranger.stats.set_stat(&"adenosine", 44.0)
+	ox.stats.set_stat(&"strength", 1.15)
 
-	var watched: Array[Person] = [zoogs, stranger]
+	var watched: Array[Person] = [zoogs, stranger, ox]
 	var diary := {}
 	for person in watched:
 		diary[person] = {
 			"awake": person.brain.is_awake(),
 			"asleep_since": 0.0,
 			"bedtimes": [],     # hour of day he turned in, one per night
+			"mornings": [],     # hour of day he got up
 			"nights": [],       # how long each night lasted, in hours
 		}
 
@@ -570,6 +576,7 @@ func _check_the_cycle_is_anchored_to_the_sun() -> void:
 				continue
 			if awake_now:
 				entry["nights"].append(clock.hours_elapsed - float(entry["asleep_since"]))
+				entry["mornings"].append(clock.time_of_day() * HOURS_IN_A_DAY)
 			else:
 				entry["bedtimes"].append(clock.time_of_day() * HOURS_IN_A_DAY)
 				entry["asleep_since"] = clock.hours_elapsed
@@ -610,6 +617,35 @@ func _check_the_cycle_is_anchored_to_the_sun() -> void:
 		_require(absf(his - last) < 0.5, together,
 			"after %d days Zoogs turns in at %s and the stranger at %s — the sun is not pulling them together" % [
 				ANCHOR_DAYS, _as_clock_text(last), _as_clock_text(his)])
+
+	# ASSERTION 12. The one difference the sun does NOT flatten — and the reason
+	# two farmers racing for one plot is a contest rather than a coin flip
+	# decided by scene order.
+	#
+	# Stated as "earlier than the ordinary man", never as an hour: it is about
+	# the SIGN of what strength does, which is the thing that would go wrong. Put
+	# strength on how fast he tires instead and this fails, because a man who
+	# tires slowly goes to bed later and gets up later — measured, and the whole
+	# reason it hangs on recovery.
+	var strongest := "12 — a stronger body clears the night faster, so he is up first"
+	var his_mornings: Array = diary[zoogs]["mornings"]
+	var ox_mornings: Array = diary[ox]["mornings"]
+	var ox_bedtimes: Array = diary[ox]["bedtimes"]
+	_require(not his_mornings.is_empty() and not ox_mornings.is_empty(), strongest,
+		"one of them never got up at all in %d simulated days" % ANCHOR_DAYS)
+	if not his_mornings.is_empty() and not ox_mornings.is_empty():
+		var ordinary: float = his_mornings[his_mornings.size() - 1]
+		var strong: float = ox_mornings[ox_mornings.size() - 1]
+		_require(strong < ordinary, strongest,
+			"the strong man rose at %s and the ordinary one at %s — strength is not buying him the morning" % [
+				_as_clock_text(strong), _as_clock_text(ordinary)])
+		_kept_strong_morning = strong
+	# And he is still anchored. A trait that bought an early start by unhooking
+	# him from the sun would be a drift dressed as a difference.
+	if ox_bedtimes.size() >= 2:
+		_require(absf(float(ox_bedtimes[ox_bedtimes.size() - 1])
+				- float(ox_bedtimes[ox_bedtimes.size() - 2])) < 0.25, strongest,
+			"the strong man's bedtime is still moving — strength unhooked him from the sun")
 
 	world.queue_free()
 
@@ -753,6 +789,8 @@ func _report() -> void:
 		print("        once settled:      turns in %s, sleeps %.2f h, up %s" % [
 			_as_clock_text(_kept_bedtime), _kept_night,
 			_as_clock_text(_kept_bedtime + _kept_night)])
+	if _kept_strong_morning >= 0.0:
+		print("        a strong man (1.15) is up at %s instead" % _as_clock_text(_kept_strong_morning))
 	print("")
 	for claim in _claims:
 		if _first_failure.has(claim):
