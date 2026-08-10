@@ -1479,3 +1479,140 @@ Not yet applied.
 | Rung 3 | `find_workstations` sorting by travel cost (per Decision 7) now has its metric — `person.get_travel_cost_to(station_place)`. |
 | Rung 4 | Arrival is the overshoot clamp, not a radius. Departure writes null. The `_ready` warning stays. |
 | Rung 7 | `Trade`'s candidate query inherits "a man on the road is unreachable" for free. |
+
+---
+
+## Decision 11 — The sleep cycle is anchored to the sun
+
+**Settled 2026-08-10, at the author's direction, between rungs 2 and 3. Shipped
+in `cd5fc7c`.** Not a rung — a tuning fix taken before rung 3, on the author's
+reasoning that a drifting cycle makes every rung above it harder to verify.
+
+### The bug, measured
+
+Driven by adenosine alone, the cycle's length is whatever the two rates happen
+to sum to. Measured at **19.6 hours** — 14 awake plus 5.6 asleep. A day is 24,
+so **bedtime slid 4.4 hours earlier every day** and lapped the clock every five
+and a half days:
+
+```
+day 0  18:01 → 23:37      day 2  09:17 → 14:53
+day 1  13:39 → 19:15      day 3  04:55 → 10:31
+```
+
+The shipped baseline of *"turns in at 18.01, up at 23.62"* was therefore never a
+schedule. It was **day 0 of a free run**, and day 0 was the odd one out: he
+starts on an empty tank, which is fuller than any night ever leaves him.
+
+### Why tuning the rates is not the fix
+
+Making the rates sum to 24 fixes the **period** and not the **phase**. There is
+no restoring force, so any disturbance moves him permanently and he keeps the
+new hours forever. Rung 6's obligations are full of disturbances.
+
+### What was settled
+
+> **Being up is worth more while the sun is up.**
+
+`StayUp.get_utility_score` stops being flat:
+
+```gdscript
+@export var pull := 67.3           # what being up is worth at dawn and dusk
+@export var daylight_pull := 20.0  # added at midday, taken off at midnight
+return pull + daylight_pull * person.get_sun_height()
+```
+
+Recovery drops `6.25 → 5.0`, so sixteen hours awake at 2.5 builds a swing of 40
+and eight hours asleep clears it. **The rates set the shape of the cycle;
+`daylight_pull` sets its phase.**
+
+Measured convergence from a cold start — and the convergence is the point:
+
+```
+day 0  turns in 21:07        day 2  21:59 → 05:59
+day 1  21:53 → 05:55         day 3+ 22:00 → 06:00, to the minute
+```
+
+### It is a score term and never a gate
+
+*"Can't sleep during the day"* would bar an exhausted man from sleeping — the
+same barring mistake as a radius around a tavern, in different clothes, and
+forbidden by the same rule as travel cost. **The daylight peak (87.3) sits below
+the adenosine ceiling (100) deliberately**, so a man kept up long enough WILL
+drop at noon. The probe's second man demonstrates it without being asked to:
+started with most of a day's tiredness on him, he goes to bed at **14:59** on
+day 0, and is on the town's hours by day 3.
+
+### One definition of the sun
+
+`Clock.get_sun_height()` — −1 at midnight, 0 at dawn and dusk, +1 at midday.
+`Daylight` now asks for it instead of writing its own sine; two would agree today
+and part company the first time either changed.
+
+Actions reach it through **`Person.get_sun_height()`**, because an Action scoring
+itself has the person and nothing else — and it is the honest place for it to
+graduate, since a man in a cellar sees no sun at noon.
+
+### `Person.clock`, and what rung 3 gets from it
+
+`Person` now pulls a `Clock` off `Population` beside its `Town`, by the same
+mechanism (Decision 10). **This changes rung 3's workstation snippet.** Decision
+2 shows `Workstation.claim()` reading a `clock` of its own, and flags the
+hand-wired reference as the `node_paths` trap waiting to happen. It no longer
+needs one: `claim(person)` can read `person.clock.day()`, so **not one station
+carries a wire.** Re-derive the snippet accordingly.
+
+### Wake has no daylight term — measured, not overlooked
+
+The symmetrical version was written and then deleted:
+
+> StayUp anchors bedtime to the evening. Eight hours of clearing puts the waking
+> crossing at **dawn** — and dawn is exactly where the sun sits level with the
+> horizon, so the term is multiplied by **zero** at the only moment the score is
+> ever read. Tried at 6 and again at 30: the settled schedule did not move by one
+> minute either time, and no claim in the probe could tell.
+
+The anchor is one term in one action. If bedtime is ever retuned far enough that
+waking lands well away from dawn, this becomes live again — **that** is what to
+look for before adding it back, rather than adding it because it reads as
+symmetrical.
+
+### Probe
+
+**The pumped window goes 24h → 48h.** An eight-hour night starting at 22:00 no
+longer fits inside one midnight-to-midnight window, so the old one caught him
+going to bed and quit before he got up. Not a fix to the assertion — the window
+was cut to a free-running cycle that no longer exists.
+
+Two claims added, **neither of which names an hour**, because an assertion about
+a tuned number is an assertion about the tuning board and goes red the first time
+somebody drags a slider:
+
+- **10 — the cycle holds its hour.** He turns in with the sun below the horizon
+  (stated as sun height, so it survives any retune), and the last two bedtimes
+  differ by under fifteen minutes.
+- **11 — two people who start from different histories keep the same hours.** The
+  restoring force, asserted directly, and a preview of the town.
+
+Broken on purpose, both red: strip the sun out of `StayUp` (10 and 11 both fail),
+and invert it (he turns in at 09:56 in broad daylight, 10 fails).
+
+**The measured schedule is printed, not asserted** — the same treatment
+18.01/23.62 always had.
+
+### New regression baseline — supersedes 18.01 / 23.62 everywhere
+
+```
+cold start   turns in hour 21.11 (21:07), up at 29.67 (05:40)
+settled      turns in 22:01, sleeps 8.00 h, up 06:01
+```
+
+### Plan edits this implies
+
+Not yet applied.
+
+| Section | Change |
+|---|---|
+| Rung 0 / everywhere | The regression fingerprint is no longer 18.01 / 23.62. Use the pair above. |
+| Rung 3 (`Workstation`) | Drop the per-station `clock` reference from Decision 2's snippet — read `person.clock.day()` instead. No station carries a wire. |
+| Rung 6a | The "expect assertion 1 to go red when hunger and social join the ballot" note still stands, but the window is now 48 h and the cycle is anchored, so there is more headroom than the old 0.38 h. |
