@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=16 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://game/population.gd" id="6_population"]
 [ext_resource type="Script" path="res://game/town.gd" id="7_town"]
 [ext_resource type="Script" uid="uid://c3yankxrk447k" path="res://game/place.gd" id="8_place"]
+[ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_person_readout"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
@@ -77,7 +78,7 @@ tint = Color(0.82, 0.46, 0.3, 1)
 current_place = NodePath("../../Town/Fields")
 
 [node name="Camera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.87, 0.5, 0, -0.5, 0.87, 0, 4.5, 8)
+transform = Transform3D(1, 0, 0, 0, 0.788, 0.616, 0, -0.616, 0.788, -2, 11, 14)
 fov = 55.0
 
 [node name="Screen" type="CanvasLayer" parent="."]
@@ -95,6 +96,11 @@ offset_bottom = -224.0
 person = NodePath("../../Population/Zoogs")
 show_stats = false
 title = "Zoogs — what he's weighing"
+
+[node name="PersonReadout" parent="Screen" node_paths=PackedStringArray("person", "clock") instance=ExtResource("9_person_readout")]
+layout_mode = 3
+person = NodePath("../../Population/Zoogs")
+clock = NodePath("../../Clock")
 
 [node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
 watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake")])

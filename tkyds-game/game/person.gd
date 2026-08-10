@@ -138,7 +138,7 @@ func get_travel_cost_to(place: Place) -> float:
 # and the day Population starts thinking for him every fourth frame, the text
 # above his head would freeze between thoughts.
 func _process(_delta: float) -> void:
-	readout.text = _readout_text()
+	readout.text = get_name_plate_text()
 
 
 func _apply_tint() -> void:
@@ -148,10 +148,21 @@ func _apply_tint() -> void:
 	_shape.material_override = material
 
 
-# What's floating over his head: his name, what he's doing, and every stat he
-# has. The stats are listed rather than named one by one so that adding one to
-# Stats makes it show up here without this file changing.
-func _readout_text() -> String:
+# What floats over his head — who he is and what he is doing, and deliberately
+# nothing else. It travels with him, so it shrinks with distance and turns
+# side-on, and thirteen stat lists floating over a town is soup. Everything you
+# need to tell one man from another at a glance, and not one line more.
+#
+# The detail lives in PersonReadout, which sits still in a corner and shows one
+# man closely. That split is why this is short.
+func get_name_plate_text() -> String:
+	return "\n".join([person_name, brain.describe_current_action()])
+
+
+# Everything about him, for something that has the room to show it. The stats
+# are listed rather than named one by one so that adding one to Stats makes it
+# show up here without this file changing.
+func get_readout_text() -> String:
 	var lines := [person_name, brain.describe_current_action()]
 	# Asked for by name rather than picked up off the stat list, because being
 	# awake isn't a stat he carries — see Brain.is_awake.
