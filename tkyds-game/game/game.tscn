@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" path="res://game/ui/stat_graph.tscn" id="4_stat_graph"]
 [ext_resource type="PackedScene" path="res://game/ui/tuning_board.tscn" id="5_tuning_board"]
 [ext_resource type="Script" path="res://game/population.gd" id="6_population"]
-[ext_resource type="Script" path="res://game/town.gd" id="7_town"]
+[ext_resource type="Script" uid="uid://c0r2y56224pe2" path="res://game/town.gd" id="7_town"]
 [ext_resource type="Script" uid="uid://c3yankxrk447k" path="res://game/place.gd" id="8_place"]
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_person_readout"]
 [ext_resource type="Script" path="res://game/workstation.gd" id="10_workstation"]
@@ -29,11 +29,11 @@ albedo_color = Color(0.78, 0.68, 0.31, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_place"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inn"]
-albedo_color = Color(0.42, 0.29, 0.22, 1)
-
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_plot"]
 albedo_color = Color(0.5, 0.37, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inn"]
+albedo_color = Color(0.42, 0.29, 0.22, 1)
 
 [node name="Game" type="Node3D"]
 
@@ -70,7 +70,6 @@ transform = Transform3D(0.12, 0, 0, 0, 1, 0, 0, 0, 0.12, 0.2, 0.01, 0.15)
 material_override = SubResource("StandardMaterial3D_plot")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
-work_name = &"field work"
 
 [node name="Inn" type="MeshInstance3D" parent="Town"]
 transform = Transform3D(6, 0, 0, 0, 1, 0, 0, 0, 6, 8, 0.02, 4)
@@ -90,7 +89,7 @@ person_name = "Zoogs"
 tint = Color(0.82, 0.46, 0.3, 1)
 current_place = NodePath("../../Town/Fields")
 
-[node name="WorkTheField" parent="Population/Zoogs/Brain" instance=ExtResource("11_work_the_field")]
+[node name="WorkTheField" parent="Population/Zoogs/Brain" index="3" instance=ExtResource("11_work_the_field")]
 
 [node name="Hobb" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.5, 0, -5.5)
@@ -98,7 +97,7 @@ person_name = "Hobb"
 tint = Color(0.42, 0.58, 0.8, 1)
 current_place = NodePath("../../Town/Fields")
 
-[node name="WorkTheField" parent="Population/Hobb/Brain" instance=ExtResource("11_work_the_field")]
+[node name="WorkTheField" parent="Population/Hobb/Brain" index="3" instance=ExtResource("11_work_the_field")]
 
 [node name="Stats" parent="Population/Hobb" index="3"]
 strength = 1.15
