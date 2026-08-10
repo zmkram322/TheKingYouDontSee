@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" path="res://game/ui/tuning_board.tscn" id="5_tuning_board"]
 [ext_resource type="Script" path="res://game/population.gd" id="6_population"]
 [ext_resource type="Script" path="res://game/town.gd" id="7_town"]
-[ext_resource type="Script" path="res://game/place.gd" id="8_place"]
+[ext_resource type="Script" uid="uid://c3yankxrk447k" path="res://game/place.gd" id="8_place"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
