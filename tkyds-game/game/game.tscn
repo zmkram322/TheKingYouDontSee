@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=19 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
@@ -9,6 +9,8 @@
 [ext_resource type="Script" path="res://game/town.gd" id="7_town"]
 [ext_resource type="Script" uid="uid://c3yankxrk447k" path="res://game/place.gd" id="8_place"]
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_person_readout"]
+[ext_resource type="Script" path="res://game/workstation.gd" id="10_workstation"]
+[ext_resource type="PackedScene" path="res://game/actions/work_the_field.tscn" id="11_work_the_field"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
@@ -29,6 +31,9 @@ albedo_color = Color(0.78, 0.68, 0.31, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inn"]
 albedo_color = Color(0.42, 0.29, 0.22, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_plot"]
+albedo_color = Color(0.5, 0.37, 0.2, 1)
 
 [node name="Game" type="Node3D"]
 
@@ -60,6 +65,13 @@ mesh = SubResource("PlaneMesh_place")
 script = ExtResource("8_place")
 place_name = "the grain fields"
 
+[node name="Plot" type="MeshInstance3D" parent="Town/Fields"]
+transform = Transform3D(0.12, 0, 0, 0, 1, 0, 0, 0, 0.12, 0.2, 0.01, 0.15)
+material_override = SubResource("StandardMaterial3D_plot")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"field work"
+
 [node name="Inn" type="MeshInstance3D" parent="Town"]
 transform = Transform3D(6, 0, 0, 0, 1, 0, 0, 0, 6, 8, 0.02, 4)
 material_override = SubResource("StandardMaterial3D_inn")
@@ -73,9 +85,23 @@ clock = NodePath("../Clock")
 town = NodePath("../Town")
 
 [node name="Zoogs" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -4)
 person_name = "Zoogs"
 tint = Color(0.82, 0.46, 0.3, 1)
 current_place = NodePath("../../Town/Fields")
+
+[node name="WorkTheField" parent="Population/Zoogs/Brain" instance=ExtResource("11_work_the_field")]
+
+[node name="Hobb" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.5, 0, -5.5)
+person_name = "Hobb"
+tint = Color(0.42, 0.58, 0.8, 1)
+current_place = NodePath("../../Town/Fields")
+
+[node name="WorkTheField" parent="Population/Hobb/Brain" instance=ExtResource("11_work_the_field")]
+
+[node name="Stats" parent="Population/Hobb" index="3"]
+strength = 1.15
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.788, 0.616, 0, -0.616, 0.788, -2, 11, 14)
@@ -85,6 +111,7 @@ fov = 55.0
 
 [node name="StatGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
 layout_mode = 3
+offset_right = 412.0
 person = NodePath("../../Population/Zoogs")
 show_utilities = false
 title = "Zoogs — stats"
@@ -92,15 +119,36 @@ title = "Zoogs — stats"
 [node name="UtilityGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
 layout_mode = 3
 offset_top = -424.0
+offset_right = 412.0
 offset_bottom = -224.0
 person = NodePath("../../Population/Zoogs")
 show_stats = false
 title = "Zoogs — what he's weighing"
 
-[node name="PersonReadout" parent="Screen" node_paths=PackedStringArray("person", "clock") instance=ExtResource("9_person_readout")]
+[node name="HobbStatGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
 layout_mode = 3
+offset_left = 424.0
+offset_right = 824.0
+person = NodePath("../../Population/Hobb")
+show_utilities = false
+title = "Hobb — stats"
+
+[node name="HobbUtilityGraph" parent="Screen" node_paths=PackedStringArray("person") instance=ExtResource("4_stat_graph")]
+layout_mode = 3
+offset_left = 424.0
+offset_top = -424.0
+offset_right = 824.0
+offset_bottom = -224.0
+person = NodePath("../../Population/Hobb")
+show_stats = false
+title = "Hobb — what he's weighing"
+
+[node name="PersonReadout" parent="Screen" node_paths=PackedStringArray("person", "clock") instance=ExtResource("9_person_readout")]
 person = NodePath("../../Population/Zoogs")
 clock = NodePath("../../Clock")
 
 [node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
-watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake")])
+watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake"), NodePath("../../Population/Zoogs/Brain/WorkTheField"), NodePath("../../Population/Hobb/Stats")])
+
+[editable path="Population/Zoogs"]
+[editable path="Population/Hobb"]

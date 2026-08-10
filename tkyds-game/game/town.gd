@@ -67,6 +67,68 @@ func get_places() -> Array[Place]:
 # written — keep this loop as the slow oracle, run both, assert they agree. The
 # build plan's "find_people_at and get_current_place never disagree" assertion
 # is vacuous today because there is only one copy; it is banked for exactly then.
+# The two flavours of idleness, and they are TWO on purpose: "there was no
+# field" and "every field was taken" are different worlds with opposite fixes —
+# collapsed into one number, the day the town runs out of work looks exactly
+# like the day it runs out of workers. Each is one accumulating float and never
+# a history: a list of nights would be the decision log the plan names as its
+# only unbounded complexity class. These are the class of fact that CANNOT be
+# recomputed from world state — a failure that already happened leaves no trace
+# in a snapshot — which is why storing them doesn't break "store nothing you
+# can work out again".
+#
+# PLAIN accumulators for now, deliberately: decay arrives with the first reader
+# (a Lord noticing his town stands idle), because a half-life is a tuning knob
+# and a knob nothing reads is substrate before need. Nothing reads these yet,
+# and that is correct. They are telemetry written from a gate — the documented
+# exception lives at the write site in work_the_field.gd.
+var no_candidates_existed_pressure := 0.0
+var every_candidate_was_taken_pressure := 0.0
+
+
+# Every station in this town where that kind of work is done, STABLY SORTED by
+# what the journey costs the asking person, node path as tiebreak — never
+# Dictionary hash order. The sort is the agreement mechanism: gate, score and
+# step each re-derive "the best plot" fresh, and a stable order is what makes
+# three derivations land on the same one.
+#
+# No radius bound and no nearest-N cap, deliberately: a far plot is outbid,
+# never barred, and locality is emergent — a station in the next town would sit
+# at the bottom of this list because it is expensive, not because a rule says
+# "only your own town". Nothing truncates; a caller that ever wants the nearest
+# three takes the front of the list.
+#
+# Freeness is NOT filtered here — that is the asking action's business, and a
+# taken plot is still a fact about the town (it is what makes "every field was
+# taken" answerable at all).
+func find_workstations(person: Person, work_name: StringName) -> Array[Workstation]:
+	var found: Array[Workstation] = []
+	for place in get_places():
+		for child in place.get_children():
+			var station := child as Workstation
+			if station != null and station.work_name == work_name:
+				found.append(station)
+	found.sort_custom(func(left: Workstation, right: Workstation) -> bool:
+		var left_cost: float = person.get_travel_cost_to(left.get_place())
+		var right_cost: float = person.get_travel_cost_to(right.get_place())
+		if left_cost != right_cost:
+			return left_cost < right_cost
+		return String(left.get_path()) < String(right.get_path()))
+	return found
+
+
+# "There was no field." The town has run out of WORK — the fix is more
+# stations, and it is nothing like the fix for the counter below.
+func note_no_candidates_existed() -> void:
+	no_candidates_existed_pressure += 1.0
+
+
+# "Every field was taken." The town has run out of ROOM — it has more willing
+# hands than places to put them.
+func note_every_candidate_was_taken() -> void:
+	every_candidate_was_taken_pressure += 1.0
+
+
 func find_people_at(place: Place) -> Array[Person]:
 	var found: Array[Person] = []
 	# Nobody is at nowhere — and this is a real answer, not a swallowed error. A

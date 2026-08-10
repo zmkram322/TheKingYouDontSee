@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/actions/work_the_field.gd" id="1_work_the_field"]
+[ext_resource type="Script" path="res://game/actions/work_step.gd" id="2_work_step"]
+
+[node name="WorkTheField" type="Node"]
+script = ExtResource("1_work_the_field")
+label = "work the field"
+work_name = &"field work"
+pull = 73.0
+daylight_pull = 30.0
+
+[node name="Work" type="Node" parent="."]
+script = ExtResource("2_work_step")
