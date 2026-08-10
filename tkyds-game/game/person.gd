@@ -24,6 +24,31 @@ extends CharacterBody3D
 # so every instance can differ without needing a material file apiece.
 @export var tint := Color(0.78, 0.74, 0.68)
 
+# Where he IS — a discrete fact he carries, not a distance to anything. Authored
+# per instance today; rung 4's walking step writes it on arrival and clears it
+# for the length of the road. Null is a real state and means "on the way".
+#
+# Note for whoever wires this in a .tscn by hand: it needs
+# `node_paths=PackedStringArray("current_place")` on that instance's own header
+# line, or the loader assigns the raw NodePath to a typed field and you get null
+# — which here reads as a man standing on a road that doesn't exist.
+@export var current_place: Place
+
+# The world he can ask questions about. Not exported and not a wire: pulled off
+# his Population in _ready, the same way Brain finds its Person by asking its
+# parent. One wire in the whole scene feeds everybody, so thirteen people at
+# rung 9 is still one NodePath rather than thirteen chances at the trap that
+# already shipped a dead day/night cycle here.
+#
+# It is pulled rather than handed down because Godot readies children BEFORE
+# parents: a Population handing this out in its own _ready would arrive after
+# every person had already checked his pocket and found it empty, so the warning
+# below would fire on every person of every correct scene. Pulling also means a
+# man born mid-run — the probe's spares, and standing check #2's fourteenth
+# villager — is wired the instant he enters the tree, with nothing watching for
+# new arrivals.
+var town: Town
+
 @onready var stats: Stats = $Stats
 @onready var brain: Brain = $Brain
 @onready var readout: Label3D = $Readout
@@ -38,8 +63,19 @@ func _ready() -> void:
 	# Population above him never thinks, never tires and never sleeps, and
 	# without this that is indistinguishable from a man who is merely well
 	# rested. It is the same silence that shipped a dead day/night cycle.
-	if get_parent() as Population == null:
+	var population := get_parent() as Population
+	if population == null:
 		push_warning("%s has no Population above him — he will never think" % person_name)
+	else:
+		town = population.town
+	if town == null:
+		push_warning("%s has no Town — he can never be asked who else is here" % person_name)
+	# Nobody is born on the road. Null is a legitimate state for a man WALKING
+	# once rung 4 exists, but at birth it means his place was never authored —
+	# and a man standing nowhere is invisible to every place query in the game,
+	# which reads as a town that ignores him rather than as a missing wire.
+	if current_place == null:
+		push_warning("%s starts nowhere — no place query will ever find him" % person_name)
 
 
 # One slice of living, in world HOURS. Not called from here: Population walks
@@ -53,6 +89,46 @@ func _ready() -> void:
 # game uses, rather than by a second route that can quietly diverge from it.
 func think_and_act(hours: float) -> void:
 	brain.think_and_act(hours)
+
+
+# Where he is standing, or null if he is between places. Asked in GATE, where
+# the answer has to be crisp: "am I at the tavern?" gets exactly one answer, and
+# a gate reading it can never flicker because nothing here is compared against a
+# threshold. Rungs 3 and 7 both ask it every tick.
+#
+# An accessor over a public field looks redundant and isn't: it is the wall that
+# lets where-he-is graduate — carried on a vehicle, inside a building inside a
+# place — without a single caller moving. Same reason stats go through get_stat.
+func get_current_place() -> Place:
+	return current_place
+
+
+# What getting there costs him. Asked in SCORE, and it NEVER gates: a far place
+# is outbid, never barred, so the cost only ever multiplies an appeal. That is
+# what keeps "he loses, and losing is the content" true, and it is why nothing
+# here compares against a threshold.
+#
+# Straight-line off the transforms today, which is what makes standing check #3
+# pass — drag a place in the editor and this number moves while the game runs.
+# Roads, a river crossing, a gate shut at night, and one day a world spanning
+# several towns all install in THIS FUNCTION BODY and no call site changes. It
+# lives on Person rather than on Place or Town because every caller is an Action
+# scoring itself and an Action always has the person — and because there will be
+# more than one town, so a Town-scoped answer breaks.
+#
+# The falloff curve that turns this into a multiplier lands at rung 4, which is
+# the first rung where a man chooses between two places at different costs and
+# so the first collision that can actually break the curve.
+func get_travel_cost_to(place: Place) -> float:
+	# A place that isn't there costs everything. Nowhere is deliberately the
+	# most expensive answer rather than the cheapest: returning 0.0 would read
+	# as "at his feet" and make a nonexistent place the most attractive
+	# destination in town, which is a bug that would present as strange
+	# wandering rather than as a null.
+	if place == null:
+		push_error("%s was asked what it costs to reach nowhere" % person_name)
+		return INF
+	return global_position.distance_to(place.global_position)
 
 
 # What's over his head, and nothing else. The readout deliberately does NOT
@@ -83,7 +159,23 @@ func _readout_text() -> String:
 	for stat_name in stats.get_stat_names():
 		var value: Variant = stats.get_stat(stat_name)
 		lines.append("%s %s" % [stat_name, _as_text(value)])
+	lines.append("at %s" % _describe_current_place())
+	# Every place in the town gets priced, rather than one named in here. Same
+	# reason the stats above are listed instead of named one by one: adding a
+	# place to the scene makes it show up over every head without this file
+	# changing, and no string in game/ ends up naming one particular instance.
+	if town != null:
+		for place in town.get_places():
+			lines.append("to %s %.1f" % [place.place_name, get_travel_cost_to(place)])
 	return "\n".join(lines)
+
+
+# Nowhere is a real answer — a man between places is at no place — so it gets a
+# word rather than being left blank and read as a broken wire.
+func _describe_current_place() -> String:
+	if current_place == null:
+		return "nowhere"
+	return current_place.place_name
 
 
 # Numbers get a decimal place; yes/no stats read as words. Anything else falls

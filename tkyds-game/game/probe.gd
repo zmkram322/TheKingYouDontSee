@@ -112,6 +112,9 @@ func _process(_delta: float) -> bool:
 	_pump_one_day()
 	_check_everyone_is_ticked_once_per_call()
 	_check_the_town_survives_losing_somebody()
+	_check_a_man_carries_his_place()
+	_check_who_is_where_is_asked_not_remembered()
+	_check_travel_cost_is_read_and_never_bars()
 	_check_every_scene_is_wired()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
@@ -338,6 +341,161 @@ func _check_the_town_survives_losing_somebody() -> void:
 	world.queue_free()
 
 
+# --- Assertion 7: a man carries his place ----------------------------------------
+
+# Place is a discrete fact he holds, not a result derived from where he is
+# standing. The last assertion in here is the important one: it is the mechanical
+# guard against the proximity model that was reverted on 2026-08-08 coming back
+# in through a side door. If standing somewhere starts changing where a man IS,
+# gates begin flickering at a radius edge and nothing in the design can smooth it.
+func _check_a_man_carries_his_place() -> void:
+	var claim := "7 — a man's place is a fact he carries, never a proximity result"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if population == null or zoogs == null or fields == null or inn == null:
+		_require(false, claim, "the scene came up without a Population, a Zoogs, and a Town holding Fields and Inn")
+		return
+
+	# Authored in game.tscn — and this doubles as the one check that would catch
+	# `current_place` losing its node_paths header, because a node reference the
+	# loader refused to resolve arrives here as exactly this null.
+	_require(zoogs.get_current_place() == fields, claim,
+		"Zoogs is authored at the fields and reports %s" % _describe_place(zoogs.get_current_place()))
+
+	var newcomer := _add_a_person(population, "Newcomer")
+	if newcomer == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+
+	_require(newcomer.get_current_place() == null, claim,
+		"a man nobody has placed reports %s — something is defaulting it" % _describe_place(newcomer.get_current_place()))
+
+	newcomer.current_place = fields
+	_require(newcomer.get_current_place() == fields, claim,
+		"put at the fields and reports %s" % _describe_place(newcomer.get_current_place()))
+	newcomer.current_place = inn
+	_require(newcomer.get_current_place() == inn, claim,
+		"moved to the Inn and reports %s" % _describe_place(newcomer.get_current_place()))
+
+	# Standing somewhere is not being there. His BODY goes to the fields and he
+	# is still at the Inn, because nothing derives place from a transform.
+	newcomer.global_position = fields.global_position
+	_require(newcomer.get_current_place() == inn, claim,
+		"standing him on the fields changed his place to %s — place is being derived from distance again" % [
+			_describe_place(newcomer.get_current_place())])
+
+	world.queue_free()
+
+
+# --- Assertion 8: who is where ---------------------------------------------------
+
+# find_people_at is a QUERY — it loops the people and asks each one. So the plan's
+# original assertion here ("the index and the fact never disagree") is vacuous:
+# there is one copy of the fact and one copy cannot contradict itself. That
+# assertion is banked in town.gd against the day an index exists to disagree.
+#
+# These have teeth instead: the exact set, a man who moves without anything being
+# invalidated by hand, and a man who dies.
+func _check_who_is_where_is_asked_not_remembered() -> void:
+	var claim := "8 — find_people_at returns exactly who is there, and nobody else"
+	var world := _add_a_disabled_game_scene()
+	var town := world.get_node_or_null("Town") as Town
+	var population := world.get_node_or_null("Population") as Population
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if town == null or population == null or zoogs == null or fields == null or inn == null:
+		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, Fields and an Inn")
+		return
+
+	var mara := _add_a_person(population, "Mara")
+	var bram := _add_a_person(population, "Bram")
+	var wisp := _add_a_person(population, "Wisp")
+	if mara == null or bram == null or wisp == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+	mara.current_place = fields
+	bram.current_place = inn
+	# Wisp is at no place at all — on the road, as far as anyone can tell.
+
+	_require_exactly(town.find_people_at(fields), [zoogs, mara], claim, "at the fields")
+	_require_exactly(town.find_people_at(inn), [bram], claim, "at the Inn")
+
+	# Nothing is invalidated, nothing is notified, nothing is re-posted. The next
+	# call simply asks again, which is the whole argument for a query.
+	mara.current_place = inn
+	_require_exactly(town.find_people_at(fields), [zoogs], claim, "at the fields once Mara left")
+	_require_exactly(town.find_people_at(inn), [bram, mara], claim, "at the Inn once Mara arrived")
+
+	# STRUCTURALLY SATISFIED TODAY — say so rather than let it read as covered.
+	# find_people_at asks the living, and free() takes Bram out of the child list
+	# at once, so there is no path by which he could come back. Measured:
+	# deleting the is_instance_valid guard in town.gd leaves this green. It grows
+	# teeth the day find_people_at holds a list, which is the same day the banked
+	# index-disagreement assertion does — both are waiting on the same change.
+	#
+	# free() rather than queue_free() regardless: queued deletion doesn't land
+	# until the end of the frame, so within one pumped tick he would still be a
+	# perfectly valid child and this would be testing nothing at all.
+	bram.free()
+	_require_exactly(town.find_people_at(inn), [mara], claim, "at the Inn once Bram died")
+
+	# Nobody is at nowhere. If this ever returns Wisp, then every man walking a
+	# road counts as standing with every other man walking a road, and rung 7
+	# trades between two people half a town apart.
+	_require_exactly(town.find_people_at(null), [], claim, "at nowhere")
+
+	world.queue_free()
+
+
+# --- Assertion 9: travel cost ----------------------------------------------------
+
+# Cost is read off the transforms every time it is asked, which is what makes
+# standing check #3 mechanical — drag a place and this moves. And it never bars:
+# there is no distance at which a place stops being an option, only one at which
+# it is outbid.
+func _check_travel_cost_is_read_and_never_bars() -> void:
+	var claim := "9 — travel cost is read off the transforms and never bars a place"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if zoogs == null or fields == null or inn == null:
+		_require(false, claim, "the scene came up without a Zoogs, Fields and an Inn")
+		return
+
+	zoogs.global_position = inn.global_position
+	_require(is_zero_approx(zoogs.get_travel_cost_to(inn)), claim,
+		"standing on the Inn cost him %.4f to reach" % zoogs.get_travel_cost_to(inn))
+
+	var away := inn.global_position + Vector3(30.0, 0.0, 30.0)
+	zoogs.global_position = away
+	var cost_from_there: float = zoogs.get_travel_cost_to(inn)
+
+	zoogs.global_position = away.lerp(inn.global_position, 0.5)
+	var cost_from_halfway: float = zoogs.get_travel_cost_to(inn)
+	_require(cost_from_halfway < cost_from_there, claim,
+		"walked half way to the Inn and the cost did not fall, %.2f → %.2f" % [cost_from_there, cost_from_halfway])
+
+	zoogs.global_position = away + Vector3(20.0, 0.0, 20.0)
+	var cost_from_further: float = zoogs.get_travel_cost_to(inn)
+	_require(cost_from_further > cost_from_there, claim,
+		"walked away from the Inn and the cost did not rise, %.2f → %.2f" % [cost_from_there, cost_from_further])
+
+	# Absurdly far, and still a price rather than a refusal. INF or NAN here
+	# would poison rung 4's falloff curve and turn "outbid" into "barred", which
+	# is the one thing travel cost is not allowed to do.
+	zoogs.global_position = Vector3(100000.0, 0.0, 100000.0)
+	var absurd: float = zoogs.get_travel_cost_to(fields)
+	_require(is_finite(absurd) and absurd > 0.0, claim,
+		"a place 140km away priced at %f — a far place must be expensive, never unreachable" % absurd)
+
+	world.queue_free()
+
+
 # --- Assertion 4: the node_paths trap -------------------------------------------
 
 # Two halves, because the trap has two halves and only one of them is visible
@@ -394,7 +552,52 @@ func _find_unresolved_node_path_arrays() -> Array[String]:
 	return unresolved
 
 
+# --- Building a cast ------------------------------------------------------------
+
+# One more real person under a real Population — person.tscn instanced, never a
+# mock. He picks his Town up off his parent in his own _ready, which is also the
+# only proof this file has that a man born mid-run is wired at all.
+func _add_a_person(population: Population, person_name: String) -> Person:
+	var person_scene: PackedScene = load(PERSON_SCENE_PATH) as PackedScene
+	if person_scene == null:
+		return null
+	var person := person_scene.instantiate() as Person
+	if person == null:
+		return null
+	person.name = person_name
+	person.person_name = person_name
+	population.add_child(person)
+	return person
+
+
 # --- Saying so ------------------------------------------------------------------
+
+# Compares two casts as SETS, by name, so the assertion says nothing about the
+# order people come back in. Order is Population's child order today and there is
+# no reason for any caller to depend on it — an assertion that quietly did would
+# go red the day somebody reorders the scene tree, for no defect.
+func _require_exactly(found: Array[Person], expected: Array[Person], claim: String, where: String) -> void:
+	var found_names := _list_names(found)
+	var expected_names := _list_names(expected)
+	found_names.sort()
+	expected_names.sort()
+	_require(found_names == expected_names, claim,
+		"%s — expected [%s] and found [%s]" % [where, ", ".join(expected_names), ", ".join(found_names)])
+
+
+func _list_names(people: Array[Person]) -> PackedStringArray:
+	var names := PackedStringArray()
+	for person in people:
+		names.append(person.person_name)
+	return names
+
+
+# Nowhere is a real answer, so it reads as a word rather than as "<null>".
+func _describe_place(place: Place) -> String:
+	if place == null:
+		return "nowhere"
+	return place.place_name
+
 
 # Records one claim's outcome. Claims are keyed by their headline text, so the
 # same headline asserted two thousand times reports once — see _claims.

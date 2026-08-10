@@ -40,6 +40,20 @@ extends Node
 # loader assigns the raw NodePath to a typed field and you get null.
 @export var clock: Clock
 
+# The world the people live in. Population never reads this itself — it is here
+# so that ONE wire in the scene feeds every person underneath, instead of one
+# per person. Thirteen hand-typed NodePaths at rung 9 is thirteen chances at the
+# trap that already shipped a dead day/night cycle here.
+#
+# Each Person picks it up off this field in his own _ready, the same way Brain
+# finds its Person by asking its parent. Handing it down from here instead would
+# arrive too late to be checked: Godot readies children before parents, so every
+# person would have already looked and found nothing.
+#
+# No warning here on purpose — the person who wants it warns by name, which
+# tells you WHO is standing there unable to ask questions about the world.
+@export var town: Town
+
 
 # Says so out loud rather than standing there quietly doing nothing. A
 # Population with no Clock never advances anybody, and without this that is

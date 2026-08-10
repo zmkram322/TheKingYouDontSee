@@ -1,7 +1,9 @@
-[gd_scene load_steps=10 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=16 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" path="res://game/population.gd" id="6_population"]
+[ext_resource type="Script" path="res://game/town.gd" id="7_town"]
+[ext_resource type="Script" path="res://game/place.gd" id="8_place"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
 [ext_resource type="PackedScene" path="res://game/ui/stat_graph.tscn" id="4_stat_graph"]
@@ -18,6 +20,14 @@ albedo_color = Color(0.36, 0.52, 0.32, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(40, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fields"]
+albedo_color = Color(0.78, 0.68, 0.31, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inn"]
+albedo_color = Color(0.42, 0.29, 0.22, 1)
 
 [node name="Game" type="Node3D"]
 
@@ -38,13 +48,39 @@ environment = NodePath("../Sky")
 material_override = SubResource("StandardMaterial3D_ground")
 mesh = SubResource("PlaneMesh_ground")
 
-[node name="Population" type="Node" parent="." node_paths=PackedStringArray("clock")]
+[node name="Town" type="Node3D" parent="." node_paths=PackedStringArray("population")]
+script = ExtResource("7_town")
+population = NodePath("../Population")
+
+[node name="Fields" type="Node3D" parent="Town"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, -5)
+script = ExtResource("8_place")
+place_name = "the grain fields"
+
+[node name="Patch" type="MeshInstance3D" parent="Town/Fields"]
+transform = Transform3D(7, 0, 0, 0, 0.1, 0, 0, 0, 7, 0, 0.05, 0)
+material_override = SubResource("StandardMaterial3D_fields")
+mesh = SubResource("BoxMesh_marker")
+
+[node name="Inn" type="Node3D" parent="Town"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 4)
+script = ExtResource("8_place")
+place_name = "the Lord's Inn"
+
+[node name="Building" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(3, 0, 0, 0, 2.5, 0, 0, 0, 3, 0, 1.25, 0)
+material_override = SubResource("StandardMaterial3D_inn")
+mesh = SubResource("BoxMesh_marker")
+
+[node name="Population" type="Node" parent="." node_paths=PackedStringArray("clock", "town")]
 script = ExtResource("6_population")
 clock = NodePath("../Clock")
+town = NodePath("../Town")
 
-[node name="Zoogs" parent="Population" instance=ExtResource("3_person")]
+[node name="Zoogs" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
 person_name = "Zoogs"
 tint = Color(0.82, 0.46, 0.3, 1)
+current_place = NodePath("../../Town/Fields")
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.87, 0.5, 0, -0.5, 0.87, 0, 4.5, 8)
