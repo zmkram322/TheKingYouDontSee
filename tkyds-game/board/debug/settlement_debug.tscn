@@ -1,8 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://0aql5ey7d3m8"]
-
-[ext_resource type="Script" uid="uid://bpdau35fy32vj" path="res://board/debug/settlement_debug.gd" id="1"]
-
-[node name="SettlementDebug" type="Node2D"]
-script = ExtResource("1")
-
-[node name="UI" type="CanvasLayer" parent="."]
