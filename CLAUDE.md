@@ -12,11 +12,23 @@ something needs it.
 | `game/actions/` | The action library. One scene per action, instanced under a person's Brain. |
 | `game/ui/` | Watching and tuning. `stat_graph` plots a person's stats over time; `tuning_board` puts a slider on every exported number of whatever nodes you point it at. Both are their own scenes, both need a `CanvasLayer` parent in a 3D scene, both discover what to show by reflection so neither needs a line per stat or per knob. |
 | `assets/` | Art. `quaternius/` is 3D, `tiny_town`/`tiny_dungeon` are 2D. |
-| `board/`, `town/`, `sandbox/`, `sim/`, `behavior/` | Earlier studies. Not built on. Don't extend them; don't import from them. |
 | `_bmad-output/planning-artifacts/prd.md` | The requirements contract. FR numbers are stable identifiers. |
+| `_bmad-output/proving-scene-build-plan.md` | The current build ladder — **fifteen gates** from one Zoog to a thirteen-person town. Read before adding to `game/`. |
+| `_bmad-output/proving-scene-decisions.md` | **Read with the plan.** Nine questions settled 2026-08-09, each with the reasoning. Wins where it and the plan disagree. Three of them look like violations of the rules below until you read why they aren't. |
 
-`brain/`, `world/`, and `skin/` were **retired 2026-08-05** — superseded by
-`game/`. They're in git history if you need to read how something worked.
+`tkyds-game/` is now **`game/` and `assets/` and nothing else.** `brain/`,
+`world/` and `skin/` were retired 2026-08-05; `board/`, `town/`, `sandbox/`,
+`sim/`, `behavior/`, `tests/` and the old `main.tscn` followed on **2026-08-08**,
+deleted outright to free their `class_name`s — see below. All of it is in git
+history if you need to read how something worked; port ideas by hand, never
+wire to them.
+
+**`class_name` is project-global, and 23 good names were being squatted on.**
+Freed by that deletion, and now available: `Goal`, `Demand`, `Actor`, `State`,
+`Wait`, `Simulation`, `Villager`, `TownMap`, `Hex`, `HexMap`, `Orchestrator`,
+`UtilityBrain`, `ActionOption`, `SequenceState`, `Perform`, `Stat`, `StatStore`,
+`Tune`, `TerrainGenerator`, `Settlement*`, `Sandbox*`. `Goal` and `Demand`
+especially — both are words the PRD uses constantly and both were unavailable.
 
 ## Naming
 
@@ -61,6 +73,20 @@ sleeps, which reads as a balance problem and takes an hour to trace. Grep
 **Node vs shared file:** different for every person → **Node** (stats, brain,
 what he's doing). Same for everyone → **shared scene/resource** (what "sleep"
 means). Never store one person's progress on a shared action.
+
+**Nothing outside `Clock` interprets a real-time delta.** `Clock` owns the one
+conversion from real seconds to world time; **every rate in `game/` is per world
+hour**, and every argument carrying one is named `hours`, not `delta`. Two
+clocks running in different units is a live bug this project already has:
+`base_adenosine_per_second` is per real second while `Clock` divides by
+`day_length_seconds`, which is a slider — so dragging it desynchronises the body
+from the sun and the failure looks like a tuning problem. Rung 0 fixes it.
+
+**A stored `Person` reference is read through `is_instance_valid()`, always.**
+`queue_free()` does not null your reference — `== null` stays false and the next
+property read errors. Anything holding a person (a workstation's claimant, an
+obligation's issuer, a trade candidate) must check, or "delete somebody mid-run"
+produces a stack trace instead of a verdict.
 
 **Gate with `is_available_to`, never by adding or removing nodes.** Three
 different questions, three mechanisms:
