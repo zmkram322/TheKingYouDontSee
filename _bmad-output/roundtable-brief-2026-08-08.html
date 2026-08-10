@@ -1,0 +1,969 @@
+<title>TKYDS — Roundtable Decision Brief</title>
+<style>
+  :root {
+    --ground:      #ECEDEF;
+    --surface:     #F6F7F8;
+    --ink:         #1B1C24;
+    --ink-soft:    #3B3D48;
+    --slate:       #636673;
+    --rule:        #D2D5DB;
+    --rule-soft:   #E1E3E7;
+    --woad:        #2E4A7D;
+    --woad-wash:   #E2E7F0;
+    --verdigris:   #3F6259;
+    --verd-wash:   #DFE9E5;
+    --madder:      #8C3A32;
+    --madder-wash: #F1E2E0;
+    --strike:      #6E6273;
+    --strike-wash: #E8E3EB;
+
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "Hoefler Text", Georgia, serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 34rem;
+    --rail: 8.5rem;
+    --gap: 2.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:      #15161C;
+      --surface:     #1D1F27;
+      --ink:         #E3E4E9;
+      --ink-soft:    #C3C5CE;
+      --slate:       #8E92A0;
+      --rule:        #33363F;
+      --rule-soft:   #262931;
+      --woad:        #8AAAD9;
+      --woad-wash:   #1E2937;
+      --verdigris:   #7FB3A4;
+      --verd-wash:   #1A2A27;
+      --madder:      #D08A80;
+      --madder-wash: #2E1E1D;
+      --strike:      #A99BB0;
+      --strike-wash: #262130;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --ground:      #ECEDEF;
+    --surface:     #F6F7F8;
+    --ink:         #1B1C24;
+    --ink-soft:    #3B3D48;
+    --slate:       #636673;
+    --rule:        #D2D5DB;
+    --rule-soft:   #E1E3E7;
+    --woad:        #2E4A7D;
+    --woad-wash:   #E2E7F0;
+    --verdigris:   #3F6259;
+    --verd-wash:   #DFE9E5;
+    --madder:      #8C3A32;
+    --madder-wash: #F1E2E0;
+    --strike:      #6E6273;
+    --strike-wash: #E8E3EB;
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #15161C;
+    --surface:     #1D1F27;
+    --ink:         #E3E4E9;
+    --ink-soft:    #C3C5CE;
+    --slate:       #8E92A0;
+    --rule:        #33363F;
+    --rule-soft:   #262931;
+    --woad:        #8AAAD9;
+    --woad-wash:   #1E2937;
+    --verdigris:   #7FB3A4;
+    --verd-wash:   #1A2A27;
+    --madder:      #D08A80;
+    --madder-wash: #2E1E1D;
+    --strike:      #A99BB0;
+    --strike-wash: #262130;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: calc(var(--rail) + var(--gap) + var(--measure));
+    margin: 0 auto;
+    padding: 4rem 1.5rem 7rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  /* ---- masthead ---- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    padding-bottom: 2.25rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--slate);
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 2.9rem);
+    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .standfirst {
+    font-size: 1.125rem;
+    color: var(--ink-soft);
+    max-width: 32rem;
+  }
+
+  .provenance {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--slate);
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--rule);
+  }
+  .provenance b { color: var(--ink-soft); font-weight: 500; }
+
+  /* ---- how to use ---- */
+
+  .brief-note {
+    background: var(--surface);
+    border-left: 3px solid var(--woad);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .brief-note p { margin: 0; }
+  .brief-note h2 {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--woad);
+    font-weight: 500;
+    margin: 0;
+  }
+
+  /* ---- sections ---- */
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--ink);
+  }
+  .sec-head h2 {
+    font-size: 1.55rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .sec-head p {
+    margin: 0;
+    color: var(--slate);
+    font-size: 0.95rem;
+    max-width: var(--measure);
+  }
+
+  /* ---- entries with marginal rulings ---- */
+
+  .entry {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    gap: var(--gap);
+    align-items: start;
+  }
+
+  .ruling {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-items: flex-start;
+    padding-top: 0.28rem;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.5rem;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .chip-settled { background: var(--verd-wash); color: var(--verdigris); }
+  .chip-amend   { background: var(--woad-wash); color: var(--woad); }
+  .chip-open    { background: var(--madder-wash); color: var(--madder); }
+  .chip-reject  { background: var(--strike-wash); color: var(--strike); }
+
+  .frtag {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--slate);
+    line-height: 1.5;
+  }
+
+  .body h3 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+  .body p { margin: 0 0 0.75rem; max-width: var(--measure); }
+  .body p:last-child { margin-bottom: 0; }
+  .body ul { margin: 0 0 0.75rem; padding-left: 1.1rem; max-width: var(--measure); }
+  .body li { margin-bottom: 0.35rem; }
+  .body ul:last-child, .body li:last-child { margin-bottom: 0; }
+
+  .quote {
+    font-style: italic;
+    border-left: 2px solid var(--rule);
+    padding-left: 1rem;
+    color: var(--ink-soft);
+    margin: 0 0 0.75rem;
+    max-width: var(--measure);
+  }
+
+  .wording {
+    background: var(--surface);
+    border: 1px solid var(--rule-soft);
+    padding: 0.85rem 1rem;
+    margin: 0 0 0.75rem;
+    font-size: 0.9375rem;
+    max-width: var(--measure);
+  }
+  .wording .label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-bottom: 0.4rem;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--rule-soft);
+    padding: 0.08em 0.32em;
+    border-radius: 2px;
+  }
+
+  .voice {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    color: var(--slate);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---- reinvention table ---- */
+
+  .tablewrap { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9375rem;
+    min-width: 30rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.9rem 0.6rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--slate);
+    font-weight: 500;
+    border-bottom-color: var(--rule);
+  }
+  td:first-child {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    color: var(--woad);
+    white-space: nowrap;
+    padding-right: 1.5rem;
+  }
+
+  /* ---- closing ---- */
+
+  .colophon {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--slate);
+    line-height: 1.7;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  a { color: var(--woad); text-underline-offset: 2px; }
+  a:focus-visible, :focus-visible {
+    outline: 2px solid var(--woad);
+    outline-offset: 2px;
+  }
+
+  strong { font-weight: 600; }
+
+  @media (max-width: 40rem) {
+    .page { padding: 2.5rem 1.15rem 4rem; gap: 2.75rem; }
+    .entry { grid-template-columns: minmax(0, 1fr); gap: 0.7rem; }
+    .ruling { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding-top: 0; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="eyebrow">Supplemental design brief · carry into a PRD edit session</div>
+    <h1>The King You Don't See</h1>
+    <p class="standfirst">Seven rounds of party-mode roundtable, distilled into rulings against the existing requirements contract. Written to be amended <em>from</em>, not read straight through.</p>
+    <div class="provenance">
+      <span><b>Session</b> 2026-08-06 → 08</span>
+      <span><b>Voices</b> Samus · Cloud Dragonborn · Mary · Sally · Indie</span>
+      <span><b>Contract</b> _bmad-output/planning-artifacts/prd.md</span>
+      <span><b>Build</b> tkyds-game/game/ · branch poc-v2</span>
+    </div>
+  </header>
+
+  <div class="brief-note">
+    <h2>How to use this</h2>
+    <p>Every entry carries a ruling in the margin. <strong>Settled</strong> means the room converged and the author did not object — treat as decided. <strong>Amend</strong> means a specific edit to the PRD is proposed, with wording where wording exists. <strong>Open</strong> means genuinely unresolved; do not let an edit session quietly close it. <strong>Rejected</strong> means decided against — recorded so it is not rebuilt.</p>
+    <p>FR numbers are stable identifiers and the PRD's numbering policy is append-only. Nothing here renumbers anything. Where a proposal contradicts an existing FR, that is stated rather than smoothed over.</p>
+  </div>
+
+  <!-- ============ THE SPINE ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>The spine</h2>
+      <p>Decisions the room converged on and the author accepted. These are the load-bearing commitments everything else hangs from.</p>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR1 · FR38 · FR85</span></div>
+      <div class="body">
+        <h3>Player and NPC share one action vocabulary</h3>
+        <p>The player draws from the same action set as any Zoog, gated by the same <code>is_available_to</code>, asked every tick. <strong>No second movement system</strong> — WASD selects a Walk action, it does not move a transform. Unanimous across all seven rounds, never challenged.</p>
+        <p>The duality is <strong>freedom of aperture, not freedom of verb</strong>: the king sees what no Zoog sees and acts only through Zoog-legal verbs. Information asymmetry costs nothing structurally and is the more original game.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR5 · FR44 · FR49 · FR72</span></div>
+      <div class="body">
+        <h3>Embodiment generates the unseen hand</h3>
+        <p>Four rounds of embodied-versus-disembodied dissolved when the author described visiting a mercantile lord. A disembodied cursor does not break bread.</p>
+        <p>The chain: consequential acts have places → you occupy one place → attention is scarce because the <em>body</em> is scarce → delegation is the only way to act in two places. FR44's "breadth of attention is finite and is the constraint that forces intent downward" is a <em>spatial</em> claim, not a UI budget.</p>
+        <p>Remove the body at high influence and you remove the reason delegation exists — you become a god with a spreadsheet, which is the tycoon dashboard the PRD forbids.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">answers an open question</span></div>
+      <div class="body">
+        <h3>Presence-scarcity changes shape; it never goes away</h3>
+        <p>Early: you go to them. Middle: they come to you. Late: you go rarely, and it means something when you do. The scarcity is conserved; the granularity coarsens — which building, then which region, court, or season.</p>
+        <p>This answers the PRD's Open Question <em>"Presence-scarcity at high influence — does travel remain necessary once influence is high, or does the requirement change shape?"</em>, flagged and never resolved.</p>
+        <p>Consequence worth writing down: <strong>FR72's night-ticked distant regions stop being a performance compromise</strong> and become what the world looks like from a body that isn't there. The fog is diegetic. Aggregate state is the epistemics of absence.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR12 · FR13 · FR100 · FR102</span></div>
+      <div class="body">
+        <h3>The player's will enters as a peer candidate, never an override</h3>
+        <p>An order enters the actor's candidate set as a peer action carrying its own weight, competing rather than biasing. FR100 already says this, with a sharper argument than the room produced: <em>a sufficiently large bias is indistinguishable from a script, whereas a peer candidate can always be outbid.</em> Weight is never permission (FR12).</p>
+        <p>This is the same principle as the rebuild's "every gate is asked, there is no override," wearing a different costume. It should be stated once.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">Key Risk #1 · FR60</span></div>
+      <div class="body">
+        <h3>A good is a precondition on someone else's utility gate</h3>
+        <p>The author's opening Factorio pitch — chop wood → sticks → scythe → sell — was identified independently by four agents as the PRD's Key Risk #1, the tycoon trap, by name. Accepted.</p>
+        <p class="quote">You don't craft a scythe. You discover that eleven Zoogs refused you, and two of them refused for a reason you can buy.</p>
+        <p>The Factorio pleasure survives intact; the system is made of people instead of belts. The economic verb terminates in a person.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR23 · FR70 · Legibility NFR</span></div>
+      <div class="body">
+        <h3>Don't render the rate — render the surplus</h3>
+        <p>Reached independently by the designer and the UX lead, who did not see each other's answers. A productivity gain is a derivative and nobody has ever felt a derivative. What is legible is <strong>a person spending the time the rate created</strong> — the work ended and the day did not.</p>
+        <p>Bram walks off the field with light left; the hour has to go somewhere; he is in the tavern at an hour the tavern is empty. You manufactured a private audience with a man by changing what time he got off work.</p>
+        <p><strong>If the surplus doesn't terminate in someone choosing something, it wasn't legible and it barely happened.</strong></p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR7 · FR23 · Arbitration</span></div>
+      <div class="body">
+        <h3>Daylight scales work utility. The tide beats the bell.</h3>
+        <p>Dusk is not a deadline. Daylight scales the utility of day-job work, so transitions emerge from the curve rather than from a bell — which is consistent with "everything outbids, nothing overrides" and stores no elapsed counter on anybody.</p>
+        <p>The staggered exodus is an upgrade, not a compromise: a shared quitting-time tells you only what the sky already told you, while a staggered one makes <em>the order people walk home in</em> the productivity readout. <em>Hale is walking in. Bren is still bent over.</em> Then the scythe lands and the frame inverts.</p>
+        <p>The world needs at least one worker whose labour is <strong>not</strong> daylight-gated, or the tavern is never empty at an odd hour and the private-audience payoff evaporates.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">new · replaces refusal as the everyday case</span></div>
+      <div class="body">
+        <h3>Degradation, not refusal, is the everyday texture</h3>
+        <p>The author's correction, and the largest single design move of the session. Outright refusal is rare and short-lived. What actually happens is that <strong>people show up, honor their obligations, and do it worse and unhappier</strong> — lower supply, less met need, more unrest.</p>
+        <p>Keep outright refusal as the rare, loud, <em>teaching</em> event. The occasional hard "no" is what makes the ninety-nine quiet degradations read as consent that cost something rather than compliance that was free.</p>
+        <p><strong>Panic must stay weight, not rule.</strong> Steep fear weighting that dominates in the common case, never a checked-first gate — the same trap as the hunger override that deadlocked the sim once already.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR1 · FR85 · FR86 · FR87</span></div>
+      <div class="body">
+        <h3>Actions pull candidates. The world never pushes capability.</h3>
+        <p>The Sims' smart-object model and this build's carried-capability model are perpendicular, not opposed. The seam is exact:</p>
+        <ul>
+          <li><strong>WHY is carried.</strong> Action nodes under a Brain, <code>learn()</code>/<code>forget()</code>. Never advertised. A field cannot teach a man to reap.</li>
+          <li><strong>WHICH is offered.</strong> The world contributes candidate targets to an already-chosen Action, scored by the same mechanism over a narrower set — which FR1 already specifies.</li>
+        </ul>
+        <p>Call it a <strong>provider query</strong>, not an advertisement. The Action asks; the field does not shout. <strong>Zero candidates means unavailable, not zero-scored</strong> — otherwise you get a man standing in a field of nothing, wanting.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">the alive/interchangeable separator</span></div>
+      <div class="body">
+        <h3>The world advertises presence and precondition. Never score.</h3>
+        <p class="quote">Alive is when the world advertises an <em>opportunity</em> and the person supplies the <em>valuation</em>. Interchangeable is when the world advertises a <em>value</em> and the person supplies only proximity.</p>
+        <p>The Sims put the number on the object, so "why did she go to the fridge" has the same answer for every Sim who ever lived — the canonical proof that legible reasoning alone does not produce distinct people. RimWorld put the number in the colonist: same ad, five different answers, and the difference <em>is</em> characterization.</p>
+        <p>This build already has the RimWorld half. Two people at the same field get the same offer and reach different numbers, and that difference is the character.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR29 · FR32 · FR100</span></div>
+      <div class="body">
+        <h3>A work contract is a held channel, not an economy feature</h3>
+        <p>FR29 is a channel held through economic dependence. FR32 is a transactional channel held only while relieving a currently-unmet driver, lapsing when any source satisfies it. <strong>Every clause describes a job.</strong></p>
+        <p>So "who works which field" was never an economy system — it is the influence layer wearing a hat, and probably its most common instrument in a medieval setting, because for most people in that world employment <em>is</em> the relationship.</p>
+        <p>The test for any labor feature follows: <strong>does this create, strengthen, or sever a channel to a named person?</strong> Wage rates that only move a number — cut. Contract terms that make a man dependent on you and resentful of the neighbour who wasn't chosen — ship.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR100 · FR101 · FR103</span></div>
+      <div class="body">
+        <h3>A work contract <em>is</em> an obligation whose target is a place</h3>
+        <p>Two things were wearing one word. <strong>Occupancy is derived</strong> — "Bren is working this field right now" is answered by where he is standing, and evaporates correctly when he is interrupted. <strong>The contract is stored</strong>, because FR101's regenerability test permits externally-originated intent.</p>
+        <p>No new "claim" type. A claim would be a second thing with a lifecycle, a second thing to serialize, and a second thing that can disagree with the obligation. The obligation <em>is</em> the candidate-set narrowing: given a work obligation on the east field, the reap action's candidate set is that one field.</p>
+        <p><strong>Obligations on assets must expire.</strong> Three lines now; a redesign later. Expiry converts "Bren owns the east field forever" into "Bren has the east field this season" — the difference between a caste system and a labour market.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR60 · Key Risk #1</span></div>
+      <div class="body">
+        <h3>Contention: one secures it. Never split the yield.</h3>
+        <p>Unanimous, from three independent arguments. Split-the-yield is physically true and dramatically empty — nobody can see a division, so it is a number moving for a reason the graph cannot show, because nothing happened.</p>
+        <p>One-secures-it manufactures a <strong>loser with a body</strong>: a named person who wanted work, showed up, and was passed over. Under FR32 that man has just acquired an unmet driver, which makes him — in the most literal mechanical sense the PRD defines — newly available to the player. Contention produces inventory of grievance, and grievance is the resource.</p>
+        <p>Split-yield also fails structurally: it is a <em>stable equilibrium</em> thundering herd, not a transient, and you cannot tune your way out of an equilibrium.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR22 · FR95</span></div>
+      <div class="body">
+        <h3>All land has a holder; unclaimed land is the king's</h3>
+        <p>The author's answer, and it is totalizing rather than a fallback: there is no unowned land, only land whose owner you haven't thought about yet. It also means patronage never has to fall back to a nameless default.</p>
+        <p>Land wears the FR22 sigil on its <strong>edge, never its fill</strong> — the fill is already carrying crop posture, and tinting gold would break the harvest read. Held land gets a planted stake; residual crown land gets nothing planted, so <strong>absence of a stake is the sigil</strong>, and the lesson lands once, in the territorial overlay, when the whole unclaimed remainder floods with the player's own colour.</p>
+        <p>A stake is <em>testimony, not title</em>. Two stakes in two colours on one field is the entire political situation, explained without a word.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">Settled</span><span class="frtag">FR85 · position</span></div>
+      <div class="body">
+        <h3>Hiring is an action, gated on presence</h3>
+        <p>The owner's pick runs in the same decision engine — scored, gated, outbiddable. A drunk owner can fail to hire and lose a harvest day, and the four men who waited at his gate now know something about him. That is a rumour with a cause, generated rather than scripted.</p>
+        <p>The cheap thing that makes it work: <code>is_available_to</code> requires owner and worker in the same place at the same time. The thing that breaks it: letting the pick fire as a global lookup from anywhere, which makes failure impossible and dresses bookkeeping in an action's costume.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AMENDMENTS ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Proposed amendments to the contract</h2>
+      <p>Concrete edits. Wording is given where the room produced wording. Nothing renumbers; the PRD's append-only policy holds.</p>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">FR79 · FR80</span></div>
+      <div class="body">
+        <h3>Separate knowable reasoning from vantage-limited cause</h3>
+        <p>The sharpest collision in the document. FR79 and FR80 as written make cause unknowable and forbid a success counter — which is arguably the exact defect diagnosed as fatal in Majesty and Black &amp; White. The distinction the PRD does not currently draw:</p>
+        <ul>
+          <li><strong>Reasoning</strong> — why the agent chose what it chose. Knowable. The utility graph already renders it.</li>
+          <li><strong>Cause</strong> — why the outcome happened. Legitimately opaque, but opaque <em>because of vantage</em>, never by authorial fiat.</li>
+        </ul>
+        <div class="wording">
+          <span class="label">Proposed addition to FR79</span>
+          The cause of an outcome is not necessarily distinguishable between actor incompetence, competing drives, and third-party interference — <em>because the contributing deliberations occurred outside the Player's observation reach, not because they are unmodeled.</em> Every cause is, in principle, witnessable from some vantage.
+        </div>
+        <div class="wording">
+          <span class="label">Proposed governing line</span>
+          Uncertainty is reserved for cause, never applied to reasoning.
+        </div>
+        <p class="voice">Mary. Sally concedes harder to FR79 — see Open Questions, the reasoning/cause line is not fully settled.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">FR68</span></div>
+      <div class="body">
+        <h3>The confirm-signal vocabulary must cover declines</h3>
+        <p>FR68 currently covers only actions that land. A refusal therefore has <em>no signal at all</em>, which makes it indistinguishable from the order never arriving. That is Majesty's grave.</p>
+        <div class="wording">
+          <span class="label">Proposed FR68</span>
+          Transient reaction feedback uses a tight vocabulary of confirm signals when an action lands — <strong>and an equally tight, categorical vocabulary when an ordered action is declined.</strong> A decline signal names its <em>kind</em> (<em>could not</em> / <em>chose otherwise</em> / <em>heard nothing</em>), is discrete and non-numeric, never exposes the comparison that produced it, and never names the competing drive.
+        </div>
+        <p>In the fiction: he looks at you and keeps walking (<em>chose otherwise</em>); he turns toward the field and stops, hands empty (<em>could not</em>); he never turns (<em>heard nothing</em>). Three silhouettes, legible at fifty yards on a hundred people — which a numeric bar never was.</p>
+        <p class="voice">Sally, having killed her own numeric proposal against the Legibility NFR.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">FR100</span></div>
+      <div class="body">
+        <h3>An obligation is eligibility-filtered like anything else</h3>
+        <p>FR100 says an obligation enters the candidate set but does not say whether it passes through FR85. It must. An obligation to fetch water from a well a mile away is not a low-scoring choice — it is an ineligible one, and scoring it is exactly the waste FR85 forbids.</p>
+        <div class="wording">
+          <span class="label">Proposed addition to FR100</span>
+          An obligation enters as a peer candidate and is filtered by the same eligibility pass as any other action (FR85). An obligation the actor is ineligible for is not scored and is not discharged; it remains outstanding.
+        </div>
+        <p>Also record that an obligation's target may be a <strong>place</strong>, which is what makes a work contract expressible without a new concept.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">Performance NFR</span></div>
+      <div class="body">
+        <h3>Split the actor bound into two independent knobs</h3>
+        <p>The NFR's "150 fully-simulated individuals" fuses two numbers and hides the knob between them. The author's "hundreds if not more" is a residency and node-count claim, not a frame-time one.</p>
+        <div class="wording">
+          <span class="label">Proposed replacement</span>
+          The per-tick hot path must sustain ≥60fps with <strong>150 individuals decided per second</strong> and <strong>1,000 individuals resident in the world</strong>. Residency is the population bound; decision throughput is the frame bound. Decision cadence is a knob, not a constant, and an actor's cadence may be lowered by distance, aggregation, or budget exhaustion without changing what the actor is.
+        </div>
+        <p>Related: "I hate worlds that feel empty" is a rendering and density requirement, not a throughput one. Three tiers — <strong>ambient</strong> (a path and a gait, no brain, where nearly all the fullness comes from), <strong>committed</strong> (real actors deciding rarely), <strong>deciding</strong> (full scoring, dozens). Fullness is a promotion problem — FR73 — not a decision-loop problem.</p>
+        <p class="voice">Cloud. Answers the PRD's own open question addressed to the architect.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">Architecture list · new bullet</span></div>
+      <div class="body">
+        <h3>Name the seam that owns decision dispatch</h3>
+        <p>The NFR already mandates "staggered/jittered decision ticks rather than all-actors-per-frame" — written before the current rebuild, which drifted from it without anyone noticing, because <em>no architecture bullet owned it</em>. A requirement with no seam assigned is a requirement that will be discovered as a bug.</p>
+        <div class="wording">
+          <span class="label">Proposed architecture bullet</span>
+          <strong>Population owns decision dispatch.</strong> The engine never calls a Brain's per-frame method directly. A <code>Population</code> node ticks the actors it owns and decides which decide this frame. This is the single seam where stagger, frame budget, spatial LOD, and FR73 promote/collapse install — and the seam that makes FR71's identical-replay guarantee achievable, since tick ordering and scheduler phase become owned state rather than engine incident.
+        </div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">Architecture · stat accessor</span></div>
+      <div class="body">
+        <h3>The rebuild's wall is thinner than the PRD's, and thin is correct today</h3>
+        <p>The PRD specifies <code>get_primary</code> / <code>get_derived</code> / <code>write_primary</code> with lazy-with-version recomputation. There are no derived stats in the build yet, so two-thirds of that wall guards an empty room — and air-guarding walls rot.</p>
+        <div class="wording">
+          <span class="label">Proposed replacement</span>
+          The narrow accessor is <code>get_stat</code> / <code>set_stat</code>, carrying a monotonic version stamp on write. The primary/derived split is a <strong>later refinement of the same wall</strong>, introduced when the first derived stat exists — not before.
+        </div>
+        <p>The version stamp is the one piece more expensive to retrofit than to place. It is also — the author's own extension — the cheap hook for <strong>event-driven reconsideration</strong>: the write barrier is the only place a primary changes, so it can set <code>_needs_decision</code> on the actor. A bool the actor alone reads. No subscription graph.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">Architecture · derived stats</span></div>
+      <div class="body">
+        <h3>Derived stats gain a world and population scope</h3>
+        <p>The author's remark, made in passing, is a real extension: derived stats can read world and population attributes, not only the actor's own primaries. It is what makes "lower supply → more unrest" computable at all.</p>
+        <p>Two consequences to write down before it is built ad hoc:</p>
+        <ul>
+          <li><strong>Whose version stamp?</strong> An actor-scoped stamp does not invalidate a cache that read a world aggregate. Without a stamp per scope, FR4's never-stale guarantee breaks in the direction hardest to notice — everyone acting on last season's supply.</li>
+          <li><strong>The quadratic hazard.</strong> A derived stat reading a population aggregate means any population change dirties everyone's cache, which is exactly how the "linear with reads, never O(actors²)" promise dies. The aggregate should be computed once on the slow tick and read as a value — the shape already used for the reach rollup and power centrality.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">Key Risk #1</span></div>
+      <div class="body">
+        <h3>Make the tycoon guardrail falsifiable</h3>
+        <p>"Every economic verb terminates in a person" is a slogan, not a test. Prohibitions don't survive contact with a build; tests do.</p>
+        <div class="wording">
+          <span class="label">Proposed guardrail</span>
+          Every produced good must appear as a <strong>term in some person's decision</strong>, and that term's movement must be visible. A good that only accumulates is a tycoon good and does not ship.
+        </div>
+        <p>Two tripwires that follow: no number the player can watch go up that isn't attached to a person; and replenishment must be perceivable as a <em>reason</em>, not a rate. "Wheat regrows in 12 days" is a spreadsheet. "After harvest the millers go quiet and the bakers get anxious" is a kingdom.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">promote FR88 out of the board section</span></div>
+      <div class="body">
+        <h3>No scale tool introduces a verb</h3>
+        <p>FR88 says the board's only verb is targeting, and that no second goal-installation system exists. That reads as a fact about hexes when it is actually a law about the whole game.</p>
+        <div class="wording">
+          <span class="label">Proposed global invariant</span>
+          No scale tool introduces a verb. Every tool that operates on many people is a <strong>selection over people</strong> composed with a verb any single actor could already have been given. Scale changes who is addressed, never what can be said.
+        </div>
+        <p>Enforceable at review: a kingdom tool that cannot be expressed as a selection plus an existing Action is rejected. This is what keeps the unanimous same-vocabulary result true at three hundred actors and not only at three.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">Innovation Areas · Market Context</span></div>
+      <div class="body">
+        <h3>Reorder the innovation claims and fix the comparables</h3>
+        <p>The current top claim — political propagation gated behind player-composed value-chains — is a claim about content topology, not mechanism, and a player cannot feel it in the first hour. Proposed replacement for the top slot:</p>
+        <div class="wording">
+          <span class="label">Proposed claim #1</span>
+          <strong>The agent's reasoning is a first-class visible object.</strong> Indirect-control games have historically failed on <em>illegible refusal</em> — the player cannot see why the agent said no. TKYDS makes the deliberation itself the interface: the Player's own influence appears as one weighted term among the agent's own, and at scale refusal aggregates by reason rather than by person. The substrate that makes this possible is <strong>delegation as provider-matching where the provider chose you</strong> — one scoring pass serving needs-economy, influence, and cascade, which is why every refusal has a reportable reason rather than a hidden branch.
+        </div>
+        <p>Advertisement strengthens this claim rather than complicating it: reasoning-visibility without a visible <em>opportunity set</em> is hollow — a preference with no counterfactual. Contention adds the next rung, taking it from a legible individual to a legible society.</p>
+        <p><strong>Market Context omits every game in the actual quadrant.</strong> Currently: CK3, Dishonored, Shadow of Mordor, Disco Elysium, Civ 6/Catan — every one a game where the player's input executes, none with a refusal. Add: <strong>Majesty</strong> (the direct ancestor and primary cautionary case), <strong>Black &amp; White</strong> (proof the defect isn't a one-game accident), <strong>RimWorld</strong> (the sharpest contrast — refusal there is a static capability flag; here it is a contested score that can be outbid), <strong>Dwarf Fortress</strong> (the aquarium anti-pattern's referent), <strong>The Sims</strong>, <strong>Eco</strong>, <strong>Dungeon Keeper / Populous</strong> (indirect control that worked by keeping agents predictable — the honest tradeoff), and <strong>Victoria</strong> (genuine market clearing with zero characterization).</p>
+        <p>Also: <strong>abandon the CK3 "not menu-driven" differentiator.</strong> An unseen-hand game at hundreds of agents will have lists and panels; pretending otherwise sets up a contradiction the build resolves by violating the PRD. Replace with: <em>CK3 tells you a scheme has 42% success. TKYDS tells you who is going to say no, and what outbid you.</em></p>
+        <p class="voice">Mary.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">deferred design · labor clearing</span></div>
+      <div class="body">
+        <h3>Re-audit the labor-clearing policy menu</h3>
+        <p>The 2026-05-16 deferred design specified a per-region strategy hook — RANDOM / FIFO / CHARISMA_PICK / PRODUCTIVITY_RANK — parked before the systems that would consume it existed. It was re-derived independently this session from the advertisement model, which is the tell that it is real. The menu now needs revising:</p>
+        <ul>
+          <li><code>RANDOM</code> — control only, for tuning. Not shipped.</li>
+          <li><code>FIFO</code> — kill. Makes contention a function of tick order, which is exactly the invisible cause the graph exists to eliminate.</li>
+          <li><code>PRODUCTIVITY_RANK</code> — survives, and improved: productivity is now a stat that visibly moves under degradation.</li>
+          <li><code>PATRONAGE</code> — was CHARISMA_PICK. The holder picks, and picking is favour. A relationship between named people, not a stat check.</li>
+          <li><code>OBLIGATION_FIRST</code> — new. A standing work obligation is not a competitor in the contest; it <em>is</em> the answer to it.</li>
+          <li><code>SPLIT</code> — on the menu as the honest baseline, shipped only where the fiction demands it and nobody is watching (commons, gleaning). Never the default.</li>
+        </ul>
+        <p><strong>Unify the mechanism, not the criterion.</strong> A named holder scoring candidates generalizes; "loyalty wins" does not — patronage as sole criterion makes loyalty the only stat that matters and guts the degradation model. A lord who consistently picks his cousin over the better reaper should watch his fields fail.</p>
+        <p>The seam that costs one indirection today: a single <code>grant_work(person, asset) -&gt; bool</code> called at the moment an action commits to a target, shipped as first-decider-wins. Policy gets a home without touching call sites later.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">CLAUDE.md, not the PRD</span></div>
+      <div class="body">
+        <h3>Separate the state rule from the cadence claim</h3>
+        <p>The repo's working notes fuse two things that are not the same, and the fusion is why the build drifted from a written NFR.</p>
+        <ul>
+          <li><strong>Store nothing you can work out again</strong> — a rule about <em>state</em>. Load-bearing. Keep forever.</li>
+          <li><strong>Re-decide every frame</strong> — a claim about <em>cadence</em>. Incidental; what you get free at three actors.</li>
+        </ul>
+        <div class="wording">
+          <span class="label">Proposed addition to the doctrine</span>
+          Because nothing is suspended, a brain may be asked to decide on any cadence — every frame, or every hundredth — without a resume path. Cadence is a scheduling decision made by <code>Population</code>, never an invariant of the brain.
+        </div>
+        <p>Statelessness is precisely what makes staggering <em>safe</em>. The discipline earns the cadence knob rather than forbidding it.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">the build, not the contract</span></div>
+      <div class="body">
+        <h3>Position should resolve through a location fact, not physics</h3>
+        <p>The PRD specifies a static <code>location → tags</code> lookup with no Area2D and no collision layer; the rebuild answers "am I at the inn?" from a 3D transform. The rebuild is applying the right rule to the wrong axis, and the cost compounds:</p>
+        <ul>
+          <li>A distance query is unbatchable and uncacheable; a location lookup changes only when someone <em>arrives</em>, which is discrete and rare.</li>
+          <li>Discrete location gives a discrete <strong>arrival event</strong> — a free, exact trigger. A continuous vector gives you a threshold at the edge of a circle, which is the flicker problem again.</li>
+          <li>Place-gating (visit the lord, go to the tavern) is FR85's position axis with the fiction filled in, and it makes the trigger model cheaper, not more expensive.</li>
+        </ul>
+        <p>What must not happen is <code>is_available_to</code> bodies calling <code>distance_to()</code> directly — that is a call site you would rewrite in every action, the precise failure the stat accessor exists to prevent.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">FR44 · FR85 · new</span></div>
+      <div class="body">
+        <h3>Place-gating, with the tedium test attached</h3>
+        <p>Consequential acts have places: visit the mercantile lord, go to the tavern to hear things. This is FR85's position axis and it is how presence-scarcity becomes visible without a UI meter — breadth of attention is not a bar, it is how many dinners fit in a week.</p>
+        <p>The precedent separator, and it is sharp:</p>
+        <div class="wording">
+          <span class="label">Test for any place-and-ritual gate</span>
+          Place-and-ritual gating produces meaning when the cost paid is <strong>the alternative you gave up</strong>. It produces tedium when the cost paid is <strong>the transit itself</strong>.
+        </div>
+        <p>Persona charges you a day someone else doesn't get. Mount &amp; Blade charges four minutes of riding — widely skipped, widely modded out. Second condition: <strong>the ritual must be where information arrives</strong>, not merely where permission is granted. If breaking bread only unlocks a trade agreement it is a lock and a key; if it is where you learn he will refuse you because his brother-in-law holds the contract, the innovation claim is firing.</p>
+        <p>Interface rule that follows: <strong>place-gated actions are always visible and always show their address</strong> — greyed with a place-name, never absent. The gate is a destination, not a silence.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-amend">Amend</span><span class="frtag">FR51 · FR65 · FR72</span></div>
+      <div class="body">
+        <h3>Macro visibility is someone's view, bought with relationships</h3>
+        <p>Regional trade, imports, exports — the closest this design comes to the tycoon dashboard, and the perfect habitat for the cardboard reveal. Three conditions make it honest, and the feature should be held hostage to all three:</p>
+        <ul>
+          <li><strong>The trade must already be running before you can see it.</strong> Falsifiable: pump the sim with player reach at zero, log regional flows for a simulated year, re-run with reach high. If the visible history doesn't match the invisible one, the reveal is cardboard.</li>
+          <li><strong>The unlocked view is someone's view, never the world's.</strong> The flows you see are the ones your factor in the port bothers to report — information with a provenance, a latency, and a bias, which means it can be <em>wrong</em>. A god-view exports panel cannot.</li>
+          <li><strong>Every macro number terminates in a person who can refuse.</strong> If exports is a scalar with nothing under it, that's Anno. If it decomposes to eleven actors, two of whom refuse for a reason you can buy, that's this game at a new altitude.</li>
+        </ul>
+        <p>The author's extension, worth recording: <strong>vision quality improves with investment in the people who report well, not with coin.</strong> That makes FR51's information agents structural rather than flavour, and scales the strategic layer <em>through</em> the social graph instead of alongside it.</p>
+        <p>Presentation: visibility-as-progression becomes <strong>access-as-progression</strong> — the counting-house, the harbour, a clerk with tally sticks. Not a tab you unlock; a room you gain the standing to enter. Coarse on purpose, comparative never absolute, a read never a control.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ALREADY IN THE CONTRACT ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Where the roundtable reinvented the PRD</h2>
+      <p>Recorded as evidence the contract is stronger than assumed. Seven rounds of independent derivation landed repeatedly on things already written down — in several cases with a weaker argument than the FR carries.</p>
+    </div>
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-settled">No conflict</span></div>
+      <div class="body">
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Already specified</th><th>What the room called it</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>FR100</td><td>"Ordering is a utility term, not an override" — FR100's argument is sharper</td></tr>
+              <tr><td>FR102</td><td>The authored-constant seam for order weight, replaced by channels later</td></tr>
+              <tr><td>FR88</td><td>"Every scale tool is a selection wrapper over an existing verb"</td></tr>
+              <tr><td>FR98</td><td>"The stain" — need painted on the world at two speeds</td></tr>
+              <tr><td>FR15</td><td>"The inspector" — LOOK, renamed</td></tr>
+              <tr><td>FR38</td><td>The same-vocabulary claim for the player</td></tr>
+              <tr><td>FR1</td><td>The nested which-provider/which-target decision — the whole advertisement seam</td></tr>
+              <tr><td>FR86</td><td>The candidate cap: "not entitled to have every inn in the region scored"</td></tr>
+              <tr><td>FR48 · FR75</td><td>The tech tree — already <code>learn()</code>/<code>forget()</code> plus a requirement-tagged unlock row</td></tr>
+              <tr><td>Staggering NFR</td><td>The <code>Population</code> dispatch seam, re-derived and given a node name</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REJECTED ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Decided against</h2>
+      <p>Recorded so downstream work does not rebuild them. Several were proposed <em>by the room</em> and killed by the room.</p>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3>Numeric bars for deliberation state</h3>
+        <p>A "King's Will 0.6 vs SLEEP 0.8" readout is a floating numeric bar and a sub-threshold gradient — forbidden by the Legibility NFR, FR17, and an Explicit Non-Goal. Killed by its own author, who noted it contradicted her stronger claim (that the interface <em>is</em> the progression, which is discrete and categorical). The three decline silhouettes replaced it and are better: legible at fifty yards on a hundred people.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3>Refusal aggregated by reason as a sim report</h3>
+        <p>"31 obeyed. 11 refused — 9 outbid by SLEEP, 2 rejected: no scythe" is a bare success count with causes attached, which is worse than what FR80 forbids. It would delete an entire axis of the game in one panel. What survives is the FR50 memory prosthesis: the ledger records only what the Player <em>personally witnessed</em>, so the aggregate is a product of attention rather than a report from the simulation.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3>A hard dusk deadline that work can fail against</h3>
+        <p>Proposed to make the scythe legible, withdrawn on inspection: it is a hard-fail state and it requires storing an elapsed counter on the person — two doctrine violations for one silhouette. Replaced by putting the completion condition on the <strong>job</strong>: a field has finite grain, which is world state, no flag on anybody, and the scythe empties the field before the light runs out. The better sentence is <em>"the work ran out before the day did."</em></p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3>Decision-history logs</h3>
+        <p>Three different needs were wearing one noun. Thrash-prevention is the obligation carrying weight — nothing stored. Quitting is an action that discharges it — nothing left to remember. <em>The world remembers he walked out on Aldric</em> is real, and it is <strong>reputation</strong>: one number on a relationship, written at discharge. A decision log is O(actors × elapsed time) — the only complexity class in the design with no ceiling.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3>Per-person knowledge of world instances</h3>
+        <p>Modelling "does this actor know that field exists" is a memory system growing O(people × things), and the player cannot see inside an actor's head anyway. <strong>Locality is the knowledge model</strong> — a query radius is awareness, which is what a person is. Real asymmetry, when it arrives, will be about <em>people and intentions</em>, not scenery. Leave the seam: the candidate query goes through one function, and fog filters inside it.</p>
+        <p>The cheap version of the rumour economy is the same idea: facts are legible within a radius, and <strong>the tavern is where facts pool</strong>. Sociability becomes an economic stat without a line of economics.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3><code>learn()</code> / <code>forget()</code> as the API for obligations</h3>
+        <p>Category error. <code>learn</code>/<code>forget</code> answer "what can this person ever do" — capability, a property of the person. An obligation answers "what does this person currently owe, and to whom" — intent, a relationship between two parties. Collapse them and <code>forget()</code> means both "he lost the skill" and "he walked off the job."</p>
+        <p>Use FR100's own verbs: <em>take on</em>, and <em>discharge / revoke / expire</em>. And <strong>quitting should be an Action he scores</strong> — a bookkeeping call is invisible and un-outbiddable, where an Action means walking off is gated, weighed against the shame or the pay, and watchable.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3>Unifying FR89's contention rule with labor clearing</h3>
+        <p>They look structurally identical and are not. FR89 is the Player contending over a hex — rare, visible, player-facing, and the standing that decides it is something the player can <em>change</em>. Labor clearing happens hundreds of times a tick invisibly, and a loyalty-ranked version produces a permanent deterministic underclass: the low-trust worker never works, ever, and idles into the floor action forever.</p>
+        <p>Related instrumentation note: the floor-action counter must be <strong>two counters</strong> — <em>chose floor because no candidates existed</em> versus <em>chose floor because every candidate was taken</em>. Same symptom, opposite causes, opposite fixes.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-reject">Rejected</span></div>
+      <div class="body">
+        <h3>A generalized advertisement layer, a spatial index, and a claim type</h3>
+        <p>All three are substrate ahead of need. Reverse the <code>location → tags</code> table into <code>tag → [locations]</code> plus neighbours and the range query is a handful of dictionary reads — no quadtree. Write the first provider query concretely by hand; an abstraction built on a sample size of one is the documented failure mode this project has already lived through and reverted.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OPEN ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Still open</h2>
+      <p>Do not let an edit session quietly close these. Each is genuinely unresolved, and two are live disagreements between voices who both argued well.</p>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span><span class="frtag">FR79 · FR80 · FR68</span></div>
+      <div class="body">
+        <h3>The exact reasoning/cause line</h3>
+        <p>Mary: reasoning is knowable, and denying it is the Majesty defect written into the contract. Sally: the decline signal must never name the competing drive, because that is the sim narrating its own internals. The gap is one question — <strong>can the player ever learn it was SLEEP specifically?</strong> Everything else about the amendment is agreed.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span><span class="frtag">Legibility NFR</span></div>
+      <div class="body">
+        <h3>Is the utility graph ever a player instrument?</h3>
+        <p>Sally: dev tool, ships never — the graph is the author watching his own sim think. Mary: carve an exemption for a deliberately-<em>opened</em> deliberation view, because the world is read diegetically and reasoning is read instrumentally, and conflating them recreates Black &amp; White. Note that making it an opened view rather than an ambient overlay preserves the aperture fantasy either way — looking at reasoning is an act.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span></div>
+      <div class="body">
+        <h3>Travel: content, or cost?</h3>
+        <p>Samus: the road at dusk is full of farmhands walking home, so travel is where you overhear things — don't waste content you already built. Mary: travel must cost a <strong>slot of presence</strong>, never a walk animation, or you have built the Mount &amp; Blade feast. Both are defending against tedium from opposite sides. Decides whether the road is content or a toll.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span><span class="frtag">tabled by the author</span></div>
+      <div class="body">
+        <h3>The unit of presence</h3>
+        <p>When the player attends a lord, what is spent — an evening, a day, a week of a season? The answer determines what FR44's "breadth of attention" is denominated in, and whether ritual reads as Persona or as a feast nobody attends. Tabled deliberately; the scenario was a riff, not a commitment.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span></div>
+      <div class="body">
+        <h3>Does the player experience the day boundary?</h3>
+        <p>Unanswered, and correctly so — the reads survive both branches. What's branch-dependent is only whether the player can <em>fail</em> to be there, which is the difference between an observation earned and a report handed over. The cheapest build commits to neither: stamp the observation with the hour and keep the previous one. Two fields.</p>
+        <p>It resolves by playing rather than deciding: if your hand goes to a scrub bar to skip to dusk, dusk is a filter. If you sit and watch the light go orange to catch the moment he stands up, dusk is lived.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span></div>
+      <div class="body">
+        <h3>Replenishment cadence</h3>
+        <p>The proposal on the table: <strong>three to four days, staggered out of phase per field</strong> — always somewhere to work, never everywhere, and when phases accidentally align you get an unauthored harvest festival. Daily is a metronome nobody watches by Thursday; seasonal makes <em>empty</em> the default state, which reads as dead. Overwork as an event: a field cut every cycle recovers slower.</p>
+        <p>Note the interaction nobody resolved: under the obligation model a worker doesn't shop among fields, so phase-staggering stops being <em>his</em> decision and becomes the <em>assigner's</em>. That may be an improvement — the interesting choice moves to the player's altitude — but it hasn't been confirmed.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span><span class="frtag">tabled by the author</span></div>
+      <div class="body">
+        <h3>Eligibility failure states, and the idle obligated worker</h3>
+        <p>What the different flavours of unavailability look like to a player. Specifically: a man under obligation to a field with nothing to reap — does he stand in it, or go elsewhere? This decides whether "empty marked field" reliably means neglect, which is the best glance-read in the system.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span><span class="frtag">FR5</span></div>
+      <div class="body">
+        <h3>Does the player's first hour contain hunger?</h3>
+        <p>Not "does the world have hunger" — does the player's own empty belly get felt before they ever influence anyone? If yes, FR5 and the MVP proving scene stand as written. If no, FR5 isn't an amendment, it's a deletion, and the opening hour needs re-deriving rather than letting the aperture arc quietly eat it.</p>
+        <p>The proposed amendment, if kept: <em>"…subject to the same needs as any NPC — and initially perceives the world through, at most, three of them."</em> Status and aperture start low together.</p>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Open</span><span class="frtag">the PRD's own open question</span></div>
+      <div class="body">
+        <h3>Journeys 2–4 climaxes</h3>
+        <p>Untouched this session. The test to apply when it is: <strong>a climax lands only if it has a "nobody came" branch.</strong> Journey 1 has one — that is what makes the proving scene good. If a climax is "the number got big enough and the thing happened," it is a meter with extra steps.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MEASUREMENT ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>The one measurement outstanding</h2>
+      <p>Tabled by the author, but specified well enough to run in an afternoon. Recorded here so the spec isn't lost.</p>
+    </div>
+    <div class="entry">
+      <div class="ruling"><span class="chip chip-open">Tabled</span><span class="frtag">perf_probe</span></div>
+      <div class="body">
+        <h3>The 300-actor probe</h3>
+        <p>Throwaway scene, deleted after. Spawn the <em>real</em> person scene — real Stats, real Brain, real Action nodes — stripping only art. Capsules on a plane. Spawn 50 / 150 / 300 / 600 as an argument so you get a curve, because slope is what predicts a thousand.</p>
+        <p>Four passes, each adding one layer, recording frame time for each: static meshes with no script; plus skinned mesh and animation; plus movement along a path (and separately with a nav agent); plus full Brain scoring every tick. <strong>The gap between the third and fourth is the entire decision-budget question this session argued about</strong>, and the architect's estimate — flagged as estimate — is that it is the smallest of the four gaps by a wide margin.</p>
+        <p>Measure scoring time, other-brain time, and node/engine overhead separately, because they have three different fixes. Decide the thresholds before running so the result can't be rationalized: under ~4ms and the tick model is fine and the thread closes permanently.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="colophon">
+    Generated from a seven-round BMAD party-mode roundtable, 2026-08-06 to 2026-08-08.<br>
+    Voices: Samus Shepard (game design) · Cloud Dragonborn (architecture) · Mary (analysis &amp; positioning) · Sally (UX &amp; legibility) · Indie (solo-dev scope).<br>
+    Each agent argued independently as its own process; several reversed their own positions against the contract, and those reversals are recorded rather than smoothed.<br>
+    Build order and next-scene sequencing were deliberately excluded at the author's request.
+  </div>
+
+</div>
