@@ -134,6 +134,12 @@ func _process(_delta: float) -> bool:
 	_check_who_is_where_is_asked_not_remembered()
 	_check_travel_cost_is_read_and_never_bars()
 	_check_the_cycle_is_anchored_to_the_sun()
+	_check_two_farmers_one_plot()
+	_check_a_claim_survives_a_day_boundary()
+	_check_an_unworked_claim_lapses_at_the_boundary()
+	_check_a_plot_cannot_be_claimed_from_the_wrong_place()
+	_check_freeing_the_holder_frees_the_plot_within_two_ticks()
+	_check_no_stations_and_every_station_taken_are_different_counters()
 	_check_every_scene_is_wired()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
@@ -338,8 +344,11 @@ func _check_the_town_survives_losing_somebody() -> void:
 	population.move_child(bystander, 0)
 
 	population.think_for_everyone(1.0)
-	_require(population.get_people().size() == 2, claim,
-		"expected 2 people under Population and found %d — the marker node was counted as one" % [
+	# 3 = the two authored farmers plus Doomed. This number reads the authored
+	# population, so adding a person to game.tscn moves it — rung 3 took it from
+	# 2 to 3 when Hobb was authored in.
+	_require(population.get_people().size() == 3, claim,
+		"expected 3 people under Population and found %d — the marker node was counted as one" % [
 			population.get_people().size()])
 
 	# Freed outright rather than queue_free()d: queued deletion doesn't land
@@ -354,8 +363,8 @@ func _check_the_town_survives_losing_somebody() -> void:
 
 	_require(absf(moved - expected) < 0.001, claim,
 		"after a death the survivor moved %.4f where one tick's worth is %.4f" % [moved, expected])
-	_require(population.get_people().size() == 1, claim,
-		"expected 1 person left and found %d" % population.get_people().size())
+	_require(population.get_people().size() == 2, claim,
+		"expected 2 people left and found %d" % population.get_people().size())
 
 	world.queue_free()
 
@@ -424,10 +433,11 @@ func _check_who_is_where_is_asked_not_remembered() -> void:
 	var town := world.get_node_or_null("Town") as Town
 	var population := world.get_node_or_null("Population") as Population
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var inn := world.get_node_or_null("Town/Inn") as Place
-	if town == null or population == null or zoogs == null or fields == null or inn == null:
-		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, Fields and an Inn")
+	if town == null or population == null or zoogs == null or hobb == null or fields == null or inn == null:
+		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, a Hobb, Fields and an Inn")
 		return
 
 	var mara := _add_a_person(population, "Mara")
@@ -440,13 +450,15 @@ func _check_who_is_where_is_asked_not_remembered() -> void:
 	bram.current_place = inn
 	# Wisp is at no place at all — on the road, as far as anyone can tell.
 
-	_require_exactly(town.find_people_at(fields), [zoogs, mara], claim, "at the fields")
+	# The expected sets read the AUTHORED population, so any farmer authored at
+	# the Fields joins them — Hobb joined at rung 3.
+	_require_exactly(town.find_people_at(fields), [zoogs, hobb, mara], claim, "at the fields")
 	_require_exactly(town.find_people_at(inn), [bram], claim, "at the Inn")
 
 	# Nothing is invalidated, nothing is notified, nothing is re-posted. The next
 	# call simply asks again, which is the whole argument for a query.
 	mara.current_place = inn
-	_require_exactly(town.find_people_at(fields), [zoogs], claim, "at the fields once Mara left")
+	_require_exactly(town.find_people_at(fields), [zoogs, hobb], claim, "at the fields once Mara left")
 	_require_exactly(town.find_people_at(inn), [bram, mara], claim, "at the Inn once Mara arrived")
 
 	# STRUCTURALLY SATISFIED TODAY — say so rather than let it read as covered.
@@ -654,6 +666,272 @@ func _check_the_cycle_is_anchored_to_the_sun() -> void:
 # bedtime that already happened can be asked about after the fact.
 func _get_sun_height_at(hour_of_day: float) -> float:
 	return sin((hour_of_day / HOURS_IN_A_DAY - 0.25) * TAU)
+
+
+# --- Assertions 13-18: two farmers, one plot -------------------------------------
+
+# Rung 3's whole point, made mechanical: one Workstation, two men who both know
+# WorkTheField, and a schedule that is supposed to be the thing that decides
+# between them rather than which node happens to sit first under Population.
+
+# Both farmers are put to bed together — adenosine above StayUp's 50 sends both
+# to Sleep on the very next tick, from the same hour, same place, same debt.
+# From there only strength differs: Hobb clears 58 at 5.75/hour and wakes first;
+# Zoogs clears it at 5.0/hour and is still under when Hobb reaches the plot. If
+# strength were inert here, both would wake the same tick and the winner would
+# be decided by scene order, which is exactly the failure this claim exists to
+# catch — recording WHO claimed day 2's plot first and WHETHER Zoogs was still
+# asleep when it happened, not just who holds it at the end.
+func _check_two_farmers_one_plot() -> void:
+	var claim := "13 — two farmers, one plot: the early riser claims it and the loser is never scored"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var hobb := world.get_node_or_null("Population/Hobb") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	if population == null or clock == null or zoogs == null or hobb == null or plot == null or work_action == null:
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Plot and Zoogs' WorkTheField")
+		return
+
+	clock.advance(46.0)
+	zoogs.stats.set_stat(&"adenosine", 58.0)
+	hobb.stats.set_stat(&"adenosine", 58.0)
+
+	var first_claimant_of_day_2: Person = null
+	var zoogs_was_asleep_when_claimed := false
+	var tick_count := int(round(10.0 / TICK_HOURS))
+	for tick in tick_count:
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+		# Only the FIRST such tick matters — everything after it is the same fact
+		# restated, and recording it more than once would just be racing the loop
+		# against itself.
+		if first_claimant_of_day_2 == null and plot.claimed_on_day == 2:
+			first_claimant_of_day_2 = plot.claimed_by
+			zoogs_was_asleep_when_claimed = not zoogs.brain.is_awake()
+
+	_require(first_claimant_of_day_2 == hobb, claim,
+		"the first man holding day 2's plot was %s, not Hobb — strength did not decide the race" % [
+			(first_claimant_of_day_2.person_name if first_claimant_of_day_2 != null else "nobody")])
+	_require(zoogs_was_asleep_when_claimed, claim,
+		"Hobb claimed day 2's plot while Zoogs was already up — either they woke together and scene order decided it, or Zoogs got there first")
+	_require(plot.claimed_by == hobb, claim,
+		"at the end of the pump the plot reads held by %s, not Hobb" % [
+			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
+	_require(not plot.claim(zoogs), claim,
+		"Zoogs was able to claim a plot Hobb already holds")
+	_require(plot.claimed_by == hobb, claim,
+		"after Zoogs' failed claim the plot reads held by %s" % [
+			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
+	_require(zoogs.brain.is_awake(), claim,
+		"Zoogs is still asleep at the end of a ten-hour pump that started at 22:00")
+
+	# is_nan, not a low score: the loser was never on the ballot at all, and the
+	# graph draws that as a hole rather than a losing line. A plain low number
+	# here would mean he was OUTscored, which is a different (and false) claim.
+	var score: Variant = zoogs.brain.get_last_scores().get(work_action.name)
+	var zoogs_score_is_off_the_ballot := false
+	if score is float:
+		var score_value: float = score
+		zoogs_score_is_off_the_ballot = is_nan(score_value)
+	_require(zoogs_score_is_off_the_ballot, claim,
+		"Zoogs' last WorkTheField score reads %s — the loser must be OFF the ballot (NAN), not merely outscored" % str(score))
+
+	var hobb_action: Action = hobb.brain.current_action
+	_require(hobb_action != null and String(hobb_action.name) == String(work_action.name), claim,
+		"Hobb's current action reads \"%s\", not WorkTheField" % [
+			String(hobb_action.name) if hobb_action != null else "nothing"])
+
+	world.queue_free()
+
+
+# The renew mechanism, isolated from the decision layer. At 23:30 the decision
+# layer would already be sending him to bed, so this drives the STEP directly —
+# claim() on every tick it advances — to prove the day boundary itself is
+# survived by a man being worked, independent of whether he'd choose to be
+# there.
+func _check_a_claim_survives_a_day_boundary() -> void:
+	var claim := "14 — a claim survives a day boundary while being worked"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var hobb := world.get_node_or_null("Population/Hobb") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var hobb_work := world.get_node_or_null("Population/Hobb/Brain/WorkTheField") as WorkTheField
+	if clock == null or zoogs == null or hobb == null or plot == null or hobb_work == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb, the Plot and Hobb's WorkTheField")
+		return
+
+	clock.advance(23.5)
+	_require(plot.claim(hobb), claim, "Hobb, authored standing at the fields, could not claim the plot at 23:30")
+	_require(plot.claimed_on_day == 0, claim,
+		"claimed at 23:30 on day 0 and stamped day %d instead" % plot.claimed_on_day)
+	_require(not plot.is_free_for(zoogs), claim,
+		"the plot read free for Zoogs the moment Hobb held it")
+
+	for tick in 100:
+		clock.advance(TICK_HOURS)
+		hobb_work.step.advance(hobb, TICK_HOURS)
+
+	_require(clock.day() == 1, claim,
+		"100 ticks of %.2f hours from 23:30 should cross midnight and landed on day %d instead" % [TICK_HOURS, clock.day()])
+	_require(plot.claimed_by == hobb, claim,
+		"after crossing midnight under a working man the plot reads held by %s, not Hobb" % [
+			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
+	# The re-stamp is the whole mechanism: dawn passed under him and nothing
+	# expired because claim() ran again on every tick the step advanced.
+	_require(plot.claimed_on_day == 1, claim,
+		"the step advanced across the boundary and the stamp still reads day %d — renew-on-use did not fire" % plot.claimed_on_day)
+	_require(not plot.is_free_for(zoogs), claim,
+		"a plot being worked through the boundary read free for somebody else")
+
+	world.queue_free()
+
+
+# The mirror of claim 14: a claim NOBODY renews. Lazy expiry means the day
+# boundary itself does the work — nothing sweeps, and no tick is pumped between
+# the claim and the read below, which is the entire point being proven.
+func _check_an_unworked_claim_lapses_at_the_boundary() -> void:
+	var claim := "15 — a claim nobody is working lapses at the day boundary"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var hobb := world.get_node_or_null("Population/Hobb") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	if clock == null or zoogs == null or hobb == null or plot == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb and the Plot")
+		return
+
+	clock.advance(10.0)
+	_require(plot.claim(hobb), claim, "Hobb, authored standing at the fields, could not claim the plot at 10:00")
+	_require(not plot.is_free_for(zoogs), claim, "the plot read free for Zoogs while Hobb held it, same day")
+
+	# No think_for_everyone here, and none needed — the claim expires where it
+	# lies the moment somebody asks, with nothing having touched the plot at all.
+	clock.advance(15.0)
+	_require(plot.is_free_for(zoogs), claim,
+		"yesterday's claim still reads held on day %d, though nothing has touched the plot since" % clock.day())
+	_require(plot.claim(zoogs), claim, "Zoogs could not claim a plot that lapsed under nobody")
+	_require(plot.claimed_by == zoogs, claim,
+		"after Zoogs' claim the plot reads held by %s, not Zoogs" % [
+			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
+	_require(plot.claimed_on_day == 1, claim,
+		"Zoogs claimed on day %d and the stamp reads day %d" % [clock.day(), plot.claimed_on_day])
+
+	world.queue_free()
+
+
+# claim()'s presence check, isolated from is_free_for's deliberate lack of one.
+# Seeing a free plot from across town must stay legal — it is what lets a man
+# decide whether there is work for him before he has walked there, and rung 4's
+# walk-there-and-work could never even score without it. Taking it is a
+# different question, and only claim() asks it.
+func _check_a_plot_cannot_be_claimed_from_the_wrong_place() -> void:
+	var claim := "16 — a plot cannot be claimed from the wrong place"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if zoogs == null or plot == null or fields == null or inn == null:
+		_require(false, claim, "the scene came up without a Zoogs, the Plot, Fields and an Inn")
+		return
+
+	zoogs.current_place = inn
+	_require(plot.is_free_for(zoogs), claim,
+		"the plot read taken for a man standing at the Inn who has never touched it — freeness must not require presence")
+	_require(not plot.claim(zoogs), claim,
+		"Zoogs claimed a plot in the fields while standing at the Inn — you cannot reserve a plot from your bed")
+	_require(plot.claimed_by == null, claim,
+		"a claim attempted from the wrong place still landed — claimed_by reads %s" % [
+			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
+
+	zoogs.current_place = fields
+	_require(plot.claim(zoogs), claim,
+		"the same man, same plot, now standing at the fields, still could not claim it")
+
+	world.queue_free()
+
+
+# Standing check #1 (the probe's own name for it), made to run against
+# Workstation specifically. free() rather than queue_free(): queued deletion
+# doesn't land until end of frame, so inside a pumped tick the node would still
+# be perfectly valid and is_free_for's is_instance_valid guard — genuinely
+# reachable for the first time in this codebase, now that one person can hold a
+# reference to another across ticks — would never actually run. See claim 8.
+func _check_freeing_the_holder_frees_the_plot_within_two_ticks() -> void:
+	var claim := "17 — free the holder and the plot frees within two ticks"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var hobb := world.get_node_or_null("Population/Hobb") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	if population == null or clock == null or zoogs == null or hobb == null or plot == null:
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb and the Plot")
+		return
+
+	_require(plot.claim(hobb), claim, "Hobb could not claim the plot at hour 0")
+	_require(not plot.claim(zoogs), claim, "Zoogs claimed a plot Hobb already held")
+
+	hobb.free()
+
+	# Zoogs' own gate walks is_free_for over the now-freed claimed_by on each of
+	# these ticks — the first place that guard is genuinely exercised.
+	for tick in 2:
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+
+	_require(plot.claim(zoogs), claim,
+		"two ticks after Hobb was freed, Zoogs still could not claim the plot")
+	_require(plot.claimed_by == zoogs, claim,
+		"after Zoogs' claim the plot reads held by %s, not Zoogs" % [
+			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
+
+	world.queue_free()
+
+
+# The two counters town.gd keeps are two different worlds — no work versus no
+# room — and this is the claim that they cannot bleed into each other. A gate
+# check that succeeds must move neither; a town with zero stations moves only
+# the first.
+func _check_no_stations_and_every_station_taken_are_different_counters() -> void:
+	var claim := "18 — no stations and every-station-taken are different counters"
+	var world := _add_a_disabled_game_scene()
+	var town := world.get_node_or_null("Town") as Town
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	if town == null or zoogs == null or plot == null or work == null:
+		_require(false, claim, "the scene came up without a Town, a Zoogs, the Plot and Zoogs' WorkTheField")
+		return
+
+	var no_candidates_before: float = town.no_candidates_existed_pressure
+	var every_taken_before: float = town.every_candidate_was_taken_pressure
+	_require(work.is_available_to(zoogs), claim,
+		"a free plot at hour 0, with Zoogs awake and standing at the fields, did not read available")
+	_require(town.no_candidates_existed_pressure == no_candidates_before
+			and town.every_candidate_was_taken_pressure == every_taken_before, claim,
+		"a plain successful gate check moved a pressure counter — no candidates %.1f to %.1f, every taken %.1f to %.1f" % [
+			no_candidates_before, town.no_candidates_existed_pressure,
+			every_taken_before, town.every_candidate_was_taken_pressure])
+
+	# Zero stations now — "there was no field", not "every field was taken".
+	plot.free()
+
+	var no_candidates_before_empty: float = town.no_candidates_existed_pressure
+	var every_taken_before_empty: float = town.every_candidate_was_taken_pressure
+	_require(not work.is_available_to(zoogs), claim,
+		"with zero stations in town, work still read available")
+	_require(town.no_candidates_existed_pressure == no_candidates_before_empty + 1.0, claim,
+		"a town with no stations at all should move no_candidates_existed_pressure by exactly 1.0, moved by %.1f instead" % [
+			town.no_candidates_existed_pressure - no_candidates_before_empty])
+	_require(town.every_candidate_was_taken_pressure == every_taken_before_empty, claim,
+		"a town with no stations at all moved every_candidate_was_taken_pressure — that counter is for a full town, not an empty one")
+
+	world.queue_free()
 
 
 # --- Assertion 4: the node_paths trap -------------------------------------------
