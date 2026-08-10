@@ -1769,6 +1769,27 @@ So the chain closes: hours made the day shortenable, a shortened day made the
 dawn beat repeat, and the repeating beat is what makes one decisive contest per
 day watchable as a rhythm rather than as an event you wait for.
 
+### What it also showed: the loser has nowhere to go
+
+Observed by the author in the same sitting. **The loser does not wander off —
+he stands in the field.** His `WorkTheField` drops off the ballot exactly as
+designed, `StayUp` catches him as the floor, and then he is a man standing
+still in a furrow he is not allowed to work.
+
+**That is correct behaviour and an honest limit, not a defect.** Nothing else
+is built yet: there are no beds, no tavern, no walking, so `StayUp` is not
+merely the floor of his ballot, it is the whole of it. The plan's promise —
+*"he picks a different life"* — is currently satisfied in the ledger (his
+utility curves genuinely re-scramble and a different action wins) but not yet
+in the fiction, because the different life has nowhere to happen.
+
+**This is the strongest possible argument for rung 4's Moment**, and it should
+be read as the setup for it rather than as a complaint about rung 3. Rung 4's
+Moment is *"the other sets off, gets outbid en route, and turns around
+mid-field"* — the loser doing something visible with his loss. Rung 3 proved he
+loses; rung 4 is where losing goes somewhere. 6a and 6d then give the somewhere
+a reason (hunger, company) rather than only a destination.
+
 ### What this licenses for the rungs above
 
 **Shortening the day is now a proven instrument, not just a tuning
