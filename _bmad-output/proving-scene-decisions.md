@@ -1345,3 +1345,137 @@ Not yet applied.
 | Rung 0 — assertion 4 | Static scan over `.tscn` text for the bare-`NodePath`-without-`node_paths` rule, plus a runtime check that every `Array[NodePath]` entry resolves. |
 | Rung 0 — scope | Say 120–150 lines. Resolve "one file" vs `game/probes/` — one file until ~300 lines. |
 | Rung 0 — prerequisites | Note that Decision 5 (world time in hours) lands **in** rung 0, before the assertions are written. |
+
+---
+
+## Decision 10 — How a Person reaches the world
+
+**Settled 2026-08-09 while building rung 2, and shipped in `9722033`.** Not a
+roundtable question — three calls the plan left open or got wrong, made at the
+keyboard and recorded so rungs 3, 4, 6d and 7 don't re-make them.
+
+### The Person pulls its Town. It is not handed down.
+
+**The plan says** *"`Population._ready` injects `town` into each Person. Person
+`_ready` warns if `town` is still null."* **Those two sentences cannot both
+hold.** Godot readies **children before parents**, so every Person checks his
+pocket before `Population._ready` has run — the warning would fire on every
+person of every correctly wired scene, and a warning that always fires trains
+you to ignore the channel that exists to catch the dead-day/night-cycle bug.
+
+```gdscript
+# person.gd — _ready
+var population := get_parent() as Population
+if population == null:
+    push_warning("%s has no Population above him — he will never think" % person_name)
+else:
+    town = population.town          # the one line
+if town == null:
+    push_warning("%s has no Town — he can never be asked who else is here" % person_name)
+```
+
+This satisfies everything the injection instruction was protecting — **one wire
+in the whole scene** (`Population.town`), zero per-person `NodePath`s, thirteen
+people at rung 9 still one wire — and it mirrors how `Brain` finds its `Person`,
+which is what the plan's own sentence pointed at.
+
+**It is also strictly better for two later rungs**, which is why it should not be
+flipped back: a man added to a *running* world is wired in his own `_ready`, with
+nothing watching for new arrivals. That is what the probe's four spare people
+exercise, and it is precisely what standing check #2 (*add a fourteenth
+villager*) needs at 9d. Push would need a `child_entered_tree` hook to match.
+
+**Generalised:** anything a Person needs a single shared reference to — the
+world, a calendar, a market — hangs off `Population` and is pulled in
+`Person._ready`. Never one `@export` per person.
+
+### `find_people_at` is a query, and here is the contract that lets it graduate
+
+Built as a loop over `population.get_people()`. **Cost measured against the
+ladder, not in the abstract:** one pointer comparison per person per call, so
+169 per tick at the thirteen-person town this arc ends at — lost in the noise of
+the utility scoring those same thirteen already do. It stops being free
+somewhere in the low hundreds of people, which is an order of magnitude past the
+end of this plan.
+
+**The graduation is already legal, and exactly one thing would foreclose it:**
+
+> A **public occupancy list on `Place` that callers read directly** makes the
+> list the interface — every caller then depends on it existing and being
+> maintained at every write site, and it can never be swapped out. So: **nobody
+> reads occupancy except through `Town.find_people_at()`.** Kept behind that
+> function, an index is an optimisation rather than an architecture, and the body
+> can change on a Tuesday with no call site moving. Same wall as
+> `get_stat`/`set_stat`.
+
+**And the plan's assertion 2 is banked, not discarded.** *"`find_people_at` and
+`get_current_place` never disagree"* is vacuous today — one copy of the fact
+cannot contradict itself — and it is the **exact** test for the day an index
+lands: keep the loop as the slow oracle, run both, assert they match. The note
+lives on the function in `town.gd`.
+
+### `find_people_at(null)` returns nobody, deliberately
+
+Nowhere holds no one. This is a real answer rather than a swallowed error, and
+it is load-bearing from rung 4 onward: a man walking between places has
+`current_place == null` for the length of the road. Without this guard every man
+on a road would be found *together* at nowhere — and rung 7's `Trade`, whose
+candidates are `find_people_at(person.get_current_place())`, would let two people
+exchange goods while half a town apart. **A man on the road is unreachable, and
+that is the feature.**
+
+### Travel cost, as built
+
+- **Straight-line 3D `distance_to` off `global_position`.** Height counts. If a
+  rung ever stands a workstation on raised ground, that is included.
+- **`get_travel_cost_to(null)` pushes an error and returns `INF`.** Nowhere is
+  the *most* expensive answer, never the cheapest: `0.0` would read as "at his
+  feet" and make a nonexistent place the most attractive destination in town — a
+  bug that would present as strange wandering rather than as a null.
+- **The readout prices every place in the town**, enumerated from
+  `Town.get_places()`, rather than naming one in `person.gd`. Same reason the
+  stats are listed rather than named: adding a place makes it appear over every
+  head with no edit. At rung 9d that is seven lines over each head, and trimming
+  it is that rung's problem.
+
+### What rung 4 inherits, and one thing it does *not* have to undo
+
+Arrival should be **"this tick's step would take me there or past it"**, snapping
+`global_position` onto the place exactly and writing `current_place` once — not a
+"within N metres" radius. There is then no threshold constant to tune, and he
+lands on the spot at any tick rate, which removes the framerate-dependent
+arrival that helped get the proximity model reverted. Departure writes
+`current_place = null`.
+
+**The "starts nowhere" warning in `Person._ready` does not need removing when
+that lands.** It fires at birth only, and nobody is born on the road.
+
+### Probe
+
+Three claims added — 7 (a man carries his place), 8 (the exact set), 9 (cost
+falls, rises, and never comes back `INF`). **All six deliberate breaks were seen
+to exit 1**: place defaulting to the first place in town, place derived from
+proximity, `find_people_at` losing its filter, the null-place guard removed,
+cost stopping reading the transforms, and a far place returning `INF`.
+
+**Claim 7's last assertion is the mechanical guard against the reverted physics
+model** — move a man's *body* onto the fields and he must still report the Inn.
+
+**One finding, measured:** the freed-person half of claim 8 **cannot fail
+today.** Deleting the `is_instance_valid` guard from `find_people_at` leaves the
+probe green, because `free()` removes a node from `get_children()` at once. The
+guard is kept and both comments say it is unreachable. It gains teeth on the same
+change that un-banks assertion 2. **That is the third assertion in this plan to
+turn out vacuous when actually checked — keep checking.**
+
+### Plan edits this implies
+
+Not yet applied.
+
+| Section | Change |
+|---|---|
+| Rung 2 | Replace *"`Population._ready` injects `town`"* with the pull, and state the child-before-parent reason so it isn't flipped back. |
+| Rung 2 (probes) | Assertion 2 is **vacuous as written** and is replaced by the exact-set / moves / freed trio. Note where it is banked. |
+| Rung 3 | `find_workstations` sorting by travel cost (per Decision 7) now has its metric — `person.get_travel_cost_to(station_place)`. |
+| Rung 4 | Arrival is the overshoot clamp, not a radius. Departure writes null. The `_ready` warning stays. |
+| Rung 7 | `Trade`'s candidate query inherits "a man on the road is unreachable" for free. |
