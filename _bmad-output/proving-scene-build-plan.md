@@ -630,8 +630,18 @@ the clock. The slider does not do what its own comment says.
 > again.** `Clock.get_hours_elapsed(real_delta)` is the sole converter.
 > Everything downstream takes **hours** — including the argument name, per
 > `CLAUDE.md` rule 3. Every rate becomes per-hour
-> (`base_adenosine_per_hour := 4.0` reaches ~45 after ~11 hours awake, which is
+> (`base_adenosine_per_hour := 2.5` reaches ~45 after ~18 hours awake, which is
 > a sentence you can reason about).
+
+**To preserve today's behaviour, multiply every per-second rate by
+`day_length_seconds / 24`** — which is `60 / 24 = 2.5` at the shipped default.
+So `base_adenosine_per_second = 1.0` becomes `base_adenosine_per_hour = 2.5`,
+and `base_adenosine_cleared_per_second = 2.5` becomes
+`base_adenosine_cleared_per_hour = 6.25`. That reproduces the current cycle
+exactly: 45 real seconds up (18 world hours, sleeping around 18:00) and 14
+asleep (5.6 hours). **Getting this factor wrong is the one way this change
+breaks a working system**, and it will present as "he never sleeps" or "he naps
+constantly" rather than as a units error.
 
 Until `Population` exists the conversion sits in `Person.think_and_act`; rung 1
 moves it up. This is what makes assertion 1 writable: `think_and_act(1.0)` **is**

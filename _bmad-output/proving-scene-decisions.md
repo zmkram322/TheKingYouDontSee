@@ -658,10 +658,23 @@ argument called `delta` that holds hours is exactly the trap that rule exists to
 prevent. So: `Person.think_and_act(hours)`, `Brain.think_and_act(hours)`,
 `ActionStep.advance(person, hours)`.
 
+**The behaviour-preserving conversion factor is `day_length_seconds / 24`** —
+`60 / 24 = 2.5` at the shipped default. Multiply every per-second rate by it:
+
+| Today | Becomes |
+|---|---|
+| `base_adenosine_per_second = 1.0` | `base_adenosine_per_hour = 2.5` |
+| `base_adenosine_cleared_per_second = 2.5` | `base_adenosine_cleared_per_hour = 6.25` |
+
+That reproduces the shipped cycle exactly — 45 real seconds up (18 world hours,
+turning in around 18:00) and 14 asleep (5.6 hours). **Getting this factor wrong
+is the one way this change breaks a working system, and it presents as "he never
+sleeps" or "he naps constantly" rather than as a units error.**
+
 Every rate in the game becomes per-hour:
 
 ```gdscript
-@export var base_adenosine_per_hour := 4.0     # reaches ~45 after ~11 hours awake
+@export var base_adenosine_per_hour := 2.5     # reaches ~45 after ~18 hours awake
 ```
 
 ### Three things this buys
