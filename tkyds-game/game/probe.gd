@@ -1,0 +1,490 @@
+extends SceneTree
+
+# Standing verification. Not a test framework — no fixtures, no mocks, no
+# runner, no GUT, no GdUnit. One file that loads the real game scene, pumps the
+# real Zoogs by hand, and says PASS or FAIL out loud.
+#
+# It exists because "it runs without errors" has been demonstrated to mean
+# nothing here: a silent null guard shipped a dead day/night cycle through two
+# commits, and nothing complained. Everything below this rung is gated on it.
+#
+# RUN IT WITH TWO COMMANDS, ALWAYS:
+#
+#   Godot_v4.4-stable_mono_win64_console.exe --headless --path . --editor --quit
+#   Godot_v4.4-stable_mono_win64_console.exe --headless --path . --script game/probe.gd
+#
+# `--script` does NOT build the global class cache. Without the import pass in
+# front of it, `class_name Person` fails to resolve and the probe dies for a
+# reason that has nothing to do with the code you changed. (Measured.)
+#
+# Three more engine behaviours this file is shaped around, all measured against
+# the 4.4 binary, none of them worth rediscovering:
+#
+#   PROCESS_MODE_DISABLED, never set_process(false). set_process(false) called
+#   from _initialize() is silently discarded and the node ticks anyway — so a
+#   probe that disables a person and then pumps him by hand gets a
+#   DOUBLE-TICKED person, adenosine advancing at twice the pumped rate. That
+#   presents as a tuning problem rather than a harness problem, which is how it
+#   costs a day. Setting process_mode leaks zero frames, works from
+#   _initialize, and inherits down to Brain, Stats and Readout for free.
+#
+#   _initialize() runs before anything is in the tree. Setup belongs there;
+#   every assertion waits for the first _process frame, by which time _ready
+#   has run and @onready vars exist.
+#
+#   With everything disabled, Clock._process never runs and nothing moves time.
+#   The harness advances the Clock itself, in the same loop that pumps people
+#   and in the same unit, so the two cannot drift apart.
+
+
+const GAME_SCENE_PATH := "res://game/game.tscn"
+
+# Where the .tscn scan starts. The whole project, not just the scene under the
+# probe — the node_paths trap is textual, so this catches it in files nothing
+# here ever loads.
+const PROJECT_ROOT_DIR := "res://"
+
+# One tick of simulated time, in WORLD HOURS. Everything below Clock is
+# denominated in hours, which is what makes this file readable: 0.01 hours is
+# 36 world seconds, 2400 ticks is a day, and no assertion anywhere needs to
+# know what `day_length_seconds` is set to. Drag that slider all you like; this
+# file cannot notice.
+#
+# Chosen to sit near a real frame at the shipped 60-second day (1/60 real
+# second is 0.0067 hours), so the probe pumps him the way the game does rather
+# than in coarse jumps that round the cycle somewhere it never actually lands.
+const TICK_HOURS := 0.01
+const HOURS_IN_A_DAY := 24.0
+
+
+# Every claim the probe made, in the order it first made them, and the first
+# failing detail for each. Only the FIRST failure per claim is kept: a per-tick
+# assertion that goes wrong goes wrong two thousand times, and a wall of
+# identical lines buries the other three assertions — which is exactly how a
+# suite stops being read and then gets deleted.
+var _claims: Array[String] = []
+var _first_failure := {}
+var _checks := 0
+
+var _game: Node
+var _person: Person
+var _clock: Clock
+
+# Kept only so the report can say what the cycle actually did. Nothing asserts
+# against these directly — they are here so a human reading a PASS can still
+# see whether the schedule moved.
+var _fell_asleep_at_hour := -1.0
+var _woke_at_hour := -1.0
+
+
+func _initialize() -> void:
+	var scene: PackedScene = load(GAME_SCENE_PATH) as PackedScene
+	if scene == null:
+		push_error("probe: could not load %s" % GAME_SCENE_PATH)
+		return
+	_game = scene.instantiate()
+	# Before add_child, so not one frame ticks itself. See the header.
+	_game.process_mode = Node.PROCESS_MODE_DISABLED
+	root.add_child(_game)
+
+
+# Everything happens in the first frame and then the probe leaves. By now the
+# scene is in the tree and _ready has run everywhere, which is the whole reason
+# this isn't in _initialize.
+func _process(_delta: float) -> bool:
+	if not _is_scene_ready_to_pump():
+		_report()
+		quit(1)
+		return true
+	_pump_one_day()
+	_check_every_scene_is_wired()
+	_report()
+	quit(0 if _first_failure.is_empty() else 1)
+	return true
+
+
+# Nothing below this can say anything true if the scene didn't come up, and
+# most of it would crash trying. Checked separately and bailed on, rather than
+# folded into the assertions, so "the probe is broken" never reads as "the
+# game is broken".
+func _is_scene_ready_to_pump() -> bool:
+	if _game == null:
+		push_error("probe: the game scene never instantiated")
+		return false
+	_person = _game.get_node_or_null("Zoogs") as Person
+	_clock = _game.get_node_or_null("Clock") as Clock
+	if _person == null:
+		push_error("probe: no Person called \"Zoogs\" under the game scene")
+		return false
+	if _clock == null:
+		push_error("probe: no Clock under the game scene")
+		return false
+	return true
+
+
+# --- The pumped day -------------------------------------------------------------
+
+# One simulated day, one tick at a time, with assertions 1, 2 and 3 riding
+# along. They share a loop because they are three questions about the same
+# 2400 ticks, and pumping him three times would be three different days.
+func _pump_one_day() -> void:
+	var ceiling: float = _person.brain.adenosine_ceiling
+	var tick_count := int(round(HOURS_IN_A_DAY / TICK_HOURS))
+	var has_slept := false
+	var has_woken_again := false
+
+	for tick in tick_count:
+		var hour := tick * TICK_HOURS
+
+		# ASSERTION 3, first half — snapshot every gate BEFORE the tick.
+		#
+		# The obvious version of this assertion asks the gate again after the
+		# tick, and it is wrong: gates are asked against what he WAS doing.
+		# Wake's gate is `not is_awake()`, and the moment Wake becomes the
+		# current action he reads as awake — so re-asking afterwards reports
+		# the gate shut on the one action legitimately chosen, every single
+		# time he gets up. Gates are pure reads, so asking them immediately
+		# before think_and_act gives exactly what choose() is about to see.
+		var gate_answers := {}
+		for action in _person.brain.get_known_actions():
+			gate_answers[action.name] = action.is_available_to(_person)
+
+		var tired_before: float = _person.stats.get_stat(&"adenosine")
+
+		_clock.advance(TICK_HOURS)
+		_person.think_and_act(TICK_HOURS)
+
+		var tired_after: float = _person.stats.get_stat(&"adenosine")
+		var is_awake_now: bool = _person.brain.is_awake()
+
+		# ASSERTION 3, second half.
+		var chosen: Action = _person.brain.current_action
+		if chosen != null:
+			var was_gate_open: bool = gate_answers.get(chosen.name, false)
+			_require(was_gate_open,
+				"3 — no action is ever chosen while its own gate says no",
+				"chose \"%s\" at hour %.2f while its gate said no" % [chosen.name, hour])
+
+		# ASSERTION 2 — the body only ever moves the way what he's doing says.
+		#
+		# Loose comparison first, because _update_body clamps into
+		# [0, ceiling] and a clamped value is allowed to stand still. Then the
+		# strict one, guarded by the clamp that would flatten it — pinned at
+		# the ceiling he cannot rise, and empty he cannot fall, and neither is
+		# a bug. Everywhere in between, standing still IS a bug: it means a
+		# rate reached zero or the drift stopped being applied.
+		if is_awake_now:
+			_require(tired_after >= tired_before,
+				"2 — adenosine rises while awake and falls while asleep",
+				"awake at hour %.2f and adenosine fell, %.4f → %.4f" % [hour, tired_before, tired_after])
+			if tired_before < ceiling:
+				_require(tired_after > tired_before,
+					"2 — adenosine rises while awake and falls while asleep",
+					"awake at hour %.2f below the ceiling and adenosine did not rise, %.4f → %.4f" % [hour, tired_before, tired_after])
+		else:
+			_require(tired_after <= tired_before,
+				"2 — adenosine rises while awake and falls while asleep",
+				"asleep at hour %.2f and adenosine rose, %.4f → %.4f" % [hour, tired_before, tired_after])
+			if tired_before > 0.0:
+				_require(tired_after < tired_before,
+					"2 — adenosine rises while awake and falls while asleep",
+					"asleep at hour %.2f above empty and adenosine did not fall, %.4f → %.4f" % [hour, tired_before, tired_after])
+
+		# ASSERTION 1's raw material. He starts awake, so waking only counts
+		# once he has been under — otherwise the first tick satisfies it.
+		if not is_awake_now and not has_slept:
+			has_slept = true
+			_fell_asleep_at_hour = hour
+		elif is_awake_now and has_slept and not has_woken_again:
+			has_woken_again = true
+			_woke_at_hour = hour
+
+	# ASSERTION 1. Stated in simulated hours and nowhere near a real second, so
+	# dragging day_length_seconds on the tuning board cannot turn it red.
+	_require(has_slept,
+		"1 — over 24 simulated hours he sleeps at least once and wakes at least once",
+		"never slept in %.0f simulated hours — adenosine reached %.2f against StayUp's pull" % [
+			HOURS_IN_A_DAY, _person.stats.get_stat(&"adenosine")])
+	_require(has_woken_again,
+		"1 — over 24 simulated hours he sleeps at least once and wakes at least once",
+		"slept at hour %.2f and was still under at hour %.0f" % [_fell_asleep_at_hour, HOURS_IN_A_DAY])
+
+
+# --- Assertion 4: the node_paths trap -------------------------------------------
+
+# Two halves, because the trap has two halves and only one of them is visible
+# at runtime.
+func _check_every_scene_is_wired() -> void:
+	var claim := "4 — every node reference in a .tscn is wired the way the loader needs"
+
+	var scene_paths := find_scene_files(PROJECT_ROOT_DIR)
+	_require(not scene_paths.is_empty(), claim,
+		"found no .tscn files at all under %s — the scan read nothing" % PROJECT_ROOT_DIR)
+
+	var violations := find_node_path_violations(scene_paths)
+	_require(violations.is_empty(), claim, "\n        ".join(violations))
+
+	var unresolved := _find_unresolved_node_path_arrays()
+	_require(unresolved.is_empty(), claim, "\n        ".join(unresolved))
+
+
+# The runtime half. Text cannot see this one: an Array[NodePath] export is
+# resolved by hand with get_node_or_null(), so its paths are only ever checked
+# by whoever wrote the loop — and a path that points nowhere comes back null
+# and usually gets skipped in silence.
+#
+# Deliberately NOT attempted for bare NodePath exports. Those load as objects,
+# so a broken wire and a legitimately empty optional are the same `null` at
+# runtime and always will be — which is why that half is a text scan, and why
+# Workstation.owner being null on purpose (unowned land is the king's, which is
+# the same answer as nobody's) will never false-positive here.
+func _find_unresolved_node_path_arrays() -> Array[String]:
+	var unresolved: Array[String] = []
+	var every_node: Array[Node] = [_game]
+	every_node.append_array(_game.find_children("*", "", true, false))
+	for node in every_node:
+		var script: Variant = node.get_script()
+		if script == null:
+			continue
+		for property in script.get_script_property_list():
+			if not (property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
+				continue
+			if not (property.usage & PROPERTY_USAGE_EDITOR):
+				continue
+			var value: Variant = node.get(property.name)
+			if not (value is Array):
+				continue
+			for entry: Variant in value:
+				if not (entry is NodePath):
+					continue
+				var path: NodePath = entry
+				if node.get_node_or_null(path) == null:
+					unresolved.append("%s.%s points at \"%s\", which resolves to nothing" % [
+						node.name, property.name, path])
+	return unresolved
+
+
+# --- Saying so ------------------------------------------------------------------
+
+# Records one claim's outcome. Claims are keyed by their headline text, so the
+# same headline asserted two thousand times reports once — see _claims.
+func _require(is_true: bool, claim: String, detail: String) -> void:
+	_checks += 1
+	if not _claims.has(claim):
+		_claims.append(claim)
+	if is_true or _first_failure.has(claim):
+		return
+	_first_failure[claim] = detail
+
+
+func _report() -> void:
+	print("")
+	print("probe — %d checks over %.0f simulated hours at %.2f-hour ticks" % [
+		_checks, HOURS_IN_A_DAY, TICK_HOURS])
+	if _fell_asleep_at_hour >= 0.0:
+		print("        turned in at hour %.2f, up again at hour %.2f" % [
+			_fell_asleep_at_hour, _woke_at_hour])
+	print("")
+	for claim in _claims:
+		if _first_failure.has(claim):
+			var detail: String = _first_failure[claim]
+			print("FAIL    %s" % claim)
+			print("        %s" % detail)
+		else:
+			print("PASS    %s" % claim)
+	print("")
+	if _first_failure.is_empty():
+		print("all %d claims held." % _claims.size())
+	else:
+		print("%d of %d claims failed." % [_first_failure.size(), _claims.size()])
+	print("")
+
+
+# --- The .tscn text scan --------------------------------------------------------
+#
+# Godot only resolves a script property holding a node reference if the
+# property's name is listed in node_paths=PackedStringArray(...) on that same
+# node's [node ...] header. A bare NodePath("…") that isn't listed there loads
+# as null with no error and no warning. The inverse mistake also happens: an
+# Array[NodePath] is resolved by hand, so listing it is wrong. And a name can
+# survive in node_paths for a property that was renamed away, which is the same
+# bug seen from the other side.
+#
+# The trap is textual, so it is caught textually — no scene has to load, which
+# is what lets this see files the probe never opens.
+
+# The node_paths=PackedStringArray("a", "b") clause; group 1 is the raw body.
+const NODE_PATHS_CLAUSE_PATTERN := "node_paths\\s*=\\s*PackedStringArray\\(([^)]*)\\)"
+const QUOTED_NAME_PATTERN := "\"([^\"]*)\""
+const NODE_NAME_ATTRIBUTE_PATTERN := "\\bname\\s*=\\s*\"([^\"]*)\""
+const NODE_PARENT_ATTRIBUTE_PATTERN := "\\bparent\\s*=\\s*\"([^\"]*)\""
+# An identifier then "=", anchored at line start — Godot allows subproperty
+# paths like "material/0". Anchoring is what keeps a continuation line of a
+# multi-line value from being misread as a new property.
+const PROPERTY_ASSIGNMENT_PATTERN := "^\\s*([A-Za-z_][A-Za-z0-9_/]*)\\s*=\\s*(.*)$"
+const SECTION_HEADER_PATTERN := "^\\s*\\["
+const NODE_SECTION_HEADER_PATTERN := "^\\s*\\[node\\b"
+
+
+# Every .tscn under root_dir, walked by hand rather than read off any project
+# index, so this works on a stripped checkout too. Skips generated directories
+# and anything called "addons" — third-party scenes are not ours to lint.
+func find_scene_files(root_dir: String) -> PackedStringArray:
+	var found := PackedStringArray()
+	_gather_scene_files(root_dir, found)
+	return found
+
+
+func _gather_scene_files(dir_path: String, found: PackedStringArray) -> void:
+	var directory := DirAccess.open(dir_path)
+	if directory == null:
+		return
+	directory.list_dir_begin()
+	var entry_name := directory.get_next()
+	while entry_name != "":
+		if entry_name != "." and entry_name != "..":
+			var entry_path := dir_path.path_join(entry_name)
+			if directory.current_is_dir():
+				if entry_name != ".godot" and entry_name != ".import" and entry_name != "addons":
+					_gather_scene_files(entry_path, found)
+			elif entry_name.ends_with(".tscn"):
+				found.append(entry_path)
+		entry_name = directory.get_next()
+	directory.list_dir_end()
+
+
+# One plain-English message per violation, empty if every file is clean.
+func find_node_path_violations(scene_paths: PackedStringArray) -> Array[String]:
+	var violations: Array[String] = []
+	for scene_path: String in scene_paths:
+		var file_text := FileAccess.get_file_as_string(scene_path)
+		var open_error := FileAccess.get_open_error()
+		if open_error != OK:
+			violations.append("%s: could not be opened (error %d)" % [scene_path, open_error])
+			continue
+		_collect_violations_in_file(scene_path, file_text, violations)
+	return violations
+
+
+# Walks one file line by line, accumulating a node block and judging it once
+# the block closes. Blocks and assignments are plain Dictionaries; an empty one
+# stands in for "nothing open".
+#
+# Most of the care here is the multi-line value case — a long array runs across
+# several lines, and a line belongs to the previous property only if it neither
+# looks like a new assignment nor opens a section. Get that wrong and either a
+# continuation line becomes a bogus property, or a real value gets cut off
+# before the part that decides everything (Array[NodePath] vs NodePath) appears.
+func _collect_violations_in_file(scene_path: String, file_text: String, violations: Array[String]) -> void:
+	var node_paths_regex := RegEx.create_from_string(NODE_PATHS_CLAUSE_PATTERN)
+	var quoted_name_regex := RegEx.create_from_string(QUOTED_NAME_PATTERN)
+	var node_name_regex := RegEx.create_from_string(NODE_NAME_ATTRIBUTE_PATTERN)
+	var node_parent_regex := RegEx.create_from_string(NODE_PARENT_ATTRIBUTE_PATTERN)
+	var property_regex := RegEx.create_from_string(PROPERTY_ASSIGNMENT_PATTERN)
+	var section_header_regex := RegEx.create_from_string(SECTION_HEADER_PATTERN)
+	var node_section_header_regex := RegEx.create_from_string(NODE_SECTION_HEADER_PATTERN)
+
+	var current_block := {}
+	var pending := {}
+
+	for line: String in file_text.split("\n"):
+		if line.strip_edges().begins_with(";"):
+			continue
+
+		var is_section_header := section_header_regex.search(line) != null
+		var property_match: RegExMatch = null if is_section_header else property_regex.search(line)
+
+		if is_section_header or property_match != null:
+			# Whatever value was being accumulated is now complete.
+			if not current_block.is_empty() and not pending.is_empty():
+				var open_assignments: Array[Dictionary] = current_block["assignments"]
+				open_assignments.append(pending)
+			pending = {}
+
+		if is_section_header:
+			if not current_block.is_empty():
+				_check_one_node_block(scene_path, current_block, violations)
+			current_block = {}
+			# Only [node …] opens a block. [gd_scene …], [ext_resource …],
+			# [sub_resource …], [connection …] and [editable …] all close one
+			# without opening another, so their properties are never
+			# attributed to a node.
+			if node_section_header_regex.search(line) != null:
+				current_block = _build_node_block(
+					line, node_name_regex, node_parent_regex, node_paths_regex, quoted_name_regex)
+			continue
+
+		if property_match != null:
+			pending = {"name": property_match.get_string(1), "value": property_match.get_string(2)}
+			continue
+
+		if not pending.is_empty():
+			var value_so_far: String = pending["value"]
+			pending["value"] = value_so_far + "\n" + line
+
+	if not current_block.is_empty() and not pending.is_empty():
+		var trailing_assignments: Array[Dictionary] = current_block["assignments"]
+		trailing_assignments.append(pending)
+	if not current_block.is_empty():
+		_check_one_node_block(scene_path, current_block, violations)
+
+
+# A node block from its header line: a label good enough to find it by, and
+# whatever it declares in node_paths.
+func _build_node_block(
+	header_line: String,
+	node_name_regex: RegEx,
+	node_parent_regex: RegEx,
+	node_paths_regex: RegEx,
+	quoted_name_regex: RegEx
+) -> Dictionary:
+	var name_match := node_name_regex.search(header_line)
+	var node_name: String = name_match.get_string(1) if name_match != null else "(unnamed)"
+	var parent_match := node_parent_regex.search(header_line)
+	var label: String = "node \"%s\"" % node_name
+	if parent_match != null:
+		label = "node \"%s\" (parent \"%s\")" % [node_name, parent_match.get_string(1)]
+
+	var declared_names: Array[String] = []
+	var paths_match := node_paths_regex.search(header_line)
+	if paths_match != null:
+		for quoted: RegExMatch in quoted_name_regex.search_all(paths_match.get_string(1)):
+			declared_names.append(quoted.get_string(1))
+
+	var empty_assignments: Array[Dictionary] = []
+	return {"label": label, "declared": declared_names, "assignments": empty_assignments}
+
+
+# Three rules, each checked independently so one node can report more than one
+# problem: a bare NodePath must be declared, an Array[NodePath] must not be,
+# and every declared name must actually be assigned something.
+func _check_one_node_block(scene_path: String, block: Dictionary, violations: Array[String]) -> void:
+	var label: String = block["label"]
+	var declared_names: Array[String] = block["declared"]
+	var assignments: Array[Dictionary] = block["assignments"]
+
+	var assigned_names: Array[String] = []
+	for assignment: Dictionary in assignments:
+		var assigned_name: String = assignment["name"]
+		assigned_names.append(assigned_name)
+
+	for assignment: Dictionary in assignments:
+		var property_name: String = assignment["name"]
+		var value_text: String = assignment["value"]
+		var trimmed: String = value_text.strip_edges()
+		var is_array_form := trimmed.begins_with("Array[NodePath]")
+		var is_bare_form := not is_array_form and trimmed.contains("NodePath(")
+		if not is_array_form and not is_bare_form:
+			continue
+		var is_declared := declared_names.has(property_name)
+		if is_bare_form and not is_declared:
+			violations.append("%s: %s, \"%s\" is a bare NodePath but is not in node_paths — it loads as null" % [
+				scene_path, label, property_name])
+		elif is_array_form and is_declared:
+			violations.append("%s: %s, \"%s\" is an Array[NodePath] but is in node_paths — those are resolved by hand, not by the loader" % [
+				scene_path, label, property_name])
+
+	for declared_name: String in declared_names:
+		if not assigned_names.has(declared_name):
+			violations.append("%s: %s, \"%s\" is in node_paths but nothing assigns it — a renamed or removed property" % [
+				scene_path, label, declared_name])

@@ -24,6 +24,19 @@ extends CharacterBody3D
 # so every instance can differ without needing a material file apiece.
 @export var tint := Color(0.78, 0.74, 0.68)
 
+# Where real time becomes world time for this man. Dragged in from the
+# inspector rather than found by path, so moving either node doesn't silently
+# break the link — Godot repoints the reference for you.
+#
+# It is here only until Population exists. Rung 1 hoists the conversion into
+# Population.think_for_everyone, one clock read for the whole town instead of
+# one per body, and this export goes away with it.
+#
+# Note for whoever wires this in a .tscn by hand: it needs
+# `node_paths=PackedStringArray("clock")` on the node's own header line, or the
+# loader assigns the raw NodePath to a typed field and you get null.
+@export var clock: Clock
+
 @onready var stats: Stats = $Stats
 @onready var brain: Brain = $Brain
 @onready var readout: Label3D = $Readout
@@ -33,15 +46,40 @@ extends CharacterBody3D
 
 func _ready() -> void:
 	_apply_tint()
+	# Says so out loud rather than standing there quietly doing nothing. A man
+	# with no clock never thinks, and without this that is indistinguishable
+	# from a man who simply isn't tired yet.
+	if clock == null:
+		push_warning("%s has no Clock — he will never think" % person_name)
 
 
-# The one place a person's thinking is driven from. It sits here rather than in
+# One slice of living, in world HOURS. Extracted out of _process so that
+# anything driving the simulation by hand — a harness pumping a day in a
+# fraction of a second — advances him by exactly the same path the game does,
+# rather than by a second route that can quietly diverge from it.
+#
+# It takes hours, not a real delta, because everything below Clock does. Rung 1
+# moves the caller: Population reads the clock once and hands the same `hours`
+# to everybody. Nothing in here changes when that happens.
+func think_and_act(hours: float) -> void:
+	brain.think_and_act(hours)
+
+
+# The one place a person's thinking is driven from, and the one place a real
+# frame delta is turned into world time for him. It sits here rather than in
 # Brain's own _process so that later, when there are more people than a frame
 # can afford to think for, one driver can take this over and spread them out —
 # turning off a Person's processing is a smaller change than unpicking a
 # _process from every Brain in the world.
+#
+# The readout stays on _process and deliberately does NOT ride think_and_act.
+# It is presentation: it should redraw once per frame the eye sees, not once
+# per slice of simulated time. Fold it in and a harness pumping a thousand
+# ticks would rebuild a label a thousand times for nobody, and a rung 1
+# stagger that thinks every fourth frame would freeze the text above his head.
 func _process(delta: float) -> void:
-	brain.think_and_act(delta)
+	if clock != null:
+		think_and_act(clock.get_hours_elapsed(delta))
 	readout.text = _readout_text()
 
 

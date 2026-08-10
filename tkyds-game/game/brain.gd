@@ -78,6 +78,18 @@ func reload_known_actions() -> void:
 			_known_actions.append(child)
 
 
+# His whole repertoire — everything he knows how to do, gated or not. Read-only
+# to everyone outside: the way the list changes is learn() and forget(), never
+# by somebody appending to it.
+#
+# It exists so anything watching him can ask what was on the table rather than
+# only what won. The probe's standing check — "no action is ever chosen while
+# its own gate says no" — needs exactly this, and so will any panel that wants
+# to draw the actions he DIDN'T pick.
+func get_known_actions() -> Array[Action]:
+	return _known_actions
+
+
 # Is he awake? Read off what he's doing rather than kept as a stat, so the two
 # can never disagree — there is no flag to forget to clear.
 #
@@ -94,8 +106,13 @@ func is_awake() -> bool:
 	return current_action == null or not current_action.counts_as_asleep
 
 
-# One slice of thinking and doing. Three things, in this order, and the order
-# matters:
+# One slice of thinking and doing, measured in world HOURS — never real
+# seconds. The conversion happened once, above, in Clock.get_hours_elapsed;
+# down here `hours` is the only unit there is. The argument is named for what
+# it holds rather than for where it came from, because an argument called
+# `delta` carrying hours is precisely the trap that costs a day.
+#
+# Three things, in this order, and the order matters:
 #
 #   1. Decide. Gates read what he WAS doing — that's what lets Wake be on the
 #      ballot only while he's already asleep, which is half the reason the sleep
@@ -110,16 +127,16 @@ func is_awake() -> bool:
 # actions themselves (see game/actions/): sleep starts winning high and stops
 # winning low, so there's a wide gap between "start" and "stop" rather than one
 # line to sit on and jitter across.
-func think_and_act(delta: float) -> void:
+func think_and_act(hours: float) -> void:
 	if person == null:
 		return
 	current_action = decision_engine.choose(person, _known_actions)
-	_update_body(delta)
+	_update_body(hours)
 	if current_action == null or current_action.step == null:
 		return
 	if not current_action.step.is_doable(person):
 		return
-	current_action.step.advance(person, delta)
+	current_action.step.advance(person, hours)
 
 
 # --- The body ------------------------------------------------------------------
@@ -138,20 +155,33 @@ func think_and_act(delta: float) -> void:
 @export_group("Body")
 # `base_` because these are inputs to a sum, not the answer. What actually gets
 # applied comes out of the two getters below.
-@export var base_adenosine_per_second := 1.0            # while awake
-@export var base_adenosine_cleared_per_second := 2.5    # while asleep
+#
+# PER WORLD HOUR, like every rate in game/ — not per real second. That matters
+# twice over. It makes the numbers sentences you can reason about ("2.5 an
+# hour, turns in at 45, so he is up about eighteen hours") where "1.0 per real
+# second" silently meant something different at every day length. And it is
+# what ties the body to the sun: drag day_length_seconds and both move
+# together, which is what that slider always claimed to do.
+#
+# These two are the per-second values that shipped, multiplied by the
+# behaviour-preserving factor day_length_seconds / 24 = 60 / 24 = 2.5. Getting
+# that factor wrong is the one way this change breaks a working system, and it
+# presents as "he never sleeps" or "he naps constantly" rather than as a units
+# error — so if the cycle ever looks off, suspect these before the actions.
+@export var base_adenosine_per_hour := 2.5              # while awake  (was 1.0/s)
+@export var base_adenosine_cleared_per_hour := 6.25     # while asleep (was 2.5/s)
 @export var adenosine_ceiling := 100.0
 
-func _update_body(delta: float) -> void:
+func _update_body(hours: float) -> void:
 	var tired: float = person.stats.get_stat(&"adenosine")
 	if is_awake():
-		tired += get_adenosine_accumulation() * delta
+		tired += get_adenosine_accumulation() * hours
 	else:
-		tired -= get_adenosine_recovery() * delta
+		tired -= get_adenosine_recovery() * hours
 	person.stats.set_stat(&"adenosine", clampf(tired, 0.0, adenosine_ceiling))
 
 
-# How fast he's tiring right now, per second, after everything that affects it.
+# How fast he's tiring right now, per world hour, after everything that affects it.
 #
 # This is a seam, and worth having one even though there's a single modifier
 # behind it today. Everything that will ever change how fast someone tires —
@@ -168,15 +198,15 @@ func _update_body(delta: float) -> void:
 # the rate negative. Watch the stacking though — three 2× modifiers is 8×, not
 # 6×. At four factors, revisit; not before.
 func get_adenosine_accumulation() -> float:
-	return base_adenosine_per_second * get_exertion()
+	return base_adenosine_per_hour * get_exertion()
 
 
-# How fast he's recovering, per second. The mirror of the above, with nothing
+# How fast he's recovering, per world hour. The mirror of the above, with nothing
 # behind it yet — sleeping in a bed versus a ditch, sleeping ill, sleeping cold
 # all belong here when they exist. Present now so the pair is obvious to
 # whoever reads this next.
 func get_adenosine_recovery() -> float:
-	return base_adenosine_cleared_per_second
+	return base_adenosine_cleared_per_hour
 
 
 # How strenuous what he's doing right now is. 1.0 when he isn't doing anything

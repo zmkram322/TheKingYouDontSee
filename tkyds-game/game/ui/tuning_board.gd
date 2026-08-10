@@ -93,7 +93,7 @@ func _build() -> void:
 # Two filters and both earn their place. Only the node's own script, because a
 # board offering to drag a Node3D's rotation is noise, not tuning. And only
 # exported vars — PROPERTY_USAGE_SCRIPT_VARIABLE alone catches plain internal
-# state too, which put Clock.seconds on the board as a slider you could drag to
+# state too, which put Clock.hours_elapsed on the board as a slider you could drag to
 # yank time sideways. An @export is the author saying "this is a number someone
 # should set"; that is exactly the question this board is asking, so it's the
 # right test. PROPERTY_USAGE_EDITOR is what distinguishes the two.

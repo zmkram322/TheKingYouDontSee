@@ -16,7 +16,7 @@ func is_done(_person: Person) -> bool:
 	return false
 
 
-func advance(_person: Person, _delta: float) -> bool:
+func advance(_person: Person, _hours: float) -> bool:
 	return false
 
 

@@ -52,13 +52,21 @@ func is_doable(_person: Person) -> bool:
 
 # The only method in the whole system that changes anything. Everything else
 # asks questions; this does the work — one tick's worth of it, scaled by how
-# much time passed, so he walks at the same speed on any machine.
+# much WORLD TIME passed, so he works at the same speed on any machine and at
+# any day length.
+#
+# `hours` is world hours, never real seconds — real time was converted once, up
+# in Clock, and is never seen again below it. Every rate a step multiplies by
+# this must therefore be authored per world hour too. Naming the argument for
+# what it holds rather than calling it `delta` is the whole guard: the two
+# units read identically at the shipped 60-second day and diverge everywhere
+# else, so a mislabelled one is invisible until somebody drags the slider.
 #
 # Returns whether it's now done. Answering here is what lets a caller ask once
 # per tick: advancing and then asking separately re-runs everything over a
 # world the advance just changed. Nothing reads that answer yet — it's for
 # Sequence, which isn't ported.
-func advance(_person: Person, _delta: float) -> bool:
+func advance(_person: Person, _hours: float) -> bool:
 	return true
 
 

@@ -37,9 +37,10 @@ environment = NodePath("../Sky")
 material_override = SubResource("StandardMaterial3D_ground")
 mesh = SubResource("PlaneMesh_ground")
 
-[node name="Zoogs" parent="." instance=ExtResource("3_person")]
+[node name="Zoogs" parent="." node_paths=PackedStringArray("clock") instance=ExtResource("3_person")]
 person_name = "Zoogs"
 tint = Color(0.82, 0.46, 0.3, 1)
+clock = NodePath("../Clock")
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.87, 0.5, 0, -0.5, 0.87, 0, 4.5, 8)
