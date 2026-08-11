@@ -920,6 +920,18 @@ be resolved by implementation drift:
 
 **Settled 2026-08-09. Author's call. Do not reopen.**
 
+> **⚠ AMENDED TWICE ON 2026-08-10 — BY DECISION 14, AND THEN BY DECISION 15.
+> Read 15 first, then 14, then this.** What still stands: the identity-check /
+> travel-cost split this decision exists to settle, *outbid never barred*, and
+> the cut of rung 3's radius bound and hard cap. **What does NOT stand is the
+> arithmetic**: the multiplier (`1.0` at his feet, falling off, never reaching
+> zero), the `distance_that_halves_appeal` knob on `Person`, and *"a man walks
+> further for a bed than for a beer"* as a travel-cost expression. 14 cut the
+> multiplier and the knob; 15 then confined travel cost to ordering an action's
+> own candidates, so there is no cross-action distance term left for per-action
+> sensitivity to live in. **Nothing in `game/` has ever contained a
+> `distance_that_halves_appeal`** — rung 4 shipped without one on 2026-08-11.
+
 This was hole 1 of the four found in the original pre-read of the build plan,
 and the last of them to be settled.
 
@@ -1054,7 +1066,14 @@ disagree the utility that won is not the utility he gets. A stable sort — by
 travel cost, then node path as tiebreak, never Dictionary hash order — makes the
 three agree. Never iterate a Dictionary for candidates.)*
 
-### The falloff curve, and the personality it gives you free
+### ~~The falloff curve, and the personality it gives you free~~ — CUT, see Decisions 14 and 15
+
+> **Everything in this subsection was overturned and none of it was built.** It
+> is kept because Decision 14 argues against it in detail and that argument is
+> worth reading. **The principle survives; only the arithmetic died** — a far
+> option is still *outbid, never barred*, but that is now guaranteed
+> structurally (travel cost never enters a cross-action score at all) rather
+> than by a curve that never reaches zero.
 
 Travel cost becomes a score multiplier through one curve: **1.0 at his feet,
 falling off, never reaching zero** — so a far option is *outbid, never barred*.
@@ -1062,8 +1081,16 @@ That is what keeps the plan's "he loses, and losing is the content" true.
 
 The knob lives on **`Person`**, not on the town:
 
+> **⚠ CUT — DO NOT BUILD THIS. Decision 14 dropped this export outright** (travel
+> speed already does the "how far will he walk" job it was invented for), and
+> Decision 15 then removed the cross-action term it would have fed. Measured at
+> exactly the `12.0` below, work from the Inn scores **39.6 against StayUp's
+> 87.3 — the man never goes to work at any hour of any day.** Rung 4 shipped
+> 2026-08-11 with no such export and the score untouched. The snippet is kept
+> only so the reasoning above it stays readable.
+
 ```gdscript
-@export var distance_that_halves_appeal := 12.0
+@export var distance_that_halves_appeal := 12.0    # CUT — never built
 ```
 
 Defaulted on `person.tscn` so everyone is identical until you decide otherwise,
@@ -1082,9 +1109,13 @@ multiply — a man walks further for a bed than for a beer.
 
 - **Rung 2** — `Person.get_travel_cost_to(place)`. One line; both nodes already
   carry positions. Lands with `Place` itself.
-- **Rung 4** — the falloff curve and the `distance_that_halves_appeal` export.
-  Rung 4 is the first rung where a man chooses between two places at different
-  costs, so it is the first collision that can actually break the curve.
+- **Rung 4** — ~~the falloff curve and the `distance_that_halves_appeal`
+  export.~~ **CUT by Decisions 14 and 15.** What rung 4 actually got, and
+  shipped: `walk_speed`, `get_travel_speed()`, `get_travel_cost_to()`
+  denominated in hours, and freeness made locally knowable. The prediction that
+  rung 4 would be "the first collision that can actually break the curve" was
+  right — the collision was worked out on paper in advance and broke it before
+  a line was written.
   Deferring it to 6d (as one reviewer proposed) would ship two rungs that
   quietly need it.
 
@@ -1096,7 +1127,7 @@ Not yet applied.
 |---|---|
 | Rung 2 | Add `Person.get_travel_cost_to(place)`. State the identity-check / travel-cost split explicitly so it is not re-fused. |
 | Rung 3 | **Delete** "Radius bound and the hard cap (~3) live in here." `find_workstations` returns every matching station, **sorted by travel cost**, stably, with node path as tiebreak. |
-| Rung 4 | Add the falloff curve and `distance_that_halves_appeal` on `Person`. Probe: a nearer station outscores an identical farther one; a far one still scores above zero (outbid, never barred); moving a place in the editor changes which wins — standing check #3, made mechanical. |
+| Rung 4 | ~~Add the falloff curve and `distance_that_halves_appeal` on `Person`.~~ **SUPERSEDED — see Decisions 14 and 15.** Of the probes named here, "a nearer station outscores an identical farther one" survives as a **candidate-ordering** assertion, "moving a place changes which wins" survives unchanged, and "a far one still scores above zero" is **retired** (no cross-action term is left for it to be barred by). |
 | Rung 6d | `Socialise`'s anti-herd damper now has its input. No change to the text beyond correcting the rung it cites. |
 | *Author's decisions already made* | Amend the 2026-08-08 location entry to say it settled the **identity check** only, and that travel cost is a separate, permitted, score-only quantity. |
 | Seam ledger → *Installed* | Add: **Travel cost** — `Person.get_travel_cost_to(place)`, rung 2. |
@@ -1965,7 +1996,17 @@ pays nothing, **`WorkTheField`'s tuned `73 / 30` does not move at all** and
 bedtime is untouched. The whole conflict dissolves rather than being tuned
 around.
 
-### The consequence rung 4 must tune for — the interruption is an inequality
+### ~~The consequence rung 4 must tune for — the interruption is an inequality~~
+
+> **⚠ THIS ENTIRE SECTION WAS OVERTURNED BY DECISION 15 — kept only as the
+> record of a mistake, and it is the mistake this project most wants to catch.**
+> The `patience` weight all three "ways out" below hang on does not exist and
+> never did. Its only real job was to delay the farmers' departure so the loser
+> would be outbid *en route* and the Moment would match the build plan's
+> wording — **building the observation instead of the cause.** Decision 15:
+> *"There is no tuning problem, no inequality, and no retune."* Rung 4 shipped
+> 2026-08-11 with the score untouched and nobody outbid mid-stride, and that is
+> the correct behaviour. **Read nothing below as an instruction.**
 
 Rung 4's Moment is a man *outbid while still walking* — that is the rung's proof
 that interrupting costs nothing. It only happens if the loser has set off before
@@ -1999,6 +2040,9 @@ walk happen at all.
 ### Plan edits this implies
 
 Not yet applied.
+
+**APPLIED 2026-08-11**, together with Decision 15's table below — with the rows
+that Decision 15 overturned dropped rather than applied. See that table.
 
 | Section | Change |
 |---|---|
@@ -2158,6 +2202,9 @@ cross-action distance term left for it to live in, and it does not need one.
 ### Plan edits this implies
 
 Not yet applied.
+
+**APPLIED 2026-08-11**, when rung 4 shipped. Every row below is now reflected in
+`proving-scene-build-plan.md` and in the amendment headers on Decisions 7 and 14.
 
 | Section | Change |
 |---|---|

@@ -346,7 +346,8 @@ What this arc installs, and what it deliberately refuses.
 | World time | `Clock.get_hours_elapsed(real_delta) -> float` — the sole real→world converter | 0 |
 | Decision dispatch | `Population.think_for_everyone(delta)` | 1 |
 | Named place | `Person.get_current_place() -> Place` | 2 |
-| Travel cost | `Person.get_travel_cost_to(place) -> float` — straight-line today, roads/rivers/a world of towns later | 2 |
+| Travel cost | `Person.get_travel_cost_to(place) -> float` — **returns HOURS** (Decision 14); straight-line ÷ speed today, roads/rivers/a world of towns later. Orders an action's own candidates and never enters a cross-action score (Decision 15) | 2 |
+| Means of travel | `Person.get_travel_speed() -> float` — takes no destination; a horse, a cart, a bad leg install here | 4 |
 | Who is where | `Town.find_people_at(place) -> Array[Person]` — the reverse index of the named place | 2 |
 | Labour clearing | `Workstation.claim(person) -> bool` — a **day-long tenancy**, renewed by use | 3 |
 | Candidate pull | `Town.find_workstations(person, work_name) -> Array[Workstation]`, **sorted by travel cost** | 3 |
@@ -934,8 +935,16 @@ farmers, or a fairness rule. He loses, and losing is the content.
 
 **Seam:** movement, and work gated on presence
 
+> **SHIPPED 2026-08-11 as `35f717f` on `poc-v2`.** This section was corrected
+> against Decisions 14 and 15 on the same day — as originally written it
+> specified a falloff curve and a `distance_that_halves_appeal` knob that both
+> decisions **cut**, and a Moment (outbid *en route*, turning around mid-field)
+> that Decision 15's knowledge rule makes impossible. Neither was ever built.
+
 - **Files:** `game/actions/go_to_step.gd`, `game/person.gd` (`@export var walk_speed`,
-  `@export var distance_that_halves_appeal`); `game/game.tscn` (camera).
+  `get_travel_speed()`, and `get_travel_cost_to()` changed to return **hours**),
+  `game/actions/work_step.gd`, `game/actions/work_the_field.gd` (the knowledge
+  rule below); `game/game.tscn` (both farmers re-authored at the Inn, camera).
 - **Do NOT call `move_and_slide()`** (Decision 4, measured). Called from
   `_process` it multiplies by the *physics* delta and produces non-uniform
   displacement; under `PROCESS_MODE_DISABLED` it moves **zero, silently**, so
@@ -952,18 +961,40 @@ tavern — and rung 7's *"same place?"* gate then says two men a hundred metres
 apart are trading, which makes every trade probe meaningless. prd.md already
 specifies the in-transit value; the plan had omitted it.
 
-**The falloff curve lands here** (Decision 7) — the first rung where a man
-chooses between two places at different costs, so the first collision that can
-break it. Travel cost becomes a score multiplier: **1.0 at his feet, falling
-off, never reaching zero**, so a far option is *outbid, never barred*. That is
-what keeps "he loses, and losing is the content" true.
+**NOTHING ABOUT SCORING CHANGES AT THIS RUNG** (Decisions 14 and 15, which
+between them replaced what this paragraph used to say). `WorkTheField` keeps
+`pull + daylight_pull * sun`, **`73 / 30` untouched**. There is no falloff
+curve, no multiplier, no `distance_that_halves_appeal`, no travel-cost
+coefficient and no `patience` weight — the last of those was invented by two
+drafts of the rung-4 prompt purely to stage this rung's Moment, and was deleted.
 
-The knob is `@export var distance_that_halves_appeal` on **`Person`**, defaulted
-on `person.tscn` so everyone matches until you decide otherwise. Override it per
-instance and **"how far will he walk" becomes a character trait for free** — a
-homebody and a wanderer are the same scene with one number changed. Per-action
-sensitivity, when wanted, is that action's own weight on the multiply: a man
-walks further for a bed than for a beer.
+> **Pull decides WHAT you do. Travel cost decides WHERE you go to do it.**
+
+Travel cost only ever competes an action's own **candidates** — this plot or
+that one. It never enters the comparison between one action and another, which
+is what makes muting a commute *structurally impossible* rather than a tuning
+invariant somebody has to remember to check. `Town.find_workstations` already
+sorts by it (rung 3), so travel cost is already doing its whole job.
+`get_travel_cost_to` changes to return **hours** — no observable behaviour at
+this rung, since hours and distance sort identically for one man; it earns
+itself at 9a, where candidates first differ in quality.
+
+**Two seams, kept apart** (Decision 14): `Person.get_travel_speed()` is the
+MEANS — walking today, a horse or a cart or a bad leg later — and takes no
+destination. `get_travel_cost_to()` is the JOURNEY, where roads and rivers
+install. **A horse changes the first, a road changes the second.** `walk_speed`
+is calibrated from the FICTION (a five-to-fifteen-minute walk to the fields),
+never from a realistic metres-per-second, or every journey in the game is free.
+
+**FREENESS IS KNOWABLE ONLY WHERE YOU ARE STANDING** (Decision 15) — one
+condition on `WorkTheField`'s candidate query, and the thing that lets a man set
+off at all. Away from a plot he knows it EXISTS, not whether it is taken, so it
+stays a candidate and he walks; standing at it he can see, and work leaves his
+ballot **on arrival**. Rung 3's remote freeness was omniscience the moment two
+men stood apart: a man at the Inn would know the job was gone and would never
+leave. `Workstation.is_free_for` does **not** change — the station reports the
+plain truth, and what a man knows of it is the Action's business. **The wasted
+journey is the point**; it is the collision that later earns the notice board.
 
 **Probe:**
 1. A person distant from the fields closes the distance by exactly
@@ -971,25 +1002,48 @@ walks further for a bed than for a beer.
    as the fields.
 2. **In transit, `get_current_place()` is `null`** — not his origin, not his
    destination.
-3. A person whose target gets claimed en route: his chosen action is no longer
-   `WorkTheField`, **and** his distance to the fields stops decreasing. *(Two
-   exact assertions — "turns around within one tick" is not a predicate.)*
-4. A nearer station outscores an identical farther one; the farther one still
-   scores **above zero** — outbid, never barred.
-5. **Move a place in the editor and which station wins changes.** Standing check
-   #3, made mechanical.
+3. A man walks toward a plot he cannot see the state of, and **work leaves his
+   ballot ON ARRIVAL.** Two exact assertions: while away from the fields with
+   the plot held by somebody else, `is_available_to` is **true** and his
+   distance is decreasing; on the tick he arrives it is **false** and
+   `get_last_scores()` records `NAN`. *(This replaced "outbid en route, distance
+   stops decreasing" — under Decision 15 he cannot see the plot until he reaches
+   it, so he is never outbid mid-stride.)*
+4. **A man does not walk to a plot he is standing next to and can see is
+   taken** — the same rule from the other side, so the gate is not simply always
+   true when away.
+5. **A nearer station is chosen over an identical farther one.** A
+   **candidate-ordering** assertion, not a score assertion. Build the second
+   station in a probe-constructed world; do not add one to `game.tscn`, or rung
+   3's contention disappears. *("The farther one still scores above zero" is
+   retired: travel cost never enters a cross-action score, so there is no number
+   left for it to be barred by. The property is now structural.)*
+6. **Move a place and which station wins changes.** Standing check #3, made
+   mechanical.
 
-**Moment:** one farmer walks west and starts working. The other sets off, gets
-outbid en route, and **turns around mid-field** — the first time an interruption
-costs nothing is the first time you can see that it costs nothing.
+**Moment — accepted as it unfolds, not staged.** Day 0: both farmers wake at the
+Inn, work overtakes `StayUp` around 03:45, and both set off. **The faster man
+arrives first and claims it; the other arrives to find the job already gone and
+re-decides standing in the furrow.** Day 1 onward is the short version — nothing
+pulls anybody home at night (beds are 6c), so both wake at or near the fields,
+Hobb claims at 04:41 and Zoogs wakes at 06:01 to find it taken where he stands.
 
-**Pull the camera back here.** It currently sits at `(0, 4.5, 8)` framing one
-capsule. From 6d onward the Moment is a man crossing from the fields to the
-tavern to the Inn, and a Moment you cannot see is not a gate. Two numbers, and
-this is the rung where walking arrives.
+**Nobody is outbid mid-stride, and that is correct.** The loser cannot see the
+plot until he arrives, so he walks the whole way and the drop happens on
+arrival. **The commute is mostly a day-0 event**, and that is honest — do not
+"fix" either here.
 
-**Do not build:** pathfinding, navmesh, obstacle avoidance, or animation. Move
-toward a point.
+**Pull the camera back here.** From 6d onward the Moment is a man crossing from
+the fields to the tavern to the Inn, and a Moment you cannot see is not a gate.
+
+**Watch it at a LONG day — 300–600 seconds — which INVERTS rung 3's
+instrument.** Decision 13 established the shortened day for watching a
+once-a-day crossing repeat; at the shipped 60-second day a ten-minute commute
+takes 0.4 real seconds and you will not see anybody walk anywhere.
+
+**Do not build:** pathfinding, navmesh, obstacle avoidance, animation, steering
+or acceleration. Move toward a point at a constant speed. No radius-based
+arrival check of any kind. No second authored workstation in `game.tscn`.
 
 ---
 
@@ -1218,8 +1272,12 @@ mid-sleep**; an abandoned bed does not survive one.
   the same reason. **Watch for a herd.** People-attract-people is positive
   feedback, and the whole town converging on one room is the same stable
   equilibrium that got split-yield rejected. The damper is already specified —
-  travel cost is a score term (rung 4), so a far crowd loses to a near one. If it
-  herds anyway, that is a curve to tune, never a rule to add.
+  `Socialise`'s candidates are ordered by travel cost, so a far crowd loses to a
+  near one. **Note the mechanism carefully: travel cost orders one action's
+  CANDIDATES and never enters `Socialise`'s own score** (Decision 15). This line
+  used to read "travel cost is a score term (rung 4)", which would put a commute
+  into the comparison between socialising and everything else and let geography
+  veto a want. If it herds anyway, that is a curve to tune, never a rule to add.
 
 **Probe:** a man with nothing else on his ballot walks to the place holding the
 most people, cost-weighted; **after N simulated days no single place ever held
