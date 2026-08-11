@@ -2217,3 +2217,254 @@ cross-action distance term left for it to live in, and it does not need one.
 | Rung 6d / 7 | Dampers unaffected — both were always candidate-vs-candidate. |
 | Rung 9a | The travel-cost coefficient earns itself here, when candidates first differ in quality. |
 | *Method* | Add the general lesson: a Moment is a prediction about causes, not a specification. Ask the author whether what actually happens is sufficient. |
+
+---
+
+## Decision 16 — What physics is for
+
+**Settled 2026-08-11. Author's call.** Forward-looking: **nothing on the current
+ladder is gated on this.** It is recorded because a cold session looking at a
+`CharacterBody3D` with a `CollisionShape3D` on it will reasonably assume
+`move_and_slide()` was an oversight, and because the combat ruling it rests on
+lives in a GDD from May that nobody reading `game/` would think to open.
+
+> **Collision is for the eye and for the route. It never decides an outcome.**
+
+### Three consumers, and not one of them is a resolver
+
+| Consumer | What it is | Touches the sim? |
+|---|---|---|
+| **Animation** | presentation | no |
+| **Walls** | what the navmesh bakes from | no |
+| **Pathfinding** | what makes travel cost honest | **yes** — via `get_travel_cost_to` |
+
+### Combat resolves on the card stack, never on a collision
+
+This upholds the identity cut recorded in the 2026-05-18 crystallisation:
+**"no action combat, no twitch stealth — failure must be cognitive, not
+mechanical."** Collision answers *"can I reach him, is he cornered, is there a
+table between us"*. The stack answers *"what happens."* A hit is always the
+effect of a card that was played, never something the engine emitted.
+
+**The argument that settles it, and it was not previously written down
+anywhere.** A stack resolver is arithmetic, so it produces the same answer
+whether you are standing there or a hundred miles away. A physics resolver
+cannot run at all without frames — so two guards brawling in a village you are
+skipping past would need a SECOND resolver, and the same fight would come out
+differently depending on whether anybody was looking.
+
+> **In a game about consequences accumulating while you are elsewhere, an
+> unwatched event must resolve exactly as a watched one does.**
+
+That single property rules out physics-resolved combat on its own, independently
+of the identity cut, and it is the reason to keep the ruling even if the card
+mechanics change shape later.
+
+### What a `body_entered` signal would have cost
+
+Worth stating so nobody reaches for it as a shortcut. Damage written from a
+collision signal is a write from **no decision**, arriving outside the tick
+order, in a design where DO is the only writer and every effect follows from
+something a person chose. You would also lose attribution — *"why did that
+happen to me"* stops having an answer — which is the opposite of a game whose
+failures are meant to be legible.
+
+### The consequence nobody expected: fast-forward SURVIVES walls
+
+Walls sound like `move_and_slide()` and collision response, and they are not.
+**If pathfinding routes AROUND a wall, the walker never hits one** — so nothing
+ever has to be physically stopped.
+
+- Walking stays exactly what rung 4 shipped: integrating `global_position`
+  toward a point at constant speed. `move_and_slide()` never arrives.
+- The only change is that the point is the **next waypoint** rather than the
+  destination, and **the overshoot clamp works unchanged, per waypoint.**
+- Headless pumping, the probe's movement claims, and a week simulated in seconds
+  all keep working. (Decision 4 is why this matters: `move_and_slide()` moves
+  **zero, silently** under `PROCESS_MODE_DISABLED`.)
+
+**Collision shapes exist to bake the navmesh and to make animation land right —
+not to stop anybody walking.**
+
+### Travel cost under pathfinding
+
+`get_travel_cost_to` becomes **path length ÷ speed**. That installs in that one
+function body and no call site changes, which is exactly what its own comment
+already promises about roads and river crossings.
+
+**Keep `GoToStep` stateless.** The obvious implementation stores the path, which
+is the remembered plan the whole design refuses to keep. Ask the navmesh *"which
+way from here?"* each tick — a query, re-derived, nothing held. It costs more per
+tick and buys back free interruption.
+
+### The movement strategy, IF physics movement is ever genuinely needed
+
+Not now. Written down so the surface stays small when somebody reaches for it.
+
+```gdscript
+# The ONLY thing that differs: how a requested displacement lands on the body.
+# Returns what the body ACTUALLY moved, which may be less than was asked.
+func apply_movement(person: Person, movement: Vector3) -> Vector3
+```
+
+Hung off **`Person.get_mover()`**, mirroring `get_travel_speed()` — the body
+decides, and no caller learns there was a choice.
+
+**What must NEVER move into the strategy:** arrival semantics, either edge of
+`current_place`, travel cost, or the decision. Put arrival in there and you get
+two arrival rules, and the radius model returns through the physics one.
+
+**Do not build it.** One implementation behind an interface is ceremony, and the
+seam that matters — `GoToStep` is the single place anything moves — already
+exists. When physics genuinely arrives, `GoToStep` grows a branch; extract this
+only if that branch turns ugly.
+
+### Left open, deliberately
+
+- **Straight-line for DECIDING vs. real path for WALKING.** `find_workstations`
+  calls `get_travel_cost_to` per station, per sort, per tick, per person; a
+  `distance_to` is free and a navmesh query is not. Deciding by straight line
+  means a man sets off for the near field and finds the bridge out — arguably
+  good content, but it must be **chosen, not discovered.**
+- **Whether `NavigationServer3D` and `PhysicsDirectSpaceState3D` queries return
+  anything useful inside the probe's disabled scene**, where the nav map may
+  never sync and the physics server may never step. **Unmeasured.** Short
+  experiment, and it belongs BEFORE walls arrive, not during.
+
+### Plan edits this implies
+
+None yet — nothing on the ladder builds this. When walls land,
+`get_travel_cost_to` gains path length and `GoToStep` steers by waypoint; both
+were already named as the places those install.
+
+---
+
+## Decision 17 — How an embodied player gets a place
+
+**Settled 2026-08-11. Author's call.** Extends the 2026-08-08 location ruling,
+which settled `current_place` for **decision-driven movers** — everyone who
+existed at the time. The player is a category that ruling never covered.
+
+### The hole
+
+`GoToStep` owning both edges of `current_place` is only true while **every move
+follows from a decision.** The player is the first mover that does not: nobody
+chose *"go to the Inn"*, somebody pushed a stick. He arrives long before
+knockback or any other physical shove does.
+
+### Why the obvious fix is the one already reverted — and worse here
+
+Walk into an `Area3D`, write `current_place`. That is the proximity model retired
+on 2026-08-08, and probe claim 7 exists to stop it returning.
+
+**For the player it is a SIM problem, not a UI one.** `Town.find_people_at()`
+cannot tell a player from an NPC. Stand on a boundary and your place flickers
+Inn → null → Inn, and you flicker in and out of **every NPC's candidate list** —
+rung 7's trade gate matches you, then does not, then does. It would read as
+*"the AI is flaky"*, which is the exact failure `work_the_field.gd`'s header
+warns costs a day to trace.
+
+### The contract, and where the wall already is
+
+> **The player's place must be exactly as crisp as an NPC's**, because nothing
+> downstream can distinguish them.
+
+Same field, same accessor, same discrete answer, no flicker. **What differs is
+only the WRITER:**
+
+| | Writer | Driven by |
+|---|---|---|
+| NPC | `GoToStep` | a decision |
+| player | an input-driven writer | input |
+
+`get_current_place()` is already the accessor everything reads, so nothing else
+in the game moves. `find_people_at`, the trade gate and every `is_available_to`
+keep working, because all of them only ever read.
+
+### The mechanism: a band, not a line
+
+> **Enter on crossing an INNER boundary. Leave only on crossing an OUTER one.**
+
+The reverted model used **one** radius, and one line is a thing you can stand on
+and jitter across. The sleep cycle already solved this with **two** — *"sleep
+starts winning high and stops winning low, so there is a wide gap rather than one
+line to sit on."* This is that same house pattern applied to space instead of to
+adenosine. It is not a new mechanism.
+
+**Interiors get it free.** A door is naturally discrete — you are in the Inn or
+you are not. The band is only needed for open ground: the fields, the square.
+
+### Left open
+
+The band width. It is a tuning number and nothing can read it yet.
+
+### Plan edits this implies
+
+None yet — there is no player character on this ladder. Relevant the moment one
+exists, and to rung 7's *"same place?"* gate, which is what would go wrong first.
+
+---
+
+## Decision 18 — The sim owns duration; the animation illustrates it
+
+**Settled 2026-08-11. Author's call.**
+
+> **The animation does not decide how long it takes. It is told.**
+
+### The inversion this exists to prevent
+
+*"The leaving animation has to resolve before the step moves on"* is the natural
+way to think about it, and it is backwards. Gating a step on an animation
+**commits** the decision for that animation's duration — which stores progress
+(*"I am 0.3 s into leaving"*) and breaks the rule the whole substrate is built
+on:
+
+> *"An ActionStep holds NO progress… Interrupting costs nothing. Nothing was
+> suspended, so nothing has to be put back."*
+
+### What to do instead, when a transition should be legible
+
+**Put the time in the WORLD, not in the renderer.** If straightening up and
+shouldering a tool should take ninety world seconds, that is ninety world seconds
+of a **step**, and the animation fills the window it is given.
+
+Legibility then belongs to the simulation, which means it survives being
+fast-forwarded past, written to a log, and happening where nobody is watching.
+Animation-owned duration gives you none of those — the same property Decision 16
+turns on.
+
+**And the wind-down stays outbiddable.** It is just another thing on the ballot:
+fire breaks out mid-put-down, `Flee` outscores it, he drops the tool where he
+stands, and nothing needed unwinding. **That is the legible beat AND free
+interruption, which the blocking version cannot have both of.**
+
+### The visual half is already seamed
+
+`person.tscn` carries `Shape` as a **child** `MeshInstance3D`, separate from the
+body — so the authoritative transform can move per the sim while the mesh blends
+and lags a few frames behind it. Presentation being slightly late is invisible;
+presentation being **authoritative** is what bites. Same precedent as the
+`Readout`, which deliberately rides `_process` rather than `think_and_act`.
+
+### Animation thrash is already prevented, and rate is not the lever
+
+The real risk in re-deciding every tick is **oscillation** — walk/work/walk
+across three ticks, and a blend tree convulses. The actions already prevent it,
+with the same hysteresis band Decisions 17 and 11 both lean on.
+
+> **Do NOT throttle the decision rate down to animation speed.** Decision
+> *stability* is the property that matters, not decision *rate*, and throttling
+> couples the simulation to the renderer — the same mistake as letting an
+> animation gate a step, wearing a different hat.
+
+### What this asks for that does not exist yet
+
+A vocabulary for **transitions that take world time**: a short wind-down step,
+outbiddable, holding no progress. That is the shape `Sequence` was for, and it is
+sitting unported in git history — port it by hand when something needs it, never
+wire to it.
+
+### Plan edits this implies
+
+None yet — no rung on this ladder animates anything. Relevant the first time a
+Moment is meant to be *read* rather than measured off a graph.
