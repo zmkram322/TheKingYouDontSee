@@ -74,6 +74,8 @@ cd5fc7c          the sleep cycle hung on the sun
 93ebc8f          Decision 13 — the Moment reads
 f69aa32          the editor's normalisation of game.tscn
 14a434e          Decision 13 — the loser stands in the field
+de8502a          Decision 14 — travel cost subtracts, in hours
+b51a8fb          Decision 15 — what distance may decide, and what is known afar
 ```
 
 ```
@@ -315,17 +317,20 @@ the commit, the way rung 3 did with claims 6 and 8.
   authored there. He now starts at the Inn — update the expectation.
 - **Claim 8** builds exact sets: `find_people_at(fields)` currently expects
   `[Zoogs, Hobb, Mara]` and `find_people_at(inn)` expects `[Bram]`. **Both move.**
-- **Claim 13** is the rung-3 centrepiece and its second assertion —
-  *"Hobb claimed it while Zoogs was still asleep"* — **goes false under Option
-  A**, because both men are awake by the time anyone sets off.
+- **Claim 13** is the rung-3 centrepiece, and it may well still pass — which is
+  the danger. It pumps ten hours from a shared bedtime and asserts that Hobb
+  first held day 2's plot *and that Zoogs was still asleep when it happened*.
+  With both men starting at the Inn, Hobb now wakes, **walks**, and claims some
+  ten minutes later — still comfortably before Zoogs wakes — so the assertion
+  survives **by accident**, on the walk happening to fit inside the pump window.
 
-  **Do not weaken claim 13. Pin its world instead.** The probe already sets
+  **Do not leave it resting on that. Pin its world.** The probe already sets
   `current_place` by hand in claims 7, 8 and 16; claim 13 should do the same —
-  stand both farmers **on the Fields** explicitly at the top of the check, and
-  the pure sleep-order race it was written to prove is preserved exactly. Then
-  write the walk-from-the-Inn race as a **new claim**. A claim that pins its own
-  setup instead of leaning on authoring is more robust anyway, and this is the
-  second rung in a row where authored placement moved underneath one.
+  stand both farmers **on the Fields** explicitly at the top of the check, so
+  the pure sleep-order race it was written to prove is preserved exactly and no
+  longer depends on travel time at all. Then write the walk from the Inn as a
+  **new claim**, where it belongs. This is the second rung running where
+  authored placement moved under a claim; pinning is the durable fix.
 
 - **The probe writing `current_place` by hand is LEGAL and must stay.** `GoToStep`
   owning both edges of that field is a rule about the **game**, not about the
@@ -381,10 +386,17 @@ walk across the whole town. A Moment you cannot see is not a gate.
 
 **Run at a LONG day — 300–600 seconds — and this inverts rung 3's instrument.**
 Decision 13 established the shortened day for watching a once-a-day crossing
-repeat, and rung 4 wants the opposite: at the shipped 60-second day a ten-minute
-commute takes 0.4 real seconds and the interruption is invisible. At 600
-seconds the walk takes about six real seconds and the interruption about one.
+repeat; rung 4 wants the opposite, because at the shipped 60-second day a
+ten-minute commute takes **0.4 real seconds** and you will not see anybody walk
+anywhere. At 600 seconds the walk takes about six real seconds, which is long
+enough to watch two men cross the town and one of them stop dead on arrival.
 Watch it slow first, then speed the day up to see the beat repeat.
+
+**Note nobody is outbid mid-stride.** Under the knowledge rule the loser cannot
+see the plot until he reaches it, so he walks the whole way and the drop happens
+**on arrival** — he does not turn around in the middle of the field. That is the
+build plan's Moment amended by Decision 15, and it is the correct behaviour, not
+a bug to tune out.
 
 **The commute is mostly a day-0 event, and that is honest.** Nothing pulls
 anybody home at night — beds arrive at 6c — so both men sleep where they
@@ -400,9 +412,9 @@ any name** — Decision 15 confines travel cost to candidate ordering, and
 `patience` in particular was deleted for being a knob that existed to stage a
 Moment. **A travel-cost coefficient**, which decides nothing until candidates
 differ in quality at 9a. Pathfinding. A navmesh. Obstacle avoidance. Animation.
-Steering or acceleration
-— move toward a point at a constant speed. A "go home" or `Linger` action — the
-loser stopping is sufficient, and `StayUp` is the floor by composition. Beds or
+Steering or acceleration — move toward a point at a constant speed. A "go home"
+or `Linger` action — the loser stopping is sufficient, and `StayUp` is the floor
+by composition. Beds or
 sleeping anywhere in particular (6c). Hunger, the tavern, or `Socialise` (6a,
 6d). Inventory (5). A radius-based arrival check of any kind. A second
 authored workstation in `game.tscn`. `Workstation.owner` or `is_permitted_to`
@@ -460,10 +472,12 @@ authored workstation in `game.tscn`. `Workstation.owner` or `is_permitted_to`
 Delegate a chunk that is self-contained, mechanically specifiable, and has
 ground truth to check itself against.
 
-**Good candidates:** the five new probe claims, handed over **after** the API and
-the tuning numbers are frozen, with an exact expected-results table. And the
-measurement run that re-derives the schedule after retuning — hand over an
-expected table and have it report HOLDS/DEVIATES per line.
+**Good candidates:** the six new probe claims, handed over **after** `GoToStep`'s
+API is frozen, with an exact expected-results table. And a measurement run that
+pumps six days and reports the schedule plus who claimed the plot when — hand
+over an expected table and have it report HOLDS/DEVIATES per line. **Nothing is
+being retuned this rung**, so that run is a regression check rather than a
+search: if any line deviates, something unintended moved.
 
 **Do NOT delegate:** the knowledge rule above, `GoToStep` itself (arrival-as-clamp
 and the null-on-departure edge are exactly what a cold agent gets wrong), or the
@@ -478,8 +492,11 @@ surgical edits to claims 7, 8 and 13.
   way**, the most recent on 2026-08-10. Commit the rung FIRST so that per-file
   `git restore` is safe during the break pass; never `git restore .`.
 - **The sleep cycle has not moved.** Zoogs still turns in 22:01, sleeps 8.00 h,
-  is up 06:01; Hobb still rises 04:41. Retuning `WorkTheField` must not shift
-  either man — this is the single most likely casualty of this rung.
+  is up 06:01; Hobb still rises 04:41. **Nothing this rung touches the score, so
+  there is no legitimate reason for either man's hours to move** — if they do,
+  you have changed something you did not mean to, most likely by giving the
+  walking step an `exertion` other than 1.0 and quietly altering how fast he
+  tires.
 - The claims that had to change are updated **deliberately**, with the reason in
   the commit — not quietly renumbered.
 - Report the probe output, then **STOP**. Do not begin rung 5.
