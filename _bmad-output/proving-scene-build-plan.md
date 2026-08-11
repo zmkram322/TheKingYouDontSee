@@ -1148,6 +1148,21 @@ it is what stops rungs 6b, 7 and 9a each growing their own transfer path.
 
 Working a plot now yields grain into the farmer's inventory.
 
+> **⚠ `WorkStep` GREW A SECOND BRANCH AT RUNG 4 — put the grain in the right
+> one.** `advance()` no longer only works: it asks where he is standing, and if
+> he is **not** at the plot's place it walks him there and returns. Add the yield
+> at the top of `advance()` and **a man produces grain while walking across
+> town**, which reads as a balance problem and is not one. It belongs after the
+> `station.claim(person)` succeeds — the same place, and for the same reason,
+> that renew-on-use lives.
+>
+> **The probe for this rung inherits the trap.** *"Work N ticks, assert grain
+> increases"* silently becomes *"walk N ticks, assert nothing"* if the farmer
+> starts anywhere but the fields — and **both farmers are now authored at the
+> Inn.** Stand him on the plot's place first (`probe.gd` has `_stand_at()` for
+> exactly this), or pump long enough to cover a ten-world-minute commute. Rung 4
+> had to pin four existing claims for this reason; do not rediscover it.
+
 **Coin lives here, not in `Stats`.** The plan previously put it in `stats.gd`
 "so it plots on the existing graph for free" — that is presentation choosing
 storage, and it splits possession across two systems permanently, so every trade
@@ -1444,6 +1459,17 @@ algorithm already deferred twice, arriving through a third door.
 **One step, not a sequence.** Same pattern as rung 4: *not at the square → walk
 toward it; at the square → lay out and match.* `Sequence` and `Choice` are not
 ported from git history and this does not need them.
+
+> **REUSE THE WALKING, DO NOT REWRITE IT.** Rung 4 shipped `GoToStep`
+> (`game/actions/go_to_step.gd`) with a `walk_toward(person, place, hours)` verb,
+> and reuse is the whole reason it takes its destination as an argument instead
+> of an `@export`. **Nest one under this rung's step, as a CHILD, never a
+> sibling** — `Action._ready` takes the *first* `ActionStep` child it finds, so
+> two steps under one Action silently pick one and ignore the other. The same
+> applies to **6a** (walk to the tavern) and **6d** (walk to the crowd). A second
+> movement implementation is also a second place `current_place` gets written,
+> and `GoToStep` owning both edges of that field is what keeps *"same place?"*
+> honest for the trade gate below.
 
 **`Trade.find_candidates()` returns people at my place with a deficit I can
 fill.** Not a global lookup — that is the one thing that would break it, because
