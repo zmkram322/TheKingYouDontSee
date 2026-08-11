@@ -529,8 +529,16 @@ func _check_travel_cost_is_read_and_never_bars() -> void:
 		"walked away from the Inn and the cost did not rise, %.2f → %.2f" % [cost_from_there, cost_from_further])
 
 	# Absurdly far, and still a price rather than a refusal. INF or NAN here
-	# would poison rung 4's falloff curve and turn "outbid" into "barred", which
-	# is the one thing travel cost is not allowed to do.
+	# would poison the candidate ordering in Town.find_workstations — every
+	# comparison against NAN is false, so a sort over one would land wherever the
+	# algorithm happened to leave it, and a station in the next county could come
+	# back as the nearest. "Outbid, never barred" is the one thing travel cost is
+	# not allowed to stop being.
+	#
+	# (This comment used to say "rung 4's falloff curve". There is no falloff
+	# curve: Decision 14 cut it and the multiplier with it, and Decision 15 then
+	# confined travel cost to ordering an action's own candidates. Nothing in
+	# game/ has ever had a `distance_that_halves_appeal`.)
 	zoogs.global_position = Vector3(100000.0, 0.0, 100000.0)
 	var absurd: float = zoogs.get_travel_cost_to(fields)
 	_require(is_finite(absurd) and absurd > 0.0, claim,
