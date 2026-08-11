@@ -7,8 +7,14 @@ day rung 3 closed.
 3, 6b, 6d, 7 and 8). So this prompt is deliberately more explicit than rung 3's
 was: where that one could say *"re-derive this, don't paste it"* and trust it to
 land, this one spells the corrected shape out. **Nothing below is optional
-detail.** The arithmetic in "THE CALL THIS SESSION MUST MAKE" in particular was
-worked out in advance precisely so a session does not discover it by flailing.
+detail.**
+
+**Two earlier drafts of this prompt were wrong in the same way** and the record
+of that is Decision 15: they invented a tuning knob whose only job was to make
+this rung's Moment look the way the build plan describes it. If you find
+yourself reaching for a number to make a Moment happen, **stop and ask the
+author whether what actually happens is sufficient.** A Moment is a prediction
+about what the causes will produce, not a specification to satisfy.
 
 ---
 
@@ -31,16 +37,19 @@ Rung 4 is the rung that fixes it.
 ## READ FIRST, IN THIS ORDER
 
 1. **`CLAUDE.md`** (repo root) — naming rules, design rules, Godot traps. Governs.
-2. **`_bmad-output/proving-scene-decisions.md`** — **Decision 14 above all**
-   (travel cost subtracts and is denominated in hours; it **amends Decision 7**
-   and settles the arithmetic this rung stands on), then **7** (the
+2. **`_bmad-output/proving-scene-decisions.md`** — **Decision 15 above all**
+   (what distance is allowed to decide, and what a man can know from afar; it
+   **amends 14, which amends 7**, and it settles what this rung stands on),
+   then **14** (the multiply-vs-subtract rule, hours, and the two travel seams —
+   noting its `patience` weight is the part 15 overturned), then **7** (the
    identity-check / travel-cost split, and *outbid, never barred*, both of which
    still stand), then **10** (arrival is the overshoot clamp, departure writes
    null, and the `find_people_at(null)` rule that depends on it), then **4**
    (`move_and_slide` cannot be pumped), then **13** (what rung 3 settled and what
    the author saw), then **12** (how two people differ — this rung gives
    `strength` its predicted second job). **This file wins where it and the plan
-   disagree, and Decision 14 wins over Decision 7 where those two disagree.**
+   disagree, and where these decisions disagree with each other the HIGHEST
+   number wins: 15 over 14 over 7.**
 3. **`_bmad-output/proving-scene-build-plan.md`** — the "Rung 4" section only.
 4. **`game/person.gd`, `game/actions/work_step.gd`, `game/actions/work_the_field.gd`,
    `game/workstation.gd`, `game/probe.gd`** — read them before writing anything.
@@ -133,13 +142,14 @@ Four things.
    hours**. There is **no** `distance_that_halves_appeal` — Decision 14 cut it.
 3. **`WorkStep` learns to walk** — not at the plot's place, walk toward it; at
    it, claim and work. One `advance()`, re-derived from where he is standing,
-   holding no route and no progress. `WorkTheField` gains a `patience` export
-   and subtracts `patience × hours_to_reach` from its score.
+   holding no route and no progress. **`WorkTheField`'s SCORE does not change**
+   — see Decision 15 below. Its candidate query gains one condition: a station
+   he is not standing at is a candidate regardless of who holds it.
 4. **Scene** — **both farmers are re-authored to start at the Inn** (the
    author's call, 2026-08-10). Today nobody in the shipped scene ever travels,
    so the Moment could only be staged by dragging a capsule. Starting them at
    the Inn makes the Moment native: at first light both set off, one arrives and
-   claims, the other is outbid en route and stops.
+   claims, and the other arrives to find the job gone.
 
 ### `GoToStep` — the shape, spelled out
 
@@ -201,85 +211,99 @@ about the other, and that is the whole reason there are two.
 is a fact about the traveller. Anything route-shaped belongs in
 `get_travel_cost_to`.
 
-### Travel cost SUBTRACTS, denominated in hours — Decision 14
+### Why the unit is hours, when it changes nothing you can see at this rung
 
-**Decision 7's multiplier is cut, and so is `distance_that_halves_appeal`.**
-Read Decision 14 for why; the short version is that this utility scale has no
-meaningful zero, so multiplying taxes a man's entire reason to be awake rather
-than taxing his journey, and at the shipped geometry it muted the commute
-outright.
+Decision 7's multiplier is cut, and so is `distance_that_halves_appeal` — read
+Decision 14 for why, and Decision 15 for what replaced the subtraction it
+proposed.
 
-```gdscript
-# work_the_field.gd
-@export var patience := 36.0    # what an hour of walking costs this errand
+**Be honest with yourself about what the unit buys here: nothing observable.**
+Sorting by hours and sorting by distance are the SAME ordering for one person,
+because travel speed is positive. It is kept because it is the honest unit,
+because `get_travel_speed()` is needed the moment anybody walks at all, and
+because hours are what a road or a horse actually change. **It earns itself at
+rung 9a**, when candidates first differ in quality and cost has to be traded
+against yield. Do not go looking for a behaviour change at rung 4 and conclude
+the change did not work.
 
-func get_utility_score(person: Person) -> float:
-    var station := get_best_candidate(person)
-    var hours_away := person.get_travel_cost_to(station.get_place())
-    return pull + daylight_pull * person.get_sun_height() - patience * hours_away
-```
+## THE CALL ALREADY MADE FOR YOU — knowledge is local, and travel cost only orders candidates
 
-`patience` lives on the **action**, because it is a fact about the errand — a
-man walks further for a bed than for a beer.
+**Decision 15. Do not re-open either half, and do not add a knob to either.**
 
-**`pull` and `daylight_pull` do NOT move.** Keep `73 / 30`. A man standing on
-the plot pays nothing, so his 22:00 score is still 47.0 against `StayUp`'s 50.0
-and **bedtime is untouched.** That is the point of subtraction: it costs nothing
-when you are already there.
+An earlier draft of this prompt had a `patience` weight whose only real job was
+to delay the farmers' departure so the loser would be outbid *en route* and the
+Moment would look the way the build plan describes. That is **building the
+observation instead of the cause**, the author caught it, and it is deleted. If
+you find yourself reaching for a number to make a Moment happen, you are making
+the same mistake — stop and ask.
 
-**The invariant, which is now a probe claim rather than a hope:** no place may
-be made unreachable by its own travel cost. Mechanically — *work at its best
-hour, from the farthest place in town, still beats `StayUp`*. At a ten-minute
-crossing that holds for any `patience` below about 94, so there is enormous
-headroom; muting is now hard to do by accident where multiplying made it the
-default.
+### Freeness is knowable only where you are standing
 
-## THE ONE THING THIS SESSION MUST TUNE — the interruption is an inequality
+Rung 3 lets `WorkTheField`'s gate ask whether a plot is **free** from anywhere in
+the world. With both farmers standing in the same field that was invisible; the
+moment they are apart it is **omniscience**, and it kills this rung: a man at the
+Inn would know the plot was taken, so work would never reach his ballot, so he
+would never set off, and nothing could ever interrupt him.
 
-**The arithmetic is already settled (Decision 14) — do not re-derive it and do
-not tune by trial and error.** What is NOT settled is the one relationship that
-decides whether this rung's Moment exists at all, and it is a trap you will
-otherwise walk into after everything else is green.
+> **Not at the plot's place** → he knows it EXISTS, not whether it is taken. It
+> stays a candidate, the urge to work stands, and he walks.
+> **At the plot's place** → he can see it. Taken by somebody else → it drops out,
+> and work leaves his ballot **at the moment he arrives.**
 
-Rung 4's Moment is a man **outbid while still walking**. That is the rung's
-whole proof that interrupting costs nothing — nothing was suspended, so he
-simply stops. It happens only if the loser has already set off when the winner
-claims:
+One condition on the candidate query. **No new knob**, and it mirrors a rule the
+codebase already has: presence is required to *claim*, and now presence is
+required to *know*.
 
-> **waking gap < commute time**
+**`Workstation.is_free_for` does not change** — the station keeps reporting the
+plain truth about itself, and what a man KNOWS of that truth is the Action's
+business. **The comment on that function argues the opposite and is wrong; fix
+the comment, not the code.**
 
-**The shipped numbers fail this, badly.** The waking gap is **80 minutes**
-(Hobb 04:41, Zoogs 06:01) and the commute is **ten**. So whoever wakes first
-claims the plot over an hour before the other man opens his eyes, the loser's
-gate is already shut when he wakes, he never sets off, and **nobody is ever
-interrupted.** Everything would still be green and the rung would have proved
-nothing.
+This restores the standing default rather than inventing one: Decision 1 already
+deferred the notice board, describing exactly this move — discovery in DO, not
+in GATE. **The wasted journey is the point**, because it is the collision that
+later earns the notice board.
 
-**Take the first of these three, and record which you took:**
+### Travel cost competes the same alternative at different locations, and nothing else
 
-1. **Set `patience` so work does not pay before sunrise** — then both men are
-   awake before either sets off, and the race is decided on **arrival**. At
-   `patience ≈ 36` the crossing lands about **06:07**, just after Zoogs wakes.
-   Hobb is up at 04:41 and waits for first light, which is good fiction rather
-   than a fudge: you do not cross town in the dark for work.
-   **This needs a speed difference to decide the race**, or two men leaving the
-   same place at the same moment arrive on the same tick and it is settled by
-   `Population` child order — the exact hazard Decision 12 exists to prevent.
-   So: **`strength` feeds `get_travel_speed()`**, which is the second job
-   Decision 12 predicted for it (*"rung 3's work step wants a rate of work per
-   hour and rung 5 wants carry capacity — both are the same capacity"*). The
-   difference stays on the body and never on the action.
-2. Shrink the waking gap to under ten minutes (`strength ≈ 1.02`) — but that
-   throws away Decision 12's deliberately visible 04:41 and weakens claim 12.
-3. Lengthen the commute past 80 minutes — contradicts the town scale the author
-   ruled, and makes every journey tedious.
+> **Pull decides WHAT you do. Travel cost decides WHERE you go to do it.**
 
-**Expect the interruption to be BRIEF.** A 15% speed advantage over a ten-minute
-walk is about **1.3 minutes** of world time. It is real, the probe can assert it
-exactly, and it is *hard to see* — which is why the Moment section below tells
-you to slow the day down rather than speed it up. If you want it more visible,
-widen it by starting the two men at different offsets near the Inn (their
-`global_position`s already differ today) rather than by inflating `strength`.
+Travel cost belongs to choosing among an action's **candidates** — this plot or
+that one. **It never enters the comparison between one action and another.** That
+is what makes muting a commute structurally impossible rather than a tuning
+invariant somebody has to remember to check.
+
+**So rung 4 changes NOTHING about scoring:**
+
+- `WorkTheField.get_utility_score` keeps `pull + daylight_pull * sun`. **`73 / 30`
+  stands untouched.** No subtraction. No coefficient. No `patience`.
+- `Town.find_workstations` **already sorts by travel cost** — shipped at rung 3.
+  Travel cost is already doing its only job.
+- **There is no tuning problem and no retune.** Bedtime cannot move, because
+  nothing about the score moved.
+
+**Do not add a travel-cost coefficient.** Ordering identical candidates by
+`appeal − k × hours` is just ordering by hours at any positive `k`, so the
+coefficient decides nothing until candidates differ in **quality** — which is
+rung 9a's `Recipe`. A number nothing can read is substrate before need.
+
+### What the Moments actually are — accepted as they unfold
+
+Not staged, not tuned for. This is what the causes produce:
+
+- **Day 0** — both wake at the Inn. Work overtakes `StayUp` around **03:45**
+  (`73 + 30·sun > 67.3 + 20·sun` at `sun > −0.57`). Both set off. **The faster
+  man arrives first and claims; the other arrives to find the job gone and
+  re-decides standing in the furrow.**
+- **Day 1 onward** — nothing pulls anybody home at night (beds are 6c), so both
+  wake at or near the fields. Hobb claims at 04:41; Zoogs wakes at 06:01, sees it
+  taken, and re-decides on the spot. The short version of the same beat.
+
+Two men leaving the same place at the same moment would otherwise arrive on the
+same tick and the plot would go by `Population` child order — the exact hazard
+Decision 12 exists to prevent. **So `strength` feeds `get_travel_speed()`**,
+which is the second job Decision 12 predicted for it (*"both are the same
+capacity"*), and the difference stays on the body rather than on the action.
 
 ## THE PROBE WILL BREAK, AND THIS IS WHERE
 
@@ -321,30 +345,36 @@ the commit, the way rung 3 did with claims 6 and 8.
    would otherwise pass.
 2. **In transit, `get_current_place()` is `null`** — not his origin, not his
    destination.
-3. **A man whose target is claimed en route** stops: his chosen action is no
-   longer `WorkTheField`, **and** his distance to the fields stops decreasing.
-   *(Two exact assertions. "Turns around within one tick" is not a predicate, and
-   he does not walk home — there is nothing to walk home to until 6c.)* **This is
-   the claim the inequality above exists to protect** — if the tuning is wrong
-   the loser never sets off, and this claim quietly becomes unconstructible
-   rather than red. Build it so it FAILS in that case.
-4. **A nearer station outscores an identical farther one.** Build the second
-   station in a **probe-constructed world** (instance a `Place` and a
-   `Workstation` at runtime, as the probe already instances people); do not add
-   one to `game.tscn`, or rung 3's contention disappears and claim 13 dies with
-   it.
-5. **No place is unreachable by its own travel cost** — work at its best hour,
-   from the farthest place in town, still beats `StayUp`. This is Decision 14's
-   invariant made mechanical, and it replaces the plan's *"the farther one still
-   scores above zero"*, which subtraction makes meaningless.
+3. **A man walks toward a plot he cannot see the state of, and work leaves his
+   ballot ON ARRIVAL.** Two exact assertions: while he is away from the Fields
+   and the plot is held by somebody else, `WorkTheField.is_available_to` is
+   **true** and his distance is decreasing; on the tick he arrives it is
+   **false** and `get_last_scores()` records `NAN` for it. This is Decision 15's
+   knowledge rule made mechanical, and it is the claim that would go red if
+   anybody restores the omniscient gate.
+4. **A man does not walk to a plot he is standing next to and can see is
+   taken** — the same rule from the other side, so the gate is not simply always
+   true when away.
+5. **A nearer station is chosen over an identical farther one.** A
+   **candidate-ordering** assertion, not a score assertion — assert
+   `get_best_candidate` returns the near one, not that any score is bigger.
+   Build the second station in a **probe-constructed world** (instance a `Place`
+   and a `Workstation` at runtime, as the probe already instances people); do
+   not add one to `game.tscn`, or rung 3's contention disappears and claim 13
+   dies with it.
 6. **Move a place and which station wins changes** — standing check #3, made
    mechanical.
 
-**Moment:** both farmers wake at the Inn. At first light both set off for the
-one plot. **The faster man arrives first and claims it; the other is outbid
-while still walking and stops mid-field.** The first time an interruption costs
-nothing is the first time you can *see* that it costs nothing — nothing was
-suspended, so there is nothing to put back, and he simply stops where he stands.
+*(The plan's "the farther one still scores above zero — outbid, never barred" is
+**retired**. Under Decision 15 travel cost never enters a cross-action score at
+all, so there is no number for it to be barred by; the property it was
+protecting is now structural.)*
+
+**Moment — accepted as it unfolds, not staged.** Day 0: both farmers wake at the
+Inn, work overtakes `StayUp` around 03:45, both set off. **The faster man
+arrives first and claims it; the other arrives to find the job already gone and
+re-decides standing in the furrow.** Day 1 onward is the short version — Hobb
+claims at 04:41, Zoogs wakes at 06:01 and finds it taken where he stands.
 
 **Pull the camera back.** It currently frames the fields; the Moment is now a
 walk across the whole town. A Moment you cannot see is not a gate.
@@ -365,7 +395,11 @@ once, not every dawn, and do not "fix" it here.
 
 A falloff curve or `distance_that_halves_appeal` — **Decision 14 cut both**, and
 a session that "restores" them from the plan or from Decision 7 has undone this
-rung's central call. Pathfinding. A navmesh. Obstacle avoidance. Animation.
+rung's central call. **A travel-cost term in any action's utility score, under
+any name** — Decision 15 confines travel cost to candidate ordering, and
+`patience` in particular was deleted for being a knob that existed to stage a
+Moment. **A travel-cost coefficient**, which decides nothing until candidates
+differ in quality at 9a. Pathfinding. A navmesh. Obstacle avoidance. Animation.
 Steering or acceleration
 — move toward a point at a constant speed. A "go home" or `Linger` action — the
 loser stopping is sufficient, and `StayUp` is the floor by composition. Beds or
@@ -417,7 +451,7 @@ authored workstation in `game.tscn`. `Workstation.owner` or `is_permitted_to`
 - **`hours`, never `delta`,** below `Population`. Every rate is per world hour —
   including `walk_speed`, which is **units per world hour**, not per second. And
   `get_travel_cost_to` now returns **hours**, so anything holding its result is
-  named for that (`hours_away`, never `distance` or `cost`).
+  named for that (`hours_away`, never `distance`).
 - Plain English over CS vocabulary. Comments explain WHY and match the existing
   density in `game/` — that density is the house style, not clutter.
 
@@ -431,7 +465,7 @@ the tuning numbers are frozen, with an exact expected-results table. And the
 measurement run that re-derives the schedule after retuning — hand over an
 expected table and have it report HOLDS/DEVIATES per line.
 
-**Do NOT delegate:** the inequality above, `GoToStep` itself (arrival-as-clamp
+**Do NOT delegate:** the knowledge rule above, `GoToStep` itself (arrival-as-clamp
 and the null-on-departure edge are exactly what a cold agent gets wrong), or the
 surgical edits to claims 7, 8 and 13.
 

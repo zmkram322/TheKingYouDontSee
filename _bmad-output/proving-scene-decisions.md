@@ -1822,6 +1822,13 @@ multiplier.** Found while writing rung 4's session prompt, before any of rung 4
 was built — the arithmetic was worked out in advance rather than discovered by
 tuning, which is why this is a decision and not a bug report.
 
+> **⚠ AMENDED THE SAME DAY BY DECISION 15 — read that first.** The
+> multiply-vs-subtract rule, the hours denomination and the two seams below all
+> stand. **What does not stand is subtracting travel cost from an action's score
+> against OTHER actions, and the `patience` weight that did it.** Travel cost
+> only ever competes the same alternative at different locations. If you read
+> this section alone you will build a mechanism the author overturned.
+
 ### The question
 
 Decision 7 settled that travel cost **scores and never gates** — a far place is
@@ -2002,3 +2009,162 @@ Not yet applied.
 | Decision 7 | Amended, not overturned — the split it settled (identity check vs travel cost) and *outbid, never barred* both stand; only the arithmetic and the knob change. |
 | Decision 12 | `strength` feeding `get_travel_speed()` is its predicted second job, and is what decides an arrival race. |
 | Rungs 6d / 7 | The anti-herd damper still has its input; it is now a subtraction in hours. |
+
+---
+
+## Decision 15 — What distance is allowed to decide, and what a man can know from afar
+
+**Settled 2026-08-10. Author's call. Amends Decision 14 (the same day) and, with
+it, Decision 7.** Two rulings from one exchange. They interlock, and both say the
+same thing from different ends: **geography may not pre-empt a want.**
+
+### How this came up, because the failure is instructive
+
+Rung 4's prompt had been written with a `patience` knob whose only real job was
+to delay the farmers' departure until both were walking at once, so that the
+loser would be outbid *en route* and the Moment would look the way the build
+plan describes it.
+
+**That is building the observation instead of the cause** — this project's own
+banned shape — and it had already been written into a session prompt as *"the
+one thing this session must tune,"* which would have propagated it into the
+build. The author caught it:
+
+> *"ur trying to fit in a system to fit that specific moment rather than asking
+> me if the moments as they'll unfold is sufficient."*
+
+**The lesson is more general than the knob.** A Moment in the build plan is a
+prediction about what the causes will produce, not a specification to be
+satisfied. When the natural behaviour and the written Moment disagree, the
+question to ask the author is *"is what actually happens sufficient?"* — never
+*"what can I add to make the written one occur?"* A rung that tunes its way to a
+predicted tableau has proved nothing about its seams.
+
+### Ruling 1 — Freeness is knowable only where you are standing
+
+Rung 3 built `WorkTheField`'s gate to ask whether a plot is **free** from
+anywhere in the world. With everybody standing in the same field that was
+invisible; the moment distance exists it is **omniscience**, and it is what
+forced the knob: a man at the Inn knew the plot was taken, so work never reached
+his ballot, so he never set off, so nothing could ever interrupt him.
+
+> **What he knows about a station depends on whether he is standing at its
+> place.** Not there → he knows it EXISTS, not whether it is taken; it stays a
+> candidate and the urge to work stands. There → he can see it; taken by
+> somebody else, it drops out and work leaves his ballot **at the moment he
+> arrives.**
+
+One condition on the candidate query, no new knob, and it mirrors a rule the
+codebase already has — **presence is required to claim, and now presence is
+required to know.**
+
+**`Workstation.is_free_for` does not change.** The station goes on reporting the
+plain truth about itself; what a man KNOWS of that truth becomes the Action's
+business. That is the right seam: the world is not obliged to lie, and knowledge
+is not a property of a plot. *(The comment on that function, written earlier the
+same day, argues the opposite case and must be corrected — its code is fine.)*
+
+**This is the standing default restored, not a new idea.** Decision 1 already
+described the notice board as moving discovery *"from DO — he wandered into the
+square and happened to find a seller — up into GATE, he knows before he leaves,
+so the walk has a cause,"* and **deferred it.** Rung 3 quietly shipped that index
+for work before the town had earned it.
+
+**The wasted journey is the point.** A man who walks to the field and finds the
+job gone is the collision that later *earns* the notice board, which is this
+project's whole method for deciding when a seam has paid for itself. Pre-solving
+it with omniscience would delete the evidence.
+
+It also makes rung 3's second counter truer: *"every candidate was taken"* starts
+counting **men who turned up and found no room**, rather than men who
+theoretically could not have worked.
+
+### Ruling 2 — Travel cost competes the same alternative at different locations, and nothing else
+
+Decision 14 had travel cost subtracted from an action's score, where it competed
+against *other actions* — work-at-a-distance against standing-here. **That is
+what let it mute a commute**, and no weight is small enough to make it right in
+principle.
+
+> **Pull decides WHAT you do. Travel cost decides WHERE you go to do it.**
+>
+> Travel cost belongs to choosing among an action's **candidates** — this plot
+> or that one, this tavern or that one. It never enters the comparison between
+> one action and another.
+
+**Muting a commute stops being a tuning invariant to check and becomes
+structurally impossible**, because the comparison that could mute it never
+happens. A want can no longer be vetoed by geography.
+
+**And `patience` was the wrong name for the wrong thing.** It implied a
+psychological trait — tolerance for walking — when the quantity is only ever a
+conversion from hours into appeal. The author's phrasing: *"it's not patience per
+se, which sounds like a different mechanism; it's more just a utility multiple on
+travelling."*
+
+**Every use of travel cost anywhere in the plan already fits this narrower
+rule**, which is the strongest evidence it is the right one:
+
+| Where | The comparison | Same alternative? |
+|---|---|---|
+| Rung 4's probe — *a nearer station outscores an identical farther one* | plot vs plot | ✓ |
+| 6d's anti-herd damper — *a far crowd loses to a near one* | `Socialise` candidate vs candidate | ✓ |
+| Decision 6's trade herd, damped the same way | `Trade` candidate vs candidate | ✓ |
+| **Rung 4's `patience`, as written** | **work-there vs stay-here** | **✗ — the only offender, and it was mine** |
+
+### What this leaves the coefficient doing, and why it is not built yet
+
+If candidates are identical apart from where they stand, ordering by
+`appeal − k × hours` is just ordering by hours, **at any positive `k`.** The
+coefficient only decides anything when candidates differ in **quality** — a rich
+plot far away against a poor one nearby.
+
+**Nothing has quality until rung 9a** brings `Recipe` and yields. So the
+coefficient is currently **unobservable**, and exporting a number nothing can
+read is substrate before need. **Do not add it.** Note the seam where it will go
+and let 9a earn it.
+
+### What rung 4 therefore has to change: nothing about scoring
+
+This is the useful consequence, and it is worth stating plainly because two
+prompt drafts said otherwise:
+
+- **`WorkTheField.get_utility_score` keeps `pull + daylight_pull * sun`.** No
+  subtraction, no coefficient. **`73 / 30` stands untouched.**
+- **`Town.find_workstations` already sorts by travel cost**, stably, node path as
+  tiebreak — shipped at rung 3. Travel cost is already doing its only job.
+- **There is no tuning problem, no inequality, and no retune.** The entire
+  difficulty of the last two drafts was manufactured by putting travel cost in
+  the wrong comparison.
+
+### Honest note on the hours denomination
+
+Sorting by hours and sorting by distance are the **same ordering** for one
+person, since travel speed is positive — so at rung 4 the unit change from
+Decision 14 buys **no observable behaviour**. It is kept anyway, cheaply, because
+it is the honest unit, because `get_travel_speed()` is genuinely needed the
+moment anybody walks, and because hours are what a road or a horse actually
+changes. **It earns itself at 9a** (quality against distance) and the first time
+two people travel by different means. Recorded so nobody looks for an effect at
+rung 4 and concludes the change did not work.
+
+### Casualty, recorded so it is not re-derived
+
+*"A man walks further for a bed than for a beer"* — Decision 7's per-action
+distance sensitivity — **retires as a travel-cost expression.** Under this
+ruling, wanting the bed more simply means the bed's pull is higher. There is no
+cross-action distance term left for it to live in, and it does not need one.
+
+### Plan edits this implies
+
+Not yet applied.
+
+| Section | Change |
+|---|---|
+| Decision 14 | Amended: keep multiply-vs-subtract, hours, the two seams, scale-from-fiction, and the cut of `distance_that_halves_appeal`. **Drop** the subtraction from cross-action scores and the `patience` weight. |
+| Rung 3 (`workstation.gd`) | The comment on `is_free_for` justifying remote freeness is **backwards** — correct it. The code stands. |
+| Rung 4 | No scoring change. Freeness becomes locally knowable in `WorkTheField`'s candidate query. `walk_speed` + `get_travel_speed()` remain. |
+| Rung 4 (probes) | *"Nearer station outscores an identical farther one"* is now a **candidate-ordering** assertion, not a score assertion. Add: a man walks to a plot he cannot yet see the state of, and work leaves his ballot **on arrival**. |
+| Rung 6d / 7 | Dampers unaffected — both were always candidate-vs-candidate. |
+| Rung 9a | The travel-cost coefficient earns itself here, when candidates first differ in quality. |
+| *Method* | Add the general lesson: a Moment is a prediction about causes, not a specification. Ask the author whether what actually happens is sufficient. |
