@@ -1812,3 +1812,193 @@ Not yet applied.
 | Rung 3 (Moment) | Mark the open question closed: the day-long Moment reads, watched at a shortened day. |
 | Decision 2 → *Deliberately left open* | The single item there is closed by this section. |
 | Rungs 6a / 6b / 6d | Note that their Moments are once-a-day crossings and are meant to be watched at a shortened day, the same instrument rung 3 proved. |
+
+---
+
+## Decision 14 — Travel cost is subtracted, and denominated in hours
+
+**Settled 2026-08-10. Author's call. Amends Decision 7, which specified a
+multiplier.** Found while writing rung 4's session prompt, before any of rung 4
+was built — the arithmetic was worked out in advance rather than discovered by
+tuning, which is why this is a decision and not a bug report.
+
+### The question
+
+Decision 7 settled that travel cost **scores and never gates** — a far place is
+*outbid, never barred* — and specified the mechanism: a multiplier, `1.0` at his
+feet, falling off, never reaching zero, with the knob
+`distance_that_halves_appeal` on `Person`.
+
+**Worked against the shipped town, that mechanism mutes the commute entirely.**
+
+### What is wrong with multiplying, and it is not "the numbers are small"
+
+Utility here is an **absolute, band-limited scale with no meaningful zero.**
+`StayUp` runs 47.3 → 87.3 across the day and is the neutral baseline of being
+awake with nothing pressing; `Sleep` is adenosine, 0 → 100; `WorkTheField` runs
+43 → 103. What decides anything is not a score but the **margin** between two of
+them — work beats idling by 2.3 at 04:41 and by 15.7 at midday.
+
+A multiplier scales the whole number, and the whole number is mostly baseline.
+So a 10% travel penalty removes about 7 points and wipes out a 2.3-point margin
+several times over. **It does not tax the journey, it taxes the man's entire
+reason for being awake.**
+
+Measured, at Decision 7's own suggested `distance_that_halves_appeal = 12` and
+the shipped 19.24 units between the Inn and the Fields:
+
+```
+falloff ×0.384      work from the Inn at midday = 39.6      StayUp = 87.3
+```
+
+**A man at the Inn would never go to work at any hour of any day**, and it would
+present as a broken walking system rather than as a curve. Holding work's peak
+under the adenosine ceiling *and* getting him to set off turned out to be
+mutually exclusive; satisfying both forces the halving distance past 130 units,
+seven times the width of the town — a falloff curve that does not curve.
+
+> **Muting a commute is barring it, wearing different clothes.** The author's
+> ruling: *"it should never outright mute a commute to work, that's nonsense."*
+> That is Decision 7's own *outbid, never barred* principle, applied to the
+> mechanism Decision 7 chose.
+
+### The rule: which costs multiply and which subtract
+
+Both shapes are legitimate and they describe different things.
+
+| | Shape | Because | Examples |
+|---|---|---|---|
+| **How good is this instance** | **multiply** | it genuinely scales the reward | a rich plot against a poor one; a bed against a ditch; a half-yield field |
+| **What you spend to get it** | **subtract** | you pay it identically whatever the reward turns out to be | hours walking, effort, a toll, a fee |
+
+**Travel is unambiguously the second.** You spend the same two hours whether the
+plot is rich or poor, so the cost cannot be a function of the prize.
+
+So: `score = pull + daylight_pull * sun − patience * hours_to_reach`, where
+`patience` is **the action's own weight** — which is how *"a man walks further
+for a bed than for a beer"* is finally expressed, and it lives on the action
+because it is a fact about the errand, not about the man.
+
+### Denominated in HOURS, and this is the load-bearing half
+
+`get_travel_cost_to` returned raw distance — `19.24` — a number with no meaning
+attached, so **any** weight on it is arbitrary and every retune is guesswork.
+Denominated in hours it becomes a real quantity: *this trip costs me ten
+minutes.* Four things follow, and the first is the reason:
+
+1. **The weight gets an honest unit** — "what an hour of walking is worth in
+   appeal" — so it can be reasoned about rather than fiddled.
+2. **It is the last un-denominated quantity in `game/`.** `CLAUDE.md` already
+   rules that every rate is per world hour; distance was the one holdout.
+3. **It is what roads and rivers actually change.** A road does not shorten the
+   distance, it shortens the *trip*. Decision 7 already named this function body
+   as where they install.
+4. **It makes the falloff knob unnecessary.** A faster traveller already finds
+   everywhere cheaper, so travel speed does the *"how far will he walk"* job
+   that `distance_that_halves_appeal` was invented for. **That export is
+   dropped** — one knob, not two doing the same work.
+
+### Two seams, and the division of labour between them
+
+**The author's call: travel speed is its own call site, because walking is only
+one way to travel.**
+
+```gdscript
+# person.gd — the MEANS. On foot today; a horse, a cart, a boat, a bad leg,
+# or a sack of grain on his back all install in this one body.
+func get_travel_speed() -> float:
+    return walk_speed
+
+# person.gd — the JOURNEY. Straight-line today; roads, a river crossing, a gate
+# shut at night, and one day a world spanning several towns install here.
+func get_travel_cost_to(place: Place) -> float      # now returns HOURS
+```
+
+Keeping them apart is the point: **a horse changes the first, a road changes the
+second**, and neither one has to know about the other. Same shape as
+`Brain.get_adenosine_recovery()` — a seam with one modifier behind it today.
+
+### Scale: the visual town is a diorama, and travel speed is what maps it
+
+**Author's ruling: a decent-sized town is a five to fifteen minute walk to the
+fields.** The Inn and the Fields sit 19.24 units apart, and a person capsule is
+1.7 units tall — so if units were metres, that crossing is a fourteen-second
+stroll and every journey in the game is instant.
+
+> **Travel speed is therefore calibrated from the FICTION, not from a realistic
+> metres-per-second.** Set it so crossing this town takes the five to fifteen
+> minutes the fiction claims, and do not let anybody "correct" it to human
+> walking pace — that would make every journey free and delete the cost this
+> whole decision is about.
+
+At a ten-minute crossing, `walk_speed ≈ 115 units per world hour`. The geometry
+still matters exactly as before: double the distance and you double the time,
+which is what keeps standing check #3 mechanical.
+
+### The invariant, and its mechanical form
+
+> **No place in the town may be made unreachable by its own travel cost.**
+
+Checkable, and it should be a probe claim rather than a hope: *work at its best
+hour, from the farthest place in town, still beats `StayUp`.* At a ten-minute
+crossing that holds for any `patience` below about 94, which is enormous
+headroom — the point being that hours-denominated subtraction makes muting hard
+to do by accident, where multiplication made it the default.
+
+### What this costs, and what it buys back
+
+**Retired from Decision 7:** the multiplier, the *"never reaching zero"*
+property, `distance_that_halves_appeal`, and the probe assertion that a far
+station *"still scores above zero"* — under subtraction a distant option goes
+negative. **The principle is untouched**: it is still on the ballot, still
+scored, still merely outbid. Only the arithmetic changed.
+
+**Bought back, and this was the surprise:** because a man standing on the plot
+pays nothing, **`WorkTheField`'s tuned `73 / 30` does not move at all** and
+bedtime is untouched. The whole conflict dissolves rather than being tuned
+around.
+
+### The consequence rung 4 must tune for — the interruption is an inequality
+
+Rung 4's Moment is a man *outbid while still walking* — that is the rung's proof
+that interrupting costs nothing. It only happens if the loser has set off before
+the winner claims:
+
+> **waking gap < commute time**
+
+The shipped numbers give a waking gap of **80 minutes** (Hobb 04:41, Zoogs
+06:01) against a **ten-minute** commute, so whoever wakes first always wins and
+**nobody is ever interrupted.** Three ways out, and rung 4 must pick one
+deliberately rather than tune into it:
+
+1. **Set `patience` high enough that work does not pay before sunrise**, so both
+   men are awake before either sets off and the race is decided on arrival. Good
+   fiction — you do not cross town in the dark for work — and it needs a speed
+   difference to decide, which is where `strength` feeding `get_travel_speed()`
+   earns itself as Decision 12's predicted second job.
+2. Shrink the waking gap (`strength` ≈ 1.02), which weakens Decision 12's
+   deliberately visible 04:41.
+3. Lengthen the commute past 80 minutes, which contradicts the town scale ruled
+   above.
+
+**Recommended: 1.** At `patience ≈ 36` both set off around 06:07.
+
+**And the interruption is brief by construction** — a 15% speed advantage over a
+ten-minute walk is about 1.3 minutes. **Rung 4's Moment therefore wants the day
+SLOWED DOWN, not sped up**, which inverts Decision 13's instrument: rung 3
+needed a short day to see the beat repeat, rung 4 needs a long one to see the
+walk happen at all.
+
+### Plan edits this implies
+
+Not yet applied.
+
+| Section | Change |
+|---|---|
+| Rung 2 / `get_travel_cost_to` | Returns **hours**, not distance units. Add `Person.get_travel_speed()` beside it and state the means/journey split. |
+| Rung 4 | Travel cost **subtracts**; the falloff curve and `distance_that_halves_appeal` are **cut**. Add `walk_speed`, calibrated from the fiction. |
+| Rung 4 (probes) | Replace *"the farther one still scores above zero"* with the invariant: the farthest place in town is still reachable at the best hour. Keep *nearer outscores farther*. |
+| Rung 4 (Moment) | State the `waking gap < commute` inequality, and that this Moment wants a **long** day where rung 3's wanted a short one. |
+| Decision 7 | Amended, not overturned — the split it settled (identity check vs travel cost) and *outbid, never barred* both stand; only the arithmetic and the knob change. |
+| Decision 12 | `strength` feeding `get_travel_speed()` is its predicted second job, and is what decides an arrival race. |
+| Rungs 6d / 7 | The anti-herd damper still has its input; it is now a subtraction in hours. |
