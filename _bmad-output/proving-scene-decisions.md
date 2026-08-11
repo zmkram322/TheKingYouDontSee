@@ -1,8 +1,14 @@
 # Proving Scene — Decisions
 
-Companion to `proving-scene-build-plan.md`. **The plan is not yet revised.** This
-file records what was settled, why, and what it changes — so a revision pass (or
-a delegate who wasn't in the room) can apply it without re-deriving it.
+Companion to `proving-scene-build-plan.md`. This file records what was settled,
+why, and what it changes — so a revision pass (or a delegate who wasn't in the
+room) can apply it without re-deriving it.
+
+**The plan HAS now been revised against every section here** (2026-08-09 for the
+first nine, 2026-08-11 for the rest). Each section's *"Plan edits this implies"*
+table says whether it was applied. **Where two sections disagree, the HIGHEST
+NUMBER WINS** — 15 over 14 over 7 — and superseded sections carry a warning
+banner at the top rather than being rewritten, per the append-only rule below.
 
 One section per settled question. Append, never rewrite.
 
@@ -180,7 +186,7 @@ naming it.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-09.** Verified row by row against the build plan on 2026-08-11; every row landed.
 
 | Section | Change |
 |---|---|
@@ -436,7 +442,7 @@ is a query (loop the people and ask), not a posted list.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-09.** Verified row by row against the build plan on 2026-08-11; every row landed.
 
 | Section | Change |
 |---|---|
@@ -563,7 +569,7 @@ item (beer) moves from 6 to 7.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-09.** Verified row by row against the build plan on 2026-08-11; every row landed.
 
 | Section | Change |
 |---|---|
@@ -707,7 +713,7 @@ every action added.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-09.** Verified row by row against the build plan on 2026-08-11; every row landed.
 
 | Section | Change |
 |---|---|
@@ -1121,7 +1127,7 @@ multiply — a man walks further for a bed than for a beer.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-11** (most rows had already landed 2026-08-09; the rest were carried across on 2026-08-11 after a row-by-row audit found them missing). Rows that are deliberately NOT carried across, because a later decision overturned them, are struck through or banner-marked in place.
 
 | Section | Change |
 |---|---|
@@ -1180,7 +1186,7 @@ Combined with Decision 3 (rung 6 → 6a–6d), the ladder goes from **9 gates to
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-09.** Verified row by row against the build plan on 2026-08-11; every row landed.
 
 | Section | Change |
 |---|---|
@@ -1364,7 +1370,7 @@ denominated in hours and the clock moves with it.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-09.** Verified row by row against the build plan on 2026-08-11; every row landed.
 
 | Section | Change |
 |---|---|
@@ -1501,7 +1507,7 @@ turn out vacuous when actually checked — keep checking.**
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-11** (most rows had already landed 2026-08-09; the rest were carried across on 2026-08-11 after a row-by-row audit found them missing). Rows that are deliberately NOT carried across, because a later decision overturned them, are struck through or banner-marked in place.
 
 | Section | Change |
 |---|---|
@@ -1640,7 +1646,7 @@ settled      turns in 22:01, sleeps 8.00 h, up 06:01
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-11** (most rows had already landed 2026-08-09; the rest were carried across on 2026-08-11 after a row-by-row audit found them missing). Rows that are deliberately NOT carried across, because a later decision overturned them, are struck through or banner-marked in place.
 
 | Section | Change |
 |---|---|
@@ -1761,7 +1767,7 @@ exists to prevent.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-11** (most rows had already landed 2026-08-09; the rest were carried across on 2026-08-11 after a row-by-row audit found them missing). Rows that are deliberately NOT carried across, because a later decision overturned them, are struck through or banner-marked in place.
 
 | Section | Change |
 |---|---|
@@ -1836,7 +1842,7 @@ none of which the Moment turned out to need.
 
 ### Plan edits this implies
 
-Not yet applied.
+**APPLIED 2026-08-11** (most rows had already landed 2026-08-09; the rest were carried across on 2026-08-11 after a row-by-row audit found them missing). Rows that are deliberately NOT carried across, because a later decision overturned them, are struck through or banner-marked in place.
 
 | Section | Change |
 |---|---|
@@ -2039,8 +2045,6 @@ walk happen at all.
 
 ### Plan edits this implies
 
-Not yet applied.
-
 **APPLIED 2026-08-11**, together with Decision 15's table below — with the rows
 that Decision 15 overturned dropped rather than applied. See that table.
 
@@ -2200,8 +2204,6 @@ ruling, wanting the bed more simply means the bed's pull is higher. There is no
 cross-action distance term left for it to live in, and it does not need one.
 
 ### Plan edits this implies
-
-Not yet applied.
 
 **APPLIED 2026-08-11**, when rung 4 shipped. Every row below is now reflected in
 `proving-scene-build-plan.md` and in the amendment headers on Decisions 7 and 14.

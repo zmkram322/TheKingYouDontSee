@@ -1,13 +1,18 @@
 # Proving Scene — Build Plan
 
 **Status:** written 2026-08-08. **Revised 2026-08-09** against nine settled
-decisions — see `proving-scene-decisions.md`. Not started.
+decisions, and again **2026-08-11** against all fifteen — see
+`proving-scene-decisions.md`. **Rungs 0-4 are SHIPPED** on `poc-v2` (rung 4,
+walking, on 2026-08-11 as `35f717f`); rung 5 is next and nothing below it is
+built.
 **Target:** the east-side town, built rung by rung, ending on a merchant with a
 stack of unsold scythes.
 **Orchestrated by:** Fable, one rung at a time.  **Fable plans then delegate to cheaper models.**
 
 > **Read `proving-scene-decisions.md` first.** It is the companion to this file
-> and it wins where the two disagree. Nine questions were settled on 2026-08-09
+> and it wins where the two disagree — and where two decisions disagree with each
+> other, **the HIGHEST NUMBER WINS** (15 over 14 over 7). Nine questions were
+> settled on 2026-08-09, and six more since
 > after this plan was vetted; each one records what was proposed, what was
 > settled, and *why*, so the reasoning survives without being re-derived. This
 > file carries the outcomes. That file carries the arguments — and the arguments
@@ -322,16 +327,45 @@ driver, which is the exact shape FR38 and FR32 want a player to walk into.
   **Amended 2026-08-09 (Decision 7):** that ruling settled the **identity
   check** — *am I at the tavern?* — and only that. **Travel cost** — *what does
   getting there cost me?* — is a separate, permitted, continuous quantity that
-  **only ever multiplies a score and never gates anything.** The two were fused
+  **never gates anything.** *(Amended again 2026-08-10, Decisions 14 and 15:
+  this bullet used to end "only ever multiplies a score", and that arithmetic is
+  dead. 14 replaced the multiplier with a subtraction in HOURS; 15 then confined
+  travel cost to ordering **one action's own candidates** — this plot or that
+  one — so it never enters the comparison between two different actions at all.
+  **Pull decides WHAT you do; travel cost decides WHERE you go to do it.** That
+  is what makes muting a commute structurally impossible rather than a tuning
+  invariant. Relevant to 6d and 9a, neither built.)* The two were fused
   into one word and had to be pulled apart: the plan's own standing check #3
   ("move a place in the editor, does behaviour change?") is unsatisfiable unless
   something reads a transform.
 - **Early bird catches the worm is intentional** (decided 2026-08-09, Decision
   2). Claims are day-long and claiming requires presence, so who works a plot is
-  decided by who is standing in the field at dawn — which traces back through
-  adenosine to when he went to sleep, and compounds. **That loop is a feature.**
+  decided by who is standing in the field at dawn. **That loop is a feature.**
   It is not to be damped with a fairness rule, a rotation, or a priority scheme.
   If it ever needs softening, that is a curve to tune, never a rule to add.
+
+  **Corrected 2026-08-10 (Decisions 11 and 12) — the mechanism named here was
+  wrong.** This bullet used to say the dawn winner "traces back through adenosine
+  to when he went to sleep, and compounds." Decision 11 **deleted** that: the
+  cycle is now anchored to the sun, so it does NOT compound — every man is pulled
+  back onto the same hours within about three days, and two men from the same
+  scene would otherwise wake on the same tick forever, handing the plot to
+  whoever happens to sit first under `Population`.
+
+  **What actually decides it is `strength`** — a stat on the body, 1.0 for an
+  ordinary man, read inside `Brain.get_adenosine_recovery()`. A stronger man
+  clears the same sleep debt in fewer hours, so he is up first, every day, for a
+  reason you can point at. Measured: 1.15 rises at **04:41** against **06:01**.
+  It hangs on RECOVERY and deliberately never on how fast a man tires — that
+  direction inverts the answer (a slow-tirer goes to bed later AND gets up
+  later) and runs at a cliff. Keep strength in roughly **0.9–1.6**.
+
+  **This is the plan's only written basis for making two people different**, so
+  it matters well past rung 3: rung 4 feeds `strength` into `get_travel_speed()`
+  (a stronger body walks faster, which is what settles an arrival race), and
+  **rung 9d's thirteen people are thirteen bodies with different stats and no
+  new code.** Build 9d with identical farmers and you get a coin flip decided by
+  scene order, which is the exact failure Decision 12 exists to prevent.
 
 ---
 
@@ -791,16 +825,33 @@ install in that one function body with no call site moving.
 `Trade` ("people at my place") need it, and it is four lines. It goes in here,
 where the index and the fact can first disagree.
 
-**`Population._ready` injects `town` into each Person.** Thirteen hand-wired
-`NodePath`s is thirteen chances to hit the trap that already shipped a dead
-day/night cycle in this project. One line instead, mirroring how `Brain` finds
-its `Person`. `Person._ready` warns if `town` is still null.
+**Each Person PULLS `town` off `Population` in his own `_ready`** — one wire in
+the whole scene feeds everybody, instead of thirteen hand-wired `NodePath`s and
+thirteen chances at the trap that already shipped a dead day/night cycle here.
+Mirrors how `Brain` finds its `Person`. `Person._ready` warns if `town` is null.
+
+> **Corrected 2026-08-10 (Decision 10). This paragraph used to say
+> "`Population._ready` INJECTS `town` into each Person", and that cannot work** —
+> Godot readies **children before parents**, so a Population handing the town
+> down in its own `_ready` arrives *after* every person has already looked and
+> found nothing, and the missing-town warning would fire on every person of every
+> correctly-wired scene. Pull also wires a man born mid-run, with nothing
+> watching for new arrivals, which is what standing check #2 needs at 9d.
+> **Generalises: anything a Person needs one shared reference to hangs off
+> `Population` and is PULLED, never pushed** — so a market, a calendar or a
+> weather system installs the same way and not by copying the rejected shape.
 
 **Probe:**
 1. A person placed at the fields reports the fields; moved to the Inn, reports
    the Inn; reports `null` before anything has set it, and warns.
-2. **`find_people_at(place)` and `get_current_place()` never disagree** — this
-   is the one with teeth.
+2. ~~**`find_people_at(place)` and `get_current_place()` never disagree** — this
+   is the one with teeth.~~ **VACUOUS — do not write this (Decision 10).**
+   `find_people_at` is a *query*: it loops the people and asks each one where he
+   is, so there is exactly ONE copy of the fact and one copy cannot contradict
+   itself. It is **banked** in `town.gd` against the day that function becomes an
+   index and a second copy exists to disagree. What replaced it, and has teeth:
+   the exact set at a place; a man who moves with nothing invalidated by hand; a
+   man who dies; and nobody at `null`.
 3. Travel cost falls as he moves toward a place and rises as he moves away.
 
 *(The plan previously asserted "standing between them reports either exactly one
@@ -844,19 +895,36 @@ var claimed_by: Person = null
 var claimed_on_day := -1
 
 func is_free_for(person: Person) -> bool:
-	# A holder who has been freed is not a holder. queue_free() does not null
-	# your reference, so without this the town reserves a plot for a dead man
-	# and standing check #1 crashes instead of returning a verdict.
+	# A holder who has been freed is not a holder. KEPT, BUT UNREACHABLE —
+	# measured 2026-08-10 by deleting it: a TRULY freed reference already
+	# compares `== null` as true in this engine, so the branch below produces
+	# the right answer without it. (CLAUDE.md's queue_free() trap is the
+	# end-of-frame case, and a claim is only ever read on a later tick.) Kept
+	# because is_instance_valid is the documented contract and one line is cheap
+	# — but do NOT write a probe claim believing this guard has teeth. It does
+	# not, and that was found the expensive way.
 	if not is_instance_valid(claimed_by):
 		claimed_by = null
 	if claimed_by == null:
 		return true
-	if claimed_on_day < clock.day():
+	# person.clock, NOT a `clock` field on the station. Every Person already
+	# carries the one Clock (pulled off Population at birth, Decision 11), so
+	# NOT ONE STATION NEEDS A WIRE OF ITS OWN — which matters most at 6c, where
+	# twenty beds are twenty more chances at the hand-wired-NodePath trap that
+	# already shipped a dead day/night cycle in this project.
+	if claimed_on_day < person.clock.day():
 		return true
 	return claimed_by == person
 
 func claim(person: Person) -> bool     # only from here — no reserving from your bed
-func release(person: Person) -> void   # giving it up early is an Action he SCORES
+
+# NO release(), AND THAT IS DELIBERATE — do not add one here or at 6c. Under
+# renew-on-use, abandoning a plot IS simply not renewing it: walk away and the
+# claim lapses at the next day boundary on its own. A release() today would be a
+# call site with no caller, and a second way to give something up. What would
+# earn it is an Action that SCORES giving a station up early, so somebody else
+# can have it before tonight — nothing scores that yet. (Rung 3 shipped without
+# it; rung 4 re-confirmed it.)
 
 # Town — the one function that finds candidates.
 # NO radius bound and NO hard cap (Decision 7 — both cut). A radius bound is a
@@ -1160,6 +1228,8 @@ explicitly permits. Only adenosine is pure upkeep.)*
 the sleep cycle has a competitor that isn't a flat number — and the rung where
 the curves actually get tuned.
 
+**Watch this at a SHORTENED day (Decision 13.)** This Moment happens ONCE A DAY, and rung 3 proved the shortened day is the instrument for exactly that shape — drag `day_length_seconds` down and the beat repeats often enough to see it hold. At the shipped 60 s a once-a-day crossing is over before you have focused on it, and "I did not see it happen" reads as a broken seam. *(Rung 4 is the one rung that wants the OPPOSITE — a LONG day — because a ten-minute commute at 60 s takes 0.4 real seconds. Match the instrument to whether you are watching one slow event or a repeating beat.)*
+
 **Do not build:** `Drink`, beer, buying anything, or the tavern's storage being
 anybody else's. That is rung 7.
 
@@ -1233,6 +1303,8 @@ one legible crossing on the instrument you already built. This is probably the
 single best gate in the plan, and it was previously buried under six other
 debuts.
 
+**Watch this at a SHORTENED day (Decision 13.)** This Moment happens ONCE A DAY, and rung 3 proved the shortened day is the instrument for exactly that shape — drag `day_length_seconds` down and the beat repeats often enough to see it hold. At the shipped 60 s a once-a-day crossing is over before you have focused on it, and "I did not see it happen" reads as a broken seam. *(Rung 4 is the one rung that wants the OPPOSITE — a LONG day — because a ten-minute commute at 60 s takes 0.4 real seconds. Match the instrument to whether you are watching one slow event or a repeating beat.)*
+
 **Do not build:** wages, contracts as a type, renegotiation, a quitting action,
 reputation, or a social graph. One obligation, one number, one expiry.
 
@@ -1291,6 +1363,8 @@ transition in it is a decision that was outbid rather than a script.
 This is now a **composition** moment rather than a debut moment — everything in
 it already shipped and was gated separately, which is what a capstone should be.
 *(The camera was pulled back at rung 4 precisely so this is watchable.)*
+
+**Watch this at a SHORTENED day (Decision 13.)** This Moment happens ONCE A DAY, and rung 3 proved the shortened day is the instrument for exactly that shape — drag `day_length_seconds` down and the beat repeats often enough to see it hold. At the shipped 60 s a once-a-day crossing is over before you have focused on it, and "I did not see it happen" reads as a broken seam. *(Rung 4 is the one rung that wants the OPPOSITE — a LONG day — because a ten-minute commute at 60 s takes 0.4 real seconds. Match the instrument to whether you are watching one slow event or a repeating beat.)*
 
 ---
 
