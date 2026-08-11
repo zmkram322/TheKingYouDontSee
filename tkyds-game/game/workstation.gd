@@ -59,10 +59,22 @@ func get_place() -> Place:
 	return get_parent() as Place
 
 
-# Free, or already his. Asked in GATE, every tick, by everybody — and it NEVER
-# asks about presence: a man deciding from across town whether there is work for
-# him must be able to see a free plot from there, or rung 4's "walk there and
-# work" could never score. Standing here is claim()'s question alone.
+# Free, or already his. The plain truth about this station, and it NEVER asks
+# about presence — not because distance is irrelevant, but because whose
+# question that is, is settled elsewhere.
+#
+# THE COMMENT THAT USED TO BE HERE ARGUED THE OPPOSITE AND WAS WRONG. It said
+# a man across town must be able to see a free plot from there or he could never
+# score walking to it. He must not: a plot he can see the state of from his bed
+# is omniscience, and it stops him ever setting off, because the moment somebody
+# else takes it work leaves his ballot while he is still at the Inn. The code was
+# always right and only the reasoning was backwards, which is why this is a
+# comment fix and not a change. (Decision 15.)
+#
+# The knowledge rule lives in WorkTheField._is_a_candidate_for, where it belongs:
+# a station reports what is true OF ITSELF, and what a man knows of that truth is
+# the asking action's business. The world is not obliged to lie on his behalf.
+# Standing here is still claim()'s question alone.
 func is_free_for(person: Person) -> bool:
 	# A holder who has been freed is not a holder.
 	#

@@ -140,6 +140,10 @@ func _process(_delta: float) -> bool:
 	_check_a_plot_cannot_be_claimed_from_the_wrong_place()
 	_check_freeing_the_holder_frees_the_plot_within_two_ticks()
 	_check_no_stations_and_every_station_taken_are_different_counters()
+	_check_a_man_walks_the_gap_shut()
+	_check_a_plot_is_invisible_from_afar_until_he_arrives()
+	_check_he_does_not_bid_for_a_plot_he_can_see_is_taken()
+	_check_the_nearer_station_wins_and_moving_a_place_changes_it()
 	_check_every_scene_is_wired()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
@@ -390,8 +394,14 @@ func _check_a_man_carries_his_place() -> void:
 	# Authored in game.tscn — and this doubles as the one check that would catch
 	# `current_place` losing its node_paths header, because a node reference the
 	# loader refused to resolve arrives here as exactly this null.
-	_require(zoogs.get_current_place() == fields, claim,
-		"Zoogs is authored at the fields and reports %s" % _describe_place(zoogs.get_current_place()))
+	#
+	# THE INN AS OF RUNG 4, and deliberately: both farmers were re-authored there
+	# so that the walk to work is something the shipped scene does on its own
+	# rather than something you stage by dragging a capsule. This expectation
+	# reads the authored population, so it moves whenever that does — it moved at
+	# rung 3 too, for Hobb.
+	_require(zoogs.get_current_place() == inn, claim,
+		"Zoogs is authored at the Inn and reports %s" % _describe_place(zoogs.get_current_place()))
 
 	var newcomer := _add_a_person(population, "Newcomer")
 	if newcomer == null:
@@ -450,16 +460,18 @@ func _check_who_is_where_is_asked_not_remembered() -> void:
 	bram.current_place = inn
 	# Wisp is at no place at all — on the road, as far as anyone can tell.
 
-	# The expected sets read the AUTHORED population, so any farmer authored at
-	# the Fields joins them — Hobb joined at rung 3.
-	_require_exactly(town.find_people_at(fields), [zoogs, hobb, mara], claim, "at the fields")
-	_require_exactly(town.find_people_at(inn), [bram], claim, "at the Inn")
+	# The expected sets read the AUTHORED population, so they move whenever the
+	# authored placement does. Hobb joined the Fields at rung 3; at rung 4 BOTH
+	# farmers were re-authored to the Inn, so the fields hold nobody but the
+	# spare the probe puts there.
+	_require_exactly(town.find_people_at(fields), [mara], claim, "at the fields")
+	_require_exactly(town.find_people_at(inn), [zoogs, hobb, bram], claim, "at the Inn")
 
 	# Nothing is invalidated, nothing is notified, nothing is re-posted. The next
 	# call simply asks again, which is the whole argument for a query.
 	mara.current_place = inn
-	_require_exactly(town.find_people_at(fields), [zoogs, hobb], claim, "at the fields once Mara left")
-	_require_exactly(town.find_people_at(inn), [bram, mara], claim, "at the Inn once Mara arrived")
+	_require_exactly(town.find_people_at(fields), [], claim, "at the fields once Mara left")
+	_require_exactly(town.find_people_at(inn), [zoogs, hobb, bram, mara], claim, "at the Inn once Mara arrived")
 
 	# STRUCTURALLY SATISFIED TODAY — say so rather than let it read as covered.
 	# find_people_at asks the living, and free() takes Bram out of the child list
@@ -472,7 +484,7 @@ func _check_who_is_where_is_asked_not_remembered() -> void:
 	# until the end of the frame, so within one pumped tick he would still be a
 	# perfectly valid child and this would be testing nothing at all.
 	bram.free()
-	_require_exactly(town.find_people_at(inn), [mara], claim, "at the Inn once Bram died")
+	_require_exactly(town.find_people_at(inn), [zoogs, hobb, mara], claim, "at the Inn once Bram died")
 
 	# Nobody is at nowhere. If this ever returns Wisp, then every man walking a
 	# road counts as standing with every other man walking a road, and rung 7
@@ -690,10 +702,23 @@ func _check_two_farmers_one_plot() -> void:
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var fields := world.get_node_or_null("Town/Fields") as Place
 	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
-	if population == null or clock == null or zoogs == null or hobb == null or plot == null or work_action == null:
-		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Plot and Zoogs' WorkTheField")
+	if population == null or clock == null or zoogs == null or hobb == null or plot == null or fields == null or work_action == null:
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Plot, the Fields and Zoogs' WorkTheField")
 		return
+
+	# BOTH MEN PINNED ON THE FIELDS, and this is the whole point of the pin. This
+	# claim is about a SLEEP-ORDER race — Hobb clears the same debt faster, so he
+	# is up first and takes the plot while Zoogs is still under. Left to the
+	# authored scene at rung 4 both men start at the Inn, so Hobb would wake,
+	# WALK, and claim some eight world minutes later — still comfortably inside
+	# the pump window, so this claim would go on passing while quietly having
+	# become a claim about travel time fitting in a ten-hour pump. It did exactly
+	# that when rung 4 first ran, which is how the pin got written. Standing them
+	# both in the furrow puts the race back to the one thing it is about.
+	_stand_at(zoogs, fields)
+	_stand_at(hobb, fields)
 
 	clock.advance(46.0)
 	zoogs.stats.set_stat(&"adenosine", 58.0)
@@ -759,13 +784,20 @@ func _check_a_claim_survives_a_day_boundary() -> void:
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var fields := world.get_node_or_null("Town/Fields") as Place
 	var hobb_work := world.get_node_or_null("Population/Hobb/Brain/WorkTheField") as WorkTheField
-	if clock == null or zoogs == null or hobb == null or plot == null or hobb_work == null:
-		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb, the Plot and Hobb's WorkTheField")
+	if clock == null or zoogs == null or hobb == null or plot == null or fields == null or hobb_work == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb, the Plot, the Fields and Hobb's WorkTheField")
 		return
 
+	# Pinned rather than taken on trust from the scene — see _stand_at. This
+	# claim is about the day boundary, and it should not be able to go red
+	# because somebody moved where a farmer is authored. Hobb has to be IN the
+	# furrow for the step below to renew instead of setting off for it.
+	_stand_at(hobb, fields)
+
 	clock.advance(23.5)
-	_require(plot.claim(hobb), claim, "Hobb, authored standing at the fields, could not claim the plot at 23:30")
+	_require(plot.claim(hobb), claim, "Hobb, standing at the fields, could not claim the plot at 23:30")
 	_require(plot.claimed_on_day == 0, claim,
 		"claimed at 23:30 on day 0 and stamped day %d instead" % plot.claimed_on_day)
 	_require(not plot.is_free_for(zoogs), claim,
@@ -800,12 +832,19 @@ func _check_an_unworked_claim_lapses_at_the_boundary() -> void:
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
-	if clock == null or zoogs == null or hobb == null or plot == null:
-		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb and the Plot")
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	if clock == null or zoogs == null or hobb == null or plot == null or fields == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb, the Plot and the Fields")
 		return
 
+	# Both pinned in the furrow — see _stand_at. This claim is about lazy expiry
+	# at the day boundary; where the two of them are authored has nothing to do
+	# with it, and both have to be present because both take a turn claiming.
+	_stand_at(zoogs, fields)
+	_stand_at(hobb, fields)
+
 	clock.advance(10.0)
-	_require(plot.claim(hobb), claim, "Hobb, authored standing at the fields, could not claim the plot at 10:00")
+	_require(plot.claim(hobb), claim, "Hobb, standing at the fields, could not claim the plot at 10:00")
 	_require(not plot.is_free_for(zoogs), claim, "the plot read free for Zoogs while Hobb held it, same day")
 
 	# No think_for_everyone here, and none needed — the claim expires where it
@@ -883,9 +922,16 @@ func _check_freeing_the_holder_frees_the_plot_within_two_ticks() -> void:
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
-	if population == null or clock == null or zoogs == null or hobb == null or plot == null:
-		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb and the Plot")
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	if population == null or clock == null or zoogs == null or hobb == null or plot == null or fields == null:
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Plot and the Fields")
 		return
+
+	# Both pinned in the furrow — see _stand_at. What is under test is a holder
+	# being deleted, so both men need to be standing where they can claim, and
+	# neither should be walking anywhere during the two ticks below.
+	_stand_at(zoogs, fields)
+	_stand_at(hobb, fields)
 
 	_require(plot.claim(hobb), claim, "Hobb could not claim the plot at hour 0")
 	_require(not plot.claim(zoogs), claim, "Zoogs claimed a plot Hobb already held")
@@ -919,10 +965,17 @@ func _check_no_stations_and_every_station_taken_are_different_counters() -> void
 	var town := world.get_node_or_null("Town") as Town
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var fields := world.get_node_or_null("Town/Fields") as Place
 	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
-	if town == null or zoogs == null or plot == null or work == null:
-		_require(false, claim, "the scene came up without a Town, a Zoogs, the Plot and Zoogs' WorkTheField")
+	if town == null or zoogs == null or plot == null or fields == null or work == null:
+		_require(false, claim, "the scene came up without a Town, a Zoogs, the Plot, the Fields and Zoogs' WorkTheField")
 		return
+
+	# Pinned in the furrow — see _stand_at. Standing him ON the plot's place is
+	# what makes the first check below say what it claims to say: away from it he
+	# would read available because he cannot SEE the plot, which is a true fact
+	# about knowledge and not the fact this claim is about.
+	_stand_at(zoogs, fields)
 
 	var no_candidates_before: float = town.no_candidates_existed_pressure
 	var every_taken_before: float = town.every_candidate_was_taken_pressure
@@ -946,6 +999,265 @@ func _check_no_stations_and_every_station_taken_are_different_counters() -> void
 			town.no_candidates_existed_pressure - no_candidates_before_empty])
 	_require(town.every_candidate_was_taken_pressure == every_taken_before_empty, claim,
 		"a town with no stations at all moved every_candidate_was_taken_pressure — that counter is for a full town, not an empty one")
+
+	world.queue_free()
+
+
+# --- Assertions 19 and 20: the walk itself ----------------------------------------
+
+# Rung 4's step, isolated from the decision layer entirely — walk_toward is
+# called directly, tick by tick, rather than through think_for_everyone. This
+# claim is about the STEP, not about whether anybody chooses to walk.
+#
+# THE POINT OF CLAIM 19 is the PER-TICK displacement, not merely that he
+# eventually arrives. A step that dawdled for 199 ticks and teleported on the
+# 200th would still get there in the end — arrival alone can't catch that.
+# Asserting (gap_before - gap_after) against his travel speed on every tick
+# before arrival is what would fail if the overshoot clamp only fired on the
+# last tick instead of closing the gap uniformly the whole way (Decision 10).
+#
+# CLAIM 20 is the departure half of the same rule, checked on the same ticks:
+# the first step of a journey writes current_place = null, and it stays null
+# until the tick he arrives. Neither his origin (the Inn) nor his destination
+# (the Fields) is a correct answer while he's between them — see
+# go_to_step.gd's header on why that's what stops find_people_at from standing
+# a man on the road together with everybody else who's also on a road.
+func _check_a_man_walks_the_gap_shut() -> void:
+	var step_claim := "19 — a walking man closes the gap by exactly his travel speed each tick, and arrives"
+	var transit_claim := "20 — a man in transit is at no place at all"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	var walk := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField/Work/GoTo") as GoToStep
+	if zoogs == null or fields == null or inn == null or walk == null:
+		_require(false, step_claim, "the scene came up without a Zoogs, Fields, an Inn and Zoogs' GoToStep")
+		return
+
+	_stand_at(zoogs, inn)
+	var expected_step := zoogs.get_travel_speed() * TICK_HOURS
+
+	var arrived := false
+	for tick in 200:
+		var gap_before: float = zoogs.global_position.distance_to(fields.global_position)
+		var arrived_this_tick: bool = walk.walk_toward(zoogs, fields, TICK_HOURS)
+		var gap_after: float = zoogs.global_position.distance_to(fields.global_position)
+
+		if arrived_this_tick:
+			arrived = true
+			break
+
+		_require(absf((gap_before - gap_after) - expected_step) < 0.001, step_claim,
+			"one tick closed the gap by %.5f where his travel speed is worth %.5f a tick, gap %.4f → %.4f" % [
+				gap_before - gap_after, expected_step, gap_before, gap_after])
+		_require(zoogs.get_current_place() == null, transit_claim,
+			"mid-journey, %.4f units short of the Fields, current_place reads %s — that is neither his origin (the Inn) nor his destination (the Fields)" % [
+				gap_after, _describe_place(zoogs.get_current_place())])
+
+	_require(arrived, step_claim,
+		"200 ticks of %.4f hours each did not close the %.4f-unit gap between the Inn and the Fields at %.2f units/hour" % [
+			TICK_HOURS, inn.global_position.distance_to(fields.global_position), zoogs.get_travel_speed()])
+	_require(zoogs.get_current_place() == fields, step_claim,
+		"walk_toward returned true and current_place reads %s, not the Fields" % _describe_place(zoogs.get_current_place()))
+	_require(zoogs.global_position.distance_to(fields.global_position) < 0.0001, step_claim,
+		"walk_toward returned true and he is still %.6f units from the Fields — arrived must mean ON the spot, not near it" % [
+			zoogs.global_position.distance_to(fields.global_position)])
+
+	world.queue_free()
+
+
+# --- Assertion 21: freeness is invisible from afar --------------------------------
+
+# THIS IS THE CLAIM THAT GOES RED IF ANYBODY RESTORES THE OMNISCIENT GATE.
+# Rung 3 let a plot's freeness be asked from anywhere in the world; rung 4
+# restricted that to wherever a man is actually standing (Decision 15). Away
+# from the plot he knows it EXISTS and nothing more, so it stays a candidate
+# and the urge to work sends him walking; the instant he arrives he can see it,
+# and if it's already somebody else's it drops off his ballot on that exact
+# tick. Restore the old rule — let is_available_to see the plot's true state
+# from the Inn — and Zoogs never sets off at all, because he'd already know the
+# job was gone: this check's very first loop iteration would never run long
+# enough to walk him anywhere, and the mid-journey gate assertion below would
+# fail the moment the plot changed hands out of his sight.
+func _check_a_plot_is_invisible_from_afar_until_he_arrives() -> void:
+	var claim := "21 — a plot's freeness is invisible from afar, and work leaves his ballot on arrival"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var hobb := world.get_node_or_null("Population/Hobb") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	if population == null or clock == null or zoogs == null or hobb == null or fields == null or inn == null or plot == null or work_action == null:
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, Fields, an Inn, the Plot and Zoogs' WorkTheField")
+		return
+
+	# Midday — where work scores 103 and beats StayUp's 87.3, so a man actually
+	# sets off rather than sitting at the Inn idling. See work_the_field.gd's
+	# header for why that margin is there at all.
+	clock.advance(12.0)
+	_stand_at(hobb, fields)
+	_stand_at(zoogs, inn)
+	_require(plot.claim(hobb), claim, "Hobb, standing at the fields at midday, could not claim the plot")
+
+	var arrived := false
+	for tick in 60:
+		if zoogs.get_current_place() == fields:
+			arrived = true
+			break
+
+		# Gates are asked BEFORE the tick that moves him — same reason assertion
+		# 3 reads gate_answers before think_for_everyone: the gate answers for
+		# what he is about to do, not for what the tick just changed him into.
+		_require(work_action.is_available_to(zoogs), claim,
+			"away from the fields (%s) and unable to see the plot is taken, work still read unavailable to Zoogs" % _describe_place(zoogs.get_current_place()))
+
+		var gap_before: float = zoogs.global_position.distance_to(fields.global_position)
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+		var gap_after: float = zoogs.global_position.distance_to(fields.global_position)
+
+		if zoogs.get_current_place() != fields:
+			_require(gap_after < gap_before, claim,
+				"walking toward the fields and the gap to them did not shrink, %.4f → %.4f" % [gap_before, gap_after])
+
+	_require(arrived, claim,
+		"Zoogs never reached the Fields inside 60 ticks — the walk-then-work path never completed")
+	if not arrived:
+		world.queue_free()
+		return
+
+	# THE MOMENT OF ARRIVAL. He can now see what he couldn't from the Inn.
+	_require(not work_action.is_available_to(zoogs), claim,
+		"the instant Zoogs stands at the Fields where Hobb already holds the plot, work still read available")
+
+	# One more decision pass so the ballot actually gets rebuilt with him
+	# standing there, and the loser's score is read the same way claim 13 reads
+	# it — NAN, meaning off the ballot, not merely outscored.
+	clock.advance(TICK_HOURS)
+	population.think_for_everyone(TICK_HOURS)
+	var score: Variant = zoogs.brain.get_last_scores().get(work_action.name)
+	var zoogs_score_is_off_the_ballot := false
+	if score is float:
+		var score_value: float = score
+		zoogs_score_is_off_the_ballot = is_nan(score_value)
+	_require(zoogs_score_is_off_the_ballot, claim,
+		"Zoogs' WorkTheField score, standing at the Fields with the plot already Hobb's, reads %s — the loser must be OFF the ballot (NAN), not merely outscored" % str(score))
+
+	_require(plot.claimed_by == hobb, claim,
+		"after the race the plot reads held by %s, not Hobb — arriving and losing must not let the loser take it off him" % [
+			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
+
+	world.queue_free()
+
+
+# --- Assertion 22: the same rule, seen from the other side ------------------------
+
+# Claim 21 shows a man away from a taken plot still bidding for it. This is the
+# mirror: a man standing right where he can see it's taken must NOT bid — so
+# the gate isn't simply "always true unless you're at the exact station",
+# it's specifically "true away from it, false once you can see for yourself".
+# And having lost, he has nowhere better to be — nothing on his ballot moves
+# him, so he stands exactly where he lost.
+func _check_he_does_not_bid_for_a_plot_he_can_see_is_taken() -> void:
+	var claim := "22 — a man standing at a plot he can see is taken does not bid for it"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var hobb := world.get_node_or_null("Population/Hobb") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	if population == null or clock == null or zoogs == null or hobb == null or fields == null or plot == null or work_action == null:
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Fields, the Plot and Zoogs' WorkTheField")
+		return
+
+	clock.advance(12.0)
+	_stand_at(hobb, fields)
+	_stand_at(zoogs, fields)
+	_require(plot.claim(hobb), claim, "Hobb, standing at the fields at midday, could not claim the plot")
+
+	_require(not work_action.is_available_to(zoogs), claim,
+		"Zoogs, standing right at the Fields where the plot is visibly Hobb's, still read work as available — the same rule from the other side")
+
+	var starting_position := zoogs.global_position
+	for tick in 20:
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+
+	_require(zoogs.global_position.distance_to(starting_position) < 0.0001, claim,
+		"with no work on his ballot, Zoogs moved %.4f units over 20 idle ticks — he should have nowhere better to go" % [
+			zoogs.global_position.distance_to(starting_position)])
+	_require(zoogs.get_current_place() == fields, claim,
+		"after 20 idle ticks Zoogs reads at %s, not the Fields where he lost the race" % _describe_place(zoogs.get_current_place()))
+
+	world.queue_free()
+
+
+# --- Assertions 23 and 24: the nearer station, and geography that moves -----------
+
+# Two identical stations, both discoverable from where he stands (rung 4's
+# knowledge rule doesn't apply here — he's at neither one's place), so nothing
+# but travel cost is left to order them. Town/Fields is authored FIRST under
+# Town, so a get_best_candidate that quietly picks scene order instead of
+# reading find_workstations' cost-sorted list would return the Plot here and
+# claim 23 would fail — that's what gives the claim teeth. Claim 24 then drags
+# the near station away in code, which is standing check #3 aimed at
+# WorkTheField specifically: cost is read live, never cached, so moving a place
+# changes which candidate wins without touching a single call site.
+func _check_the_nearer_station_wins_and_moving_a_place_changes_it() -> void:
+	var near_claim := "23 — the nearer of two identical stations is the candidate"
+	var moved_claim := "24 — move a place and which station wins changes"
+	var world := _add_a_disabled_game_scene()
+	var town := world.get_node_or_null("Town") as Town
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	if town == null or zoogs == null or fields == null or inn == null or plot == null or work_action == null:
+		_require(false, near_claim, "the scene came up without a Town, a Zoogs, Fields, an Inn, the Plot and Zoogs' WorkTheField")
+		return
+
+	# A second, hand-built station — never authored into game.tscn for this.
+	# Parented to its place BEFORE the place enters the tree, so
+	# Workstation._ready sees a Place above it the moment it's ready, same as
+	# any station built by the loader.
+	var near_place := Place.new()
+	near_place.name = "NearField"
+	near_place.place_name = "the near field"
+	var near_station := Workstation.new()
+	near_station.name = "NearPlot"
+	near_station.work_name = work_action.work_name
+	near_place.add_child(near_station)
+	town.add_child(near_place)
+	near_place.global_position = Vector3(10.0, 0.0, 10.0)
+
+	# He stands on the near field's spot but BELONGS to the Inn — at neither
+	# station's place, so both are candidates on knowledge grounds alone and
+	# only cost is left to separate them.
+	zoogs.current_place = inn
+	zoogs.global_position = Vector3(10.0, 0.0, 10.0)
+
+	var near_first: Workstation = work_action.get_best_candidate(zoogs)
+	var near_first_name := "nothing"
+	if near_first != null:
+		near_first_name = String(near_first.name)
+	_require(near_first == near_station, near_claim,
+		"standing on the near field, the best candidate reads \"%s\", not NearPlot — Town/Fields sits first in scene order, so scene order is deciding instead of distance" % near_first_name)
+
+	# Geography is READ, never assumed: drag the near place far away and the
+	# winner has to flip to the far one, with nothing else changed.
+	near_place.global_position = Vector3(300.0, 0.0, 300.0)
+	var far_first: Workstation = work_action.get_best_candidate(zoogs)
+	var far_first_name := "nothing"
+	if far_first != null:
+		far_first_name = String(far_first.name)
+	_require(far_first == plot, moved_claim,
+		"after moving the near field out to (300, 0, 300), the best candidate still reads \"%s\", not the Plot — the ordering did not re-read the new geometry" % far_first_name)
 
 	world.queue_free()
 
@@ -1007,6 +1319,27 @@ func _find_unresolved_node_path_arrays() -> Array[String]:
 
 
 # --- Building a cast ------------------------------------------------------------
+
+# Stand a man on a place outright — the fact he carries AND the body carrying
+# it — so a check that is about something else does not quietly depend on where
+# he happened to be authored.
+#
+# WRITING current_place BY HAND IS LEGAL HERE, and it must stay that way.
+# GoToStep owning both edges of that field is a rule about the GAME: it is what
+# stops a second walking path appearing. This file is authoring a situation, not
+# moving a man, and routing these through the walking step would mean every
+# claim below had to wait out a commute before it could assert anything.
+#
+# It exists because authored placement has now moved under a claim on TWO
+# successive rungs — rung 3 moved claims 6 and 8 by authoring Hobb in, rung 4
+# moved 7, 8, 13, 14, 15 and 17 by sending both farmers to the Inn. Pinning is
+# the durable fix: a check that says what world it wants cannot be broken by a
+# later rung rearranging the scene, and the checks that SHOULD track the authored
+# population (7 and 8) are then the only ones that do.
+func _stand_at(person: Person, place: Place) -> void:
+	person.current_place = place
+	person.global_position = place.global_position
+
 
 # One more real person under a real Population — person.tscn instanced, never a
 # mock. He picks his Town up off his parent in his own _ready, which is also the

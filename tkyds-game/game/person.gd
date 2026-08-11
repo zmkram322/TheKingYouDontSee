@@ -12,10 +12,12 @@ extends CharacterBody3D
 # that's what Godot's inherited scenes are for; nothing here has to change to
 # allow it.
 #
-# The body itself doesn't move yet — no walking, nowhere to walk. It's a
-# CharacterBody3D now rather than a Node3D so that when movement arrives it
-# lands on the node already carrying `velocity` and `move_and_slide`, instead
-# of a scene-wide retype.
+# The body moves as of rung 4, and NOT by move_and_slide — GoToStep integrates
+# global_position by hand. Measured: called from _process, move_and_slide
+# multiplies by the PHYSICS delta and produces non-uniform steps, and under
+# PROCESS_MODE_DISABLED it moves zero in silence, which would make every
+# movement claim in the probe unwritable. It stays a CharacterBody3D anyway:
+# the type costs nothing and collision may want it later.
 
 @export var person_name := "Someone"
 
@@ -25,14 +27,33 @@ extends CharacterBody3D
 @export var tint := Color(0.78, 0.74, 0.68)
 
 # Where he IS — a discrete fact he carries, not a distance to anything. Authored
-# per instance today; rung 4's walking step writes it on arrival and clears it
-# for the length of the road. Null is a real state and means "on the way".
+# per instance at birth, and after that GoToStep is the ONLY thing in the game
+# that writes it: cleared to null on the first tick of a journey, written again
+# on arrival. Null is a real state and means "on the way".
+#
+# (The probe writes it by hand too, and that is legal — it is authoring a
+# situation rather than moving a man. The one-writer rule is about the game.)
 #
 # Note for whoever wires this in a .tscn by hand: it needs
 # `node_paths=PackedStringArray("current_place")` on that instance's own header
 # line, or the loader assigns the raw NodePath to a typed field and you get null
 # — which here reads as a man standing on a road that doesn't exist.
 @export var current_place: Place
+
+# How fast he covers ground, in units per WORLD HOUR — like every rate in
+# game/, and emphatically not per second. It is his, not the walk's, for the
+# same reason strength is his: a fast walker should be fast at everything he
+# ever walks to, not only at the actions somebody remembered to edit.
+#
+# CALIBRATED FROM THE FICTION, NOT FROM A REALISTIC PACE, and nobody should
+# "correct" it. The visible town is a diorama: a person capsule is 1.7 units
+# tall and the Inn stands 19.24 units from the fields, so if units were metres
+# that crossing would be a fourteen-second stroll and every journey in this game
+# would be free. The author's ruling is that a decent-sized town is a five to
+# fifteen minute walk to the fields, so this is set to make the shipped crossing
+# take about ten world minutes. The geometry still means exactly what it meant —
+# double the distance and you double the trip.
+@export var walk_speed := 115.0
 
 # The world he can ask questions about. Not exported and not a wire: pulled off
 # his Population in _ready, the same way Brain finds its Person by asking its
@@ -117,22 +138,55 @@ func get_current_place() -> Place:
 	return current_place
 
 
-# What getting there costs him. Asked in SCORE, and it NEVER gates: a far place
-# is outbid, never barred, so the cost only ever multiplies an appeal. That is
-# what keeps "he loses, and losing is the content" true, and it is why nothing
-# here compares against a threshold.
+# How fast he travels right now, whatever he is travelling by. THE MEANS.
 #
-# Straight-line off the transforms today, which is what makes standing check #3
-# pass — drag a place in the editor and this number moves while the game runs.
-# Roads, a river crossing, a gate shut at night, and one day a world spanning
-# several towns all install in THIS FUNCTION BODY and no call site changes. It
-# lives on Person rather than on Place or Town because every caller is an Action
-# scoring itself and an Action always has the person — and because there will be
-# more than one town, so a Town-scoped answer breaks.
+# Its own call site rather than a read of walk_speed, because walking is only
+# one way to travel: a horse, a cart, a boat, a bad leg or a heavy sack all
+# install in this one body and not one caller changes. Same shape as
+# Brain.get_adenosine_recovery(), and it has the same single modifier behind it
+# today — strength, doing the second job it was always predicted to do. A
+# bigger body carries itself faster, so two men who set off together do not
+# arrive together, and a race for one plot is settled by the men rather than by
+# the order they happen to sit in the scene tree.
 #
-# The falloff curve that turns this into a multiplier lands at rung 4, which is
-# the first rung where a man chooses between two places at different costs and
-# so the first collision that can actually break the curve.
+# It deliberately takes NO destination. The means of travel is a fact about the
+# traveller; anything route-shaped belongs in get_travel_cost_to below. A road
+# changes that one, a horse changes this one, and neither has to know about the
+# other — which is the whole reason there are two.
+func get_travel_speed() -> float:
+	if stats == null:
+		return walk_speed
+	var strength: float = stats.get_stat(&"strength")
+	return walk_speed * strength
+
+
+# What getting there costs him, IN HOURS. THE JOURNEY. Asked in SCORE, and it
+# NEVER gates: a far place is outbid, never barred, which is what keeps "he
+# loses, and losing is the content" true, and why nothing here compares against
+# a threshold.
+#
+# Straight-line ÷ his speed today, which is what makes standing check #3 pass —
+# drag a place in the editor and this number moves while the game runs. Roads, a
+# river crossing, a gate shut at night, and one day a world spanning several
+# towns all install in THIS FUNCTION BODY and no call site changes. It lives on
+# Person rather than on Place or Town because every caller is an Action scoring
+# itself and an Action always has the person — and because there will be more
+# than one town, so a Town-scoped answer breaks.
+#
+# HOURS RATHER THAN RAW DISTANCE, and be honest about what that buys at this
+# rung: nothing you can see. Sorting by hours and sorting by distance are the
+# same ordering for one man, because his speed is positive. It is the honest
+# unit, it is the last un-denominated quantity in game/, and it is what a road
+# or a horse actually changes — a road does not shorten the distance, it
+# shortens the trip. It earns itself at rung 9a, where candidates first differ
+# in quality and cost has to be traded against yield. (Decision 14.)
+#
+# WHAT IT IS NOT ALLOWED TO DO, and this is structural rather than a tuning
+# invariant somebody has to remember: this number only ever competes the SAME
+# alternative at different locations — this plot against that one. It never
+# enters the comparison between one action and another, so no weight on it can
+# mute a commute, because the comparison that could mute one never happens.
+# Pull decides WHAT you do; this decides WHERE you go to do it. (Decision 15.)
 func get_travel_cost_to(place: Place) -> float:
 	# A place that isn't there costs everything. Nowhere is deliberately the
 	# most expensive answer rather than the cheapest: returning 0.0 would read
@@ -142,7 +196,16 @@ func get_travel_cost_to(place: Place) -> float:
 	if place == null:
 		push_error("%s was asked what it costs to reach nowhere" % person_name)
 		return INF
-	return global_position.distance_to(place.global_position)
+	# A man who cannot move cannot get there, and INF is the truthful price of
+	# that rather than the division quietly handing back one. Nothing sets a
+	# speed of zero today; this is here so that the day something does — a
+	# broken leg, a sack too heavy — it reads as "he is not going" instead of as
+	# a number nobody can explain.
+	var speed := get_travel_speed()
+	if speed <= 0.0:
+		push_error("%s cannot travel at all — his speed is %f" % [person_name, speed])
+		return INF
+	return global_position.distance_to(place.global_position) / speed
 
 
 # How high the sun is FOR HIM: -1 at midnight, 0 at dawn and dusk, +1 at midday.
@@ -207,7 +270,7 @@ func get_readout_text() -> String:
 	# changing, and no string in game/ ends up naming one particular instance.
 	if town != null:
 		for place in town.get_places():
-			lines.append("to %s %.1f" % [place.place_name, get_travel_cost_to(place)])
+			lines.append("to %s %.2f h" % [place.place_name, get_travel_cost_to(place)])
 	return "\n".join(lines)
 
 

@@ -2,9 +2,11 @@ class_name WorkTheField
 extends Action
 
 # Work a plot in the fields. The first action whose availability depends on
-# somebody ELSE — a plot another man holds is off your ballot entirely, so the
-# loser of a dawn race is never scored, not outscored, and the graph draws his
-# work as a hole rather than a losing line.
+# somebody ELSE — a plot another man holds, AND CAN SEE IS HELD, is off his
+# ballot entirely, so the loser of a dawn race is never scored, not outscored,
+# and the graph draws his work as a hole rather than a losing line. That "and
+# can see" is rung 4's, and it is what lets a man set off at all: see
+# _is_a_candidate_for at the bottom.
 #
 # An Action is a family, not a single choice: "work the field" means "work
 # WHICH plot". So the gate asks "are there candidates", the score asks "how
@@ -63,35 +65,80 @@ func is_available_to(person: Person) -> bool:
 		# does NOT license writes in gates generally.
 		person.town.note_no_candidates_existed()
 		return false
-	if _find_first_free(stations, person) == null:
+	if _find_first_candidate(stations, person) == null:
 		# The other idleness, and a different world — the town has work and no
 		# room, not no work. See town.gd for why these are two counters.
+		#
+		# Under the knowledge rule below this counter got TRUER: it now counts
+		# men who turned up and found no room, rather than men who theoretically
+		# could not have worked from wherever they happened to be standing.
 		person.town.note_every_candidate_was_taken()
 		return false
 	return true
 
 
 # How much he wants to work: the sun's arc, worth more than idling all day.
-# The best candidate's QUALITY is deliberately not in the sum yet — with one
-# kind of plot on common land every candidate is equally good, and the
-# travel-cost falloff that makes a near plot worth more than a far one is rung
-# 4's, landing the first time a man chooses between two places.
+#
+# TRAVEL COST IS NOT IN THIS SUM, AND MAY NEVER BE — under any name, at any
+# weight. It belongs to picking between an action's candidates, this plot or
+# that one, and never to the comparison between one action and another: pull
+# decides WHAT you do, travel cost decides WHERE you go to do it. Subtract a
+# commute here and geography starts vetoing a want — a man at the Inn would
+# simply stop wanting to work — which is barring wearing different clothes, and
+# no weight is small enough to make it right in principle. Keeping it out is
+# what makes muting a commute structurally impossible instead of a tuning
+# invariant somebody has to remember to check. (Decision 15; an earlier draft of
+# rung 4 had a `patience` weight here and it was deleted.)
+#
+# Travel cost is already doing its whole job one layer down, in the ordering
+# Town.find_workstations hands back. The best candidate's QUALITY is still not
+# in the sum either — with one kind of plot on common land every candidate is
+# equally good, and a coefficient trading quality against hours decides nothing
+# until rung 9a gives plots yields to differ by.
 func get_utility_score(person: Person) -> float:
 	return pull + daylight_pull * person.get_sun_height()
 
 
-# The one plot he would work: the first station free for him in Town's list,
-# which is stably sorted by travel cost — so gate, score and step, each calling
-# this fresh, land on the same station every time. Never iterates a Dictionary;
-# order is the whole contract.
+# The one plot he would work: the first station he'd take in Town's list, which
+# is stably sorted by what the journey costs HIM — so gate, score and step, each
+# calling this fresh, land on the same station every time. Never iterates a
+# Dictionary; order is the whole contract.
 func get_best_candidate(person: Person) -> Workstation:
 	if person.town == null:
 		return null
-	return _find_first_free(person.town.find_workstations(person, work_name), person)
+	return _find_first_candidate(person.town.find_workstations(person, work_name), person)
 
 
-func _find_first_free(stations: Array[Workstation], person: Person) -> Workstation:
+# FREENESS IS KNOWABLE ONLY WHERE YOU ARE STANDING. Presence was already
+# required to CLAIM a plot; as of rung 4 it is required to KNOW about one.
+#
+#   Not at the plot's place → he knows the plot EXISTS, not whether it is taken.
+#   It stays a candidate, the urge to work stands, and he walks.
+#   At the plot's place    → he can see it. Taken by somebody else and it drops
+#   out, so work leaves his ballot at the moment he ARRIVES.
+#
+# Rung 3 let this gate ask whether a plot was free from anywhere in the world.
+# With both farmers standing in the same field that was invisible; the moment
+# they are apart it is omniscience, and it kills walking outright — a man at the
+# Inn would know the plot was taken, so work would never reach his ballot, so he
+# would never set off, and nothing could ever interrupt him.
+#
+# The wasted journey is the POINT. A man who crosses the town and finds the job
+# gone is the collision that later earns a notice board; pre-solving it with
+# omniscience would delete the evidence that the board is worth building.
+# (Decision 15, restoring the default Decision 1 had already described.)
+#
+# Note where this rule does NOT live: Workstation.is_free_for goes on reporting
+# the plain truth about itself. The world is not obliged to lie, and what a man
+# KNOWS of the truth is this action's business, not the plot's.
+func _find_first_candidate(stations: Array[Workstation], person: Person) -> Workstation:
 	for station in stations:
-		if station.is_free_for(person):
+		if _is_a_candidate_for(station, person):
 			return station
 	return null
+
+
+func _is_a_candidate_for(station: Workstation, person: Person) -> bool:
+	if person.get_current_place() != station.get_place():
+		return true
+	return station.is_free_for(person)
