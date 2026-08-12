@@ -1404,10 +1404,18 @@ func _check_a_walking_man_produces_nothing() -> void:
 	# And now that he IS there, one tick of the same step must pay. Without this
 	# the claim above could be satisfied by a step that never produces anything
 	# at all, anywhere — which is the vacuous form of it.
+	#
+	# EITHER HALF COUNTS, and that is not laziness. A tick's work lands in the
+	# furrow while it is a fraction and in his sack once it is whole, so which of
+	# the two moves depends entirely on the authored rate. Naming only the furrow
+	# would make this go red for a rate of one grain per tick — which is a real
+	# defect, but it is claim 25's to catch, and a claim that fails for somebody
+	# else's reason is a claim you stop believing.
 	clock.advance(TICK_HOURS)
 	step.advance(zoogs, TICK_HOURS)
-	_require(plot.output_part_made > 0.0, claim,
-		"standing in the furrow, one worked tick moved the plot's part-made work to %.4f — the step is not producing anywhere" % plot.output_part_made)
+	_require(inventory.get_count(&"grain") > 0 or plot.output_part_made > 0.0, claim,
+		"standing in the furrow with the plot claimed, one worked tick left him holding %d grain and the plot holding %.4f — the step produces nothing ANYWHERE, so the walking half of this claim proves nothing" % [
+			inventory.get_count(&"grain"), plot.output_part_made])
 
 	world.queue_free()
 
