@@ -1,5 +1,25 @@
 # Rung 5 — session prompt
 
+> **⚠ SPENT — EXECUTED 2026-08-11 (`07a147c`). Kept as a record, and it holds up
+> except on two points, both worth knowing before this file is used as a model:**
+>
+> **1. ITS LOUDEST SECTION IS WRONG. The index trap does not exist.** *"⚠ THE
+> TRAP THIS RUNG WILL FALL INTO — MEASURED, NOT PREDICTED"* was predicted, not
+> measured, and it was tested directly on 2026-08-11 and disproved in both of its
+> forms: a node inserted **before `Stats`** leaves Hobb reading 1.15 (a property
+> override resolves by NAME, not by index), and a node added to **`Brain`** where
+> `WorkTheField` is inserted at `index="3"` leaves all 30 claims green. It cost
+> two rungs of authoring freedom for nothing. See the rung 6a prompt.
+>
+> **2. It asserted something arithmetically impossible and did not notice** —
+> claim 1 asks for *"exactly `get_yield_per_hour(person) × hours` per tick"* into
+> an integer count, but a tick is 0.01 hours, so every tick truncates to zero and
+> a man farms all day for nothing. That was caught mid-build and settled by the
+> author: the fraction lives in the furrow (`Workstation.output_part_made`). **A
+> prompt this specific can still hand the session an impossible instruction; the
+> lesson is that "nothing below is optional detail" is not the same as "nothing
+> below is wrong."**
+
 Copy everything below the line into a fresh session. Written 2026-08-11, the day
 rung 4 closed.
 
