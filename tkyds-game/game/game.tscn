@@ -9,7 +9,7 @@
 [ext_resource type="Script" uid="uid://c0r2y56224pe2" path="res://game/town.gd" id="7_town"]
 [ext_resource type="Script" uid="uid://c3yankxrk447k" path="res://game/place.gd" id="8_place"]
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_person_readout"]
-[ext_resource type="Script" path="res://game/workstation.gd" id="10_workstation"]
+[ext_resource type="Script" uid="uid://vyb3v2wjgr7e" path="res://game/workstation.gd" id="10_workstation"]
 [ext_resource type="PackedScene" path="res://game/actions/work_the_field.tscn" id="11_work_the_field"]
 
 [sub_resource type="Environment" id="Environment_sky"]
