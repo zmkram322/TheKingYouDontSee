@@ -65,6 +65,29 @@ const ASLEEP_BAND := Color(0.35, 0.42, 0.70, 0.22)
 @export var show_stats := true
 @export var show_utilities := true
 
+# And what he's carrying. On the same chart as the rest by default, because at
+# this rung the numbers share a range and the thing worth watching is grain
+# climbing through a working day while the loser's line sits flat on the axis.
+#
+# Coin is one of these, deliberately: it is Inventory.get_count(&"coin") and NOT
+# a stat, because storage should not be chosen by which panel a number happens
+# to plot on. Splitting possession across two systems would mean every trade
+# check from rung 7 on had to look in both places.
+@export var show_items := true
+
+# Pin the top of the y axis, or 0.0 to fit it to whatever is on screen.
+#
+# THE GUARD, AND IT IS NOT A NICETY. Fitting to the data means fitting to the
+# BIGGEST line: coin at 500 squashes adenosine at 45 flat against the axis, and
+# the primary instrument in this project goes unreadable at exactly the moment
+# the town gets interesting enough to need it. Pin the body panel at a number
+# the body actually lives in — 60 or so — and a merchant's fortune can climb as
+# far as it likes without taking the sleep cycle off the screen with it.
+#
+# A line above the pin rides the top edge rather than flying off across the rest
+# of the interface; see _draw_track.
+@export_range(0.0, 1000.0, 1.0, "or_greater") var top_of_scale := 0.0
+
 # What the panel calls itself. Blank means his name, which is right when
 # there's one panel and ambiguous the moment there are two.
 @export var title := ""
@@ -85,6 +108,7 @@ const ASLEEP_BAND := Color(0.35, 0.42, 0.70, 0.22)
 
 var _stats := {}                 # StringName -> Array[float], oldest first
 var _utilities := {}             # StringName -> Array[float], NAN = wasn't on the ballot
+var _items := {}                 # StringName -> Array[float], counts, oldest first
 var _asleep: Array[bool] = []
 var _seconds_owed := 0.0
 
@@ -127,6 +151,15 @@ func _take_sample() -> void:
 		for action_name in scores:
 			_push(_utilities, action_name, scores[action_name], capacity)
 
+	# Discovered by asking, exactly like the stats above: an item that turns up
+	# in this world for the first time gets a line of its own without a word
+	# being written about it here. An inventory he does not have is simply no
+	# lines rather than a warning — the man himself has already said so.
+	if show_items and person.get_inventory() != null:
+		var inventory := person.get_inventory()
+		for item_name in inventory.get_item_names():
+			_push(_items, item_name, float(inventory.get_count(item_name)), capacity)
+
 	_asleep.append(not person.brain.is_awake())
 	while _asleep.size() > capacity:
 		_asleep.pop_front()
@@ -134,7 +167,18 @@ func _take_sample() -> void:
 
 func _push(into: Dictionary, key: StringName, value: float, capacity: int) -> void:
 	if not into.has(key):
-		into[key] = [] as Array[float]
+		# A LINE THAT APPEARS MID-RUN IS BACK-FILLED WITH GAPS. Every track is
+		# drawn from the left edge one sample at a time, so a series born late —
+		# a man's first grain, an hour into the day — would otherwise be drawn
+		# against history that isn't its own and read as having happened an hour
+		# ago. NAN draws as a hole, which is the honest picture: there was no
+		# such number to plot yet. Stats and utilities never hit this because
+		# they all exist from the first sample; items are the first thing here
+		# that can come into existence while you are watching.
+		var opening: Array[float] = []
+		for filled in mini(_asleep.size(), capacity):
+			opening.append(NAN)
+		into[key] = opening
 	var samples: Array = into[key]
 	samples.append(value)
 	while samples.size() > capacity:
@@ -146,6 +190,7 @@ func _push(into: Dictionary, key: StringName, value: float, capacity: int) -> vo
 func reset() -> void:
 	_stats.clear()
 	_utilities.clear()
+	_items.clear()
 	_asleep.clear()
 	_seconds_owed = 0.0
 	queue_redraw()
@@ -173,6 +218,11 @@ func _draw() -> void:
 	for action_name in _utilities:
 		_draw_track(plot, _utilities[action_name], top, _color_at(color_index), UTILITY_WIDTH)
 		color_index += 1
+	# Items last, so adding one doesn't shift the colour every stat and utility
+	# was already being read as.
+	for item_name in _items:
+		_draw_track(plot, _items[item_name], top, _color_at(color_index), STAT_WIDTH)
+		color_index += 1
 
 	_draw_labels()
 
@@ -183,16 +233,19 @@ func _color_at(index: int) -> Color:
 
 # The top of the y axis, rounded up to something round so the gridlines land on
 # readable numbers. Never zero, or an empty graph divides by nothing. NANs are
-# skipped — an action off the ballot has no value to scale against.
+# skipped — a series with no value yet has nothing to scale against.
+#
+# A pinned top wins outright and is not rounded: a number somebody typed in is
+# the number they meant. See top_of_scale for the failure that guards against.
 func _get_top_of_scale() -> float:
+	if top_of_scale > 0.0:
+		return top_of_scale
 	var highest := 1.0
-	for samples in _stats.values():
-		for value in samples:
-			highest = maxf(highest, value)
-	for samples in _utilities.values():
-		for value in samples:
-			if not is_nan(value):
-				highest = maxf(highest, value)
+	for series in [_stats, _utilities, _items]:
+		for samples: Array in series.values():
+			for value: float in samples:
+				if not is_nan(value):
+					highest = maxf(highest, value)
 	var step: float = pow(10.0, floorf(log(highest) / log(10.0)))
 	return ceilf(highest / step) * step
 
@@ -245,9 +298,14 @@ func _draw_track(plot: Rect2, samples: Array, top: float, color: Color, width: f
 				draw_polyline(run, color, width, true)
 			run = PackedVector2Array()
 			continue
+		# Clamped to the top of the plot rather than drawn wherever the
+		# arithmetic lands. With a pinned axis a line CAN go over the top, and
+		# an unclamped one would be drawn straight across the rest of the
+		# interface; riding the top edge says "above this axis" and stays inside
+		# the panel it belongs to.
 		run.append(Vector2(
 			plot.position.x + i * step,
-			plot.end.y - (value / top) * plot.size.y))
+			plot.end.y - minf(value / top, 1.0) * plot.size.y))
 	if run.size() >= 2:
 		draw_polyline(run, color, width, true)
 
@@ -267,7 +325,7 @@ func _draw_labels() -> void:
 	var x := MARGIN_LEFT
 	var y := size.y - 18.0
 	var color_index := 0
-	for entry in [_stats, _utilities]:
+	for entry in [_stats, _utilities, _items]:
 		for key in entry:
 			var samples: Array = entry[key]
 			var latest: float = samples[-1] if not samples.is_empty() else NAN

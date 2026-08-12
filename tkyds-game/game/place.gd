@@ -53,3 +53,20 @@ extends Node3D
 # exactly where a man would stand.
 
 @export var place_name := "Somewhere"
+
+
+# What is lying about here — the sacks in the barn, the loaves in the tavern's
+# storage. Found as a child rather than wired, the same "structurally where it
+# belongs" pattern a Workstation uses to find its Place, so there is no NodePath
+# to mis-type and no node_paths header to forget.
+#
+# Asked in the same words of a person, a place and a station, because rung 6b
+# hands a quota into a barn and rung 7 hands grain to a merchant, and
+# Inventory.hand_over must not care which kind of thing is on either end.
+#
+# NULL IS A LEGITIMATE ANSWER and is not warned about: a road, a crossroads or
+# a square is somewhere a man can be and nowhere goods are kept. What must never
+# happen is a caller assuming otherwise — hand_over says so out loud when handed
+# a null destination rather than dropping the goods.
+func get_inventory() -> Inventory:
+	return get_node_or_null("Inventory") as Inventory

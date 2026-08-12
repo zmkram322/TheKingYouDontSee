@@ -1,11 +1,17 @@
 class_name WorkStep
 extends ActionStep
 
-# The working itself, and — as of rung 4 — getting there first. Like every step
-# it holds no progress: no furrow counter, no elapsed anything, and no route.
-# Which plot he is working is re-derived every tick from the same
+# The working itself, and — as of rung 4 — getting there first. As of rung 5 it
+# is also the first thing in this game that MAKES something: grain, per world
+# hour, into the working man's own inventory.
+#
+# Like every step it holds no progress — nothing on this node, and nothing on
+# the man. Which plot he is working is re-derived every tick from the same
 # get_best_candidate the gate and score used, who holds the plot lives on the
-# plot, and how far along the road he is, is where he is standing.
+# plot, how far along the road he is, is where he is standing, and how far into
+# the current grain he is lives in the FURROW (Workstation.output_part_made),
+# which is why walking away from a part-turned plot costs him nothing and leaves
+# the part-turned work for whoever comes next.
 #
 # ONE advance(), TWO behaviours, chosen by looking rather than by remembering:
 # not at the plot's place → walk toward it; at it → claim it and work. There is
@@ -24,6 +30,19 @@ extends ActionStep
 # farmer standing at the Inn would silently never set off, which reads as a
 # broken decision rather than as a missing node.
 var walk: GoToStep
+
+# What a plot yields. A constant rather than a knob: an export for it would be a
+# second authoring surface for what a station makes, and the day a station makes
+# something other than grain that comes from a Recipe (rung 9a), which owns the
+# output and the time it takes together. One item, named in one place.
+const YIELD_NAME := &"grain"
+
+# What a man brings in from a plot in one world HOUR — like every rate in game/,
+# and emphatically not per tick. An authored 1.0 means one grain an hour, so at
+# the hundredth-of-an-hour tick the game runs he makes a hundredth of a grain a
+# tick and the plot holds the remainder until it comes to something. See
+# Workstation.output_part_made for why the fraction lives there and not here.
+@export var base_grain_per_hour := 1.0
 
 
 func _ready() -> void:
@@ -63,9 +82,54 @@ func advance(person: Person, hours: float) -> bool:
 	# false, and the branch above is what makes that false mean "walk there".
 	if not station.claim(person):
 		return false
-	# The work has nothing to move yet — grain arrives with inventory at rung 5
-	# and work-that-takes-time at 9a. Holding the plot IS this rung's work.
+	# THE WORK ITSELF. Everything above this line is about getting to it.
+	#
+	# IT SITS BELOW THE CLAIM, and that placement is the whole of this rung's
+	# trap. advance() grew a second branch at rung 4, so a yield written at the
+	# top of this function pays a man for WALKING ACROSS TOWN — which reads as a
+	# balance problem, not as a misplaced line, and costs an hour to trace. Down
+	# here it is paid for exactly what renew-on-use is paid for: standing on the
+	# plot with his hands on it.
+	var inventory := person.get_inventory()
+	if inventory == null:
+		# He has already said so in his own _ready. Banking work he could never
+		# collect would leave the plot holding a part-made number that grows
+		# without bound, so the work simply does not happen.
+		return false
+	station.output_part_made += get_yield_per_hour(person) * hours
+	# Whole grain comes off the plot and goes in his sack; the fraction stays in
+	# the furrow for whoever works it next. Floor-and-subtract rather than a
+	# loop, so one enormous tick pays out in a single step instead of spinning
+	# through it a grain at a time.
+	var made := int(floorf(station.output_part_made))
+	if made > 0:
+		station.output_part_made -= float(made)
+		inventory.add(YIELD_NAME, made)
 	return false
+
+
+# What he brings in per hour, right now. THE SEAM, and it stands empty on
+# purpose.
+#
+# Its own call site rather than a read of base_grain_per_hour, because a scythe
+# in his hands, a richer plot, a wound, or a sack already full all install in
+# THIS FUNCTION BODY and not one caller changes. Same shape as
+# Brain.get_adenosine_recovery() and Person.get_travel_speed(), which is what
+# this project reaches for whenever a number is going to grow modifiers.
+#
+# It takes the person because the first modifier anybody will want is a fact
+# about the MAN — the tool he is holding — exactly as get_travel_speed's one
+# modifier is. Underscored only because nothing reads him yet, the same marker
+# Action.is_available_to uses for a seam standing empty; drop the underscore the
+# day something does.
+#
+# STRENGTH IS DELIBERATELY NOT IN HERE, though stats.gd predicts it will one day
+# mean work done per hour. That is a prediction, not a specification, and this
+# rung does not cash it: Hobb already needs less sleep, rises first, walks
+# faster and takes the plot, and nothing has asked for a fourth advantage. This
+# is where it goes on the day something does.
+func get_yield_per_hour(_person: Person) -> float:
+	return base_grain_per_hour
 
 
 # Which half of the job he is seen doing. Re-derived, like everything else here

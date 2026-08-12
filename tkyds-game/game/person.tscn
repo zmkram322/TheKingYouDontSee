@@ -1,6 +1,7 @@
-[gd_scene load_steps=9 format=3 uid="uid://cbxfrobp7ktlj"]
+[gd_scene load_steps=10 format=3 uid="uid://cbxfrobp7ktlj"]
 
 [ext_resource type="Script" uid="uid://4loqu0l5vvxy" path="res://game/person.gd" id="1_person"]
+[ext_resource type="Script" path="res://game/inventory.gd" id="7_inventory"]
 [ext_resource type="Script" uid="uid://djlixt32hpmie" path="res://game/stats.gd" id="2_stats"]
 [ext_resource type="Script" uid="uid://dtqt6plk4fgil" path="res://game/brain.gd" id="3_brain"]
 [ext_resource type="PackedScene" path="res://game/actions/stay_up.tscn" id="4_stay_up"]
@@ -43,3 +44,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0)
 billboard = 1
 font_size = 28
 outline_size = 6
+
+[node name="Inventory" type="Node" parent="."]
+script = ExtResource("7_inventory")

@@ -42,6 +42,29 @@ extends Node3D
 var claimed_by: Person = null
 var claimed_on_day := -1
 
+# Work done here that has not yet come to anything — a furrow part turned, in
+# units of whatever this station makes. The step adds a tick's worth every tick
+# it advances and takes whole units OUT the moment they complete, so this only
+# ever holds the remainder: a number in [0, 1).
+#
+# WHY THERE IS A STORED NUMBER HERE AT ALL, since the substrate refuses stored
+# progress everywhere else. A count is a whole thing (see inventory.gd) and a
+# tick is a hundredth of an hour, so a plot yielding one grain an hour makes
+# 0.01 of a grain per tick. That fraction has to survive to the next tick or a
+# man works all day and produces nothing — truncated to a whole number, every
+# tick of work rounds to zero, forever. It is genuinely not derivable from a
+# snapshot: no amount of looking at the world tells you how far into this
+# grain he is, which is the same test claimed_by already passes.
+#
+# AND WHY IT IS ON THE STATION RATHER THAN ON THE MAN. Decision 6 settles the
+# category: work in progress is a fact about the world object, never about a
+# person. Put it on the man and interrupting stops being free — he would carry
+# a half-turned furrow across town to the next plot, and the step would be
+# holding exactly the progress ActionStep exists to refuse. Here, walking away
+# leaves the part-done work lying in the furrow where anyone can have it, which
+# is both the better fiction and what rung 9a's half-ground sack already needs.
+var output_part_made := 0.0
+
 
 # A station stands AT a place — its parent, structurally — and everything about
 # it hangs on that: presence is checked against the place, and Town finds
@@ -57,6 +80,16 @@ func _ready() -> void:
 # belongs" pattern Brain uses to find its Person. No wire to mis-type.
 func get_place() -> Place:
 	return get_parent() as Place
+
+
+# What is sitting ON this station — the sack on the millstone, and one day the
+# half-ground flour beside it. Found as a child, asked in the same words as a
+# person's and a place's, and null where nothing is ever set down. Nothing in
+# the game puts anything here yet: rung 9a is what needs it, when inputs move
+# onto a station as work starts so that a man who wanders off mid-grind leaves
+# the grain on the stone instead of carrying it away.
+func get_inventory() -> Inventory:
+	return get_node_or_null("Inventory") as Inventory
 
 
 # Free, or already his. The plain truth about this station, and it NEVER asks

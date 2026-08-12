@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=20 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_person_readout"]
 [ext_resource type="Script" uid="uid://vyb3v2wjgr7e" path="res://game/workstation.gd" id="10_workstation"]
 [ext_resource type="PackedScene" path="res://game/actions/work_the_field.tscn" id="11_work_the_field"]
+[ext_resource type="Script" path="res://game/inventory.gd" id="12_inventory"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
@@ -71,12 +72,21 @@ material_override = SubResource("StandardMaterial3D_plot")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
 
+[node name="Inventory" type="Node" parent="Town/Fields/Plot"]
+script = ExtResource("12_inventory")
+
+[node name="Inventory" type="Node" parent="Town/Fields"]
+script = ExtResource("12_inventory")
+
 [node name="Inn" type="MeshInstance3D" parent="Town"]
 transform = Transform3D(6, 0, 0, 0, 1, 0, 0, 0, 6, 8, 0.02, 4)
 material_override = SubResource("StandardMaterial3D_inn")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("8_place")
 place_name = "the Lord's Inn"
+
+[node name="Inventory" type="Node" parent="Town/Inn"]
+script = ExtResource("12_inventory")
 
 [node name="Population" type="Node" parent="." node_paths=PackedStringArray("clock", "town")]
 script = ExtResource("6_population")

@@ -144,6 +144,11 @@ func _process(_delta: float) -> bool:
 	_check_a_plot_is_invisible_from_afar_until_he_arrives()
 	_check_he_does_not_bid_for_a_plot_he_can_see_is_taken()
 	_check_the_nearer_station_wins_and_moving_a_place_changes_it()
+	_check_working_a_plot_yields_grain()
+	_check_a_walking_man_produces_nothing()
+	_check_taking_more_than_he_has_moves_nothing()
+	_check_handing_over_conserves_and_is_all_or_nothing()
+	_check_only_creation_and_destruction_move_a_world_total()
 	_check_every_scene_is_wired()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
@@ -1268,6 +1273,320 @@ func _check_the_nearer_station_wins_and_moving_a_place_changes_it() -> void:
 		"after moving the near field out to (300, 0, 300), the best candidate still reads \"%s\", not the Plot — the ordering did not re-read the new geometry" % far_first_name)
 
 	world.queue_free()
+
+
+# --- Assertions 25 and 26: work makes something, and only work does -------------
+
+# Rung 5's whole point: a day finally has an output. Driven through the STEP
+# directly rather than through think_for_everyone, for the same reason claim 14
+# does it — this is about what working PAYS, not about whether the decision layer
+# would choose to work at this hour, and at midnight it would not.
+#
+# THE AMOUNT IS ASSERTED, NOT MERELY THE DIRECTION. "Grain went up" would pass
+# with the rate read off the wrong unit — per tick instead of per world hour is a
+# hundredfold error and it still goes up. So this reads the seam itself, works a
+# known number of hours, and asserts both halves of what that must produce: the
+# whole grain in his sack, and the fraction still lying in the furrow. Together
+# they have to account for every last hundredth of rate × hours, which is what
+# makes it impossible to satisfy by producing roughly the right amount.
+#
+# 2.5 hours DELIBERATELY, never a whole number of them. On an exact boundary the
+# expected answer sits one float rounding away from paying out a grain that has
+# not quite finished, and the claim would flicker for a reason that has nothing
+# to do with the code under it.
+func _check_working_a_plot_yields_grain() -> void:
+	var claim := "25 — working a plot yields grain at exactly the rate the seam reports"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	if clock == null or zoogs == null or plot == null or fields == null or work == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, the Plot, the Fields and Zoogs' WorkTheField")
+		return
+	var step := work.step as WorkStep
+	var inventory := zoogs.get_inventory()
+	if step == null or inventory == null:
+		_require(false, claim, "WorkTheField has no WorkStep under it, or Zoogs has no Inventory under him")
+		return
+
+	# Standing him in the furrow is required, and it is this rung's second trap:
+	# both farmers are authored at the Inn, so "work N ticks and assert grain"
+	# quietly becomes "walk N ticks and assert nothing". See _stand_at.
+	_stand_at(zoogs, fields)
+	_require(inventory.get_count(&"grain") == 0, claim,
+		"Zoogs starts the day holding %d grain — nothing has authored him any" % inventory.get_count(&"grain"))
+	_require(is_zero_approx(plot.output_part_made), claim,
+		"the plot starts with %.4f of a grain already part-made" % plot.output_part_made)
+
+	var rate := step.get_yield_per_hour(zoogs)
+	var worked_ticks := 250
+	for tick in worked_ticks:
+		clock.advance(TICK_HOURS)
+		step.advance(zoogs, TICK_HOURS)
+
+	var hours_worked := worked_ticks * TICK_HOURS
+	var owed := rate * hours_worked
+	var expected_whole := int(floorf(owed))
+	_require(inventory.get_count(&"grain") == expected_whole, claim,
+		"%.2f hours at %.2f grain an hour should put %d whole grain in his sack and he is holding %d" % [
+			hours_worked, rate, expected_whole, inventory.get_count(&"grain")])
+	# Sack plus furrow accounts for every hundredth. This is the half that makes
+	# the claim exact rather than approximate: a rate applied per tick instead of
+	# per hour, or a fraction dropped on the floor each tick, both land here.
+	var accounted := float(inventory.get_count(&"grain")) + plot.output_part_made
+	_require(absf(accounted - owed) < 0.0001, claim,
+		"%.2f hours at %.2f an hour owes %.4f grain, and sack (%d) plus furrow (%.4f) accounts for %.4f" % [
+			hours_worked, rate, owed, inventory.get_count(&"grain"), plot.output_part_made, accounted])
+
+	world.queue_free()
+
+
+# THE CLAIM MOST LIKELY TO CATCH A REAL MISTAKE, and it exists because
+# WorkStep.advance() grew a second branch at rung 4. It no longer only works: it
+# asks where the man is standing, and if he is not at the plot's place it walks
+# him there and returns. Put the yield at the TOP of advance() — the obvious
+# place, and where anybody reading only rung 3's version of the file would put
+# it — and a man produces grain the whole way across town. That reads as a
+# balance problem, not as a misplaced line.
+#
+# Both halves are checked on every tick of the road, because a yield paid to the
+# walker could land in either: in his sack, or as part-made work on a plot he has
+# not reached yet.
+func _check_a_walking_man_produces_nothing() -> void:
+	var claim := "26 — a man walking to a plot produces nothing until he gets there"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	if clock == null or zoogs == null or plot == null or fields == null or inn == null or work == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, the Plot, the Fields, an Inn and Zoogs' WorkTheField")
+		return
+	var step := work.step as WorkStep
+	var inventory := zoogs.get_inventory()
+	if step == null or inventory == null:
+		_require(false, claim, "WorkTheField has no WorkStep under it, or Zoogs has no Inventory under him")
+		return
+
+	_stand_at(zoogs, inn)
+
+	var arrived := false
+	for tick in 200:
+		if zoogs.get_current_place() == fields:
+			arrived = true
+			break
+		# Asserted BEFORE the tick, while he is provably still on the road —
+		# checking afterwards would be asking about a tick that may have landed
+		# him, and an arriving tick is allowed to work.
+		_require(inventory.get_count(&"grain") == 0, claim,
+			"%.4f units short of the Fields and already carrying %d grain — the yield is being paid for walking" % [
+				zoogs.global_position.distance_to(fields.global_position), inventory.get_count(&"grain")])
+		_require(is_zero_approx(plot.output_part_made), claim,
+			"%.4f units short of the Fields and the plot already reads %.4f of a grain part-made — work is being banked from the road" % [
+				zoogs.global_position.distance_to(fields.global_position), plot.output_part_made])
+		clock.advance(TICK_HOURS)
+		step.advance(zoogs, TICK_HOURS)
+
+	_require(arrived, claim,
+		"Zoogs never reached the Fields in 200 ticks — the walk half of the step never completed, so this claim proved nothing")
+
+	# The tick he ARRIVES walks him and returns; it does not also work. So the
+	# whole journey, arrival included, has to have paid exactly nothing.
+	_require(inventory.get_count(&"grain") == 0, claim,
+		"the walk from the Inn to the Fields paid him %d grain" % inventory.get_count(&"grain"))
+	_require(is_zero_approx(plot.output_part_made), claim,
+		"the walk from the Inn to the Fields banked %.4f of a grain on the plot" % plot.output_part_made)
+
+	# And now that he IS there, one tick of the same step must pay. Without this
+	# the claim above could be satisfied by a step that never produces anything
+	# at all, anywhere — which is the vacuous form of it.
+	clock.advance(TICK_HOURS)
+	step.advance(zoogs, TICK_HOURS)
+	_require(plot.output_part_made > 0.0, claim,
+		"standing in the furrow, one worked tick moved the plot's part-made work to %.4f — the step is not producing anywhere" % plot.output_part_made)
+
+	world.queue_free()
+
+
+# --- Assertions 27 to 30: the three doors ----------------------------------------
+
+# DESTRUCTION refused. A take that cannot be satisfied must move NOTHING: no
+# partial take, and no count driven below zero. A negative count would be a debt,
+# and every sum in the game would silently start including one.
+func _check_taking_more_than_he_has_moves_nothing() -> void:
+	var claim := "27 — taking more than he has returns false and changes nothing"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	if zoogs == null:
+		_require(false, claim, "the scene came up without a Zoogs")
+		return
+	var inventory := zoogs.get_inventory()
+	if inventory == null:
+		_require(false, claim, "Zoogs has no Inventory under him")
+		return
+
+	inventory.add(&"grain", 3)
+	_require(inventory.get_count(&"grain") == 3, claim,
+		"added 3 grain to an empty sack and it reads %d" % inventory.get_count(&"grain"))
+
+	_require(not inventory.take(&"grain", 5), claim,
+		"taking 5 grain from a sack holding 3 came back true")
+	_require(inventory.get_count(&"grain") == 3, claim,
+		"a refused take left him holding %d grain instead of the 3 he started with — it moved part of it" % [
+			inventory.get_count(&"grain")])
+
+	# The boundary in both directions: exactly what he has must go, and one more
+	# than nothing must not.
+	_require(inventory.take(&"grain", 3), claim,
+		"taking exactly the 3 grain he holds came back false")
+	_require(inventory.get_count(&"grain") == 0, claim,
+		"after taking all of it he reads %d grain" % inventory.get_count(&"grain"))
+	_require(not inventory.take(&"grain", 1), claim,
+		"taking 1 grain from an empty sack came back true")
+	_require(inventory.get_count(&"grain") == 0, claim,
+		"taking from an empty sack drove the count to %d — a count may never go negative" % [
+			inventory.get_count(&"grain")])
+	# A thing he has never held is not a thing he can lose.
+	_require(not inventory.take(&"scythe", 1), claim,
+		"taking a scythe he has never owned came back true")
+
+	world.queue_free()
+
+
+# MOVEMENT, from both ends. Claim 28 is that the waist conserves — sum before
+# equals sum after — and claim 29 is that a transfer which cannot complete moves
+# NEITHER half, asserted on both inventories rather than on the return value,
+# because a half-completed transfer also returns false.
+#
+# Run across all three mounts on purpose: man to place to station. If any one of
+# them came up without an Inventory this is where it says so, and a transfer
+# between a person and a barn is exactly what rung 6b's discharge will be.
+func _check_handing_over_conserves_and_is_all_or_nothing() -> void:
+	var conserves := "28 — handing goods over conserves the total across both inventories"
+	var atomic := "29 — a transfer that cannot complete moves neither half"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	if zoogs == null or inn == null or plot == null:
+		_require(false, conserves, "the scene came up without a Zoogs, an Inn and the Plot")
+		return
+	var pockets := zoogs.get_inventory()
+	var barn := inn.get_inventory()
+	var stone := plot.get_inventory()
+	if pockets == null or barn == null or stone == null:
+		_require(false, conserves, "rung 5 mounts an Inventory under Person, Place AND Workstation — one of the three has none")
+		return
+
+	pockets.add(&"grain", 10)
+	var before := _sum_grain([pockets, barn, stone])
+
+	_require(pockets.hand_over(&"grain", 4, barn), conserves,
+		"handing 4 of his 10 grain to the Inn came back false")
+	_require(pockets.get_count(&"grain") == 6 and barn.get_count(&"grain") == 4, conserves,
+		"after handing 4 over, he holds %d and the Inn holds %d" % [
+			pockets.get_count(&"grain"), barn.get_count(&"grain")])
+	_require(_sum_grain([pockets, barn, stone]) == before, conserves,
+		"a transfer changed the town's grain from %d to %d — movement must change no total" % [
+			before, _sum_grain([pockets, barn, stone])])
+
+	# Place to station, so the third mount is exercised as a source and not only
+	# as a bystander.
+	_require(barn.hand_over(&"grain", 4, stone), conserves,
+		"handing the Inn's 4 grain onto the plot came back false")
+	_require(barn.get_count(&"grain") == 0 and stone.get_count(&"grain") == 4, conserves,
+		"after the second transfer the Inn holds %d and the plot holds %d" % [
+			barn.get_count(&"grain"), stone.get_count(&"grain")])
+	_require(_sum_grain([pockets, barn, stone]) == before, conserves,
+		"two transfers changed the town's grain from %d to %d" % [
+			before, _sum_grain([pockets, barn, stone])])
+
+	# ATOMICITY. He holds 6; ask for 9.
+	var his_before := pockets.get_count(&"grain")
+	var barns_before := barn.get_count(&"grain")
+	_require(not pockets.hand_over(&"grain", 9, barn), atomic,
+		"handing over 9 grain out of the 6 he holds came back true")
+	_require(pockets.get_count(&"grain") == his_before, atomic,
+		"a refused transfer left the giver holding %d where he held %d — the take half happened" % [
+			pockets.get_count(&"grain"), his_before])
+	_require(barn.get_count(&"grain") == barns_before, atomic,
+		"a refused transfer left the receiver holding %d where it held %d — the add half happened" % [
+			barn.get_count(&"grain"), barns_before])
+	_require(_sum_grain([pockets, barn, stone]) == before, atomic,
+		"a refused transfer changed the town's grain from %d to %d" % [
+			before, _sum_grain([pockets, barn, stone])])
+
+	# Nowhere is not a destination. Goods handed to null must not simply vanish
+	# through the movement door, which is the leak the three-way split exists to
+	# make impossible.
+	_require(not pockets.hand_over(&"grain", 1, null), atomic,
+		"handing a grain to nothing at all came back true")
+	_require(pockets.get_count(&"grain") == his_before, atomic,
+		"handing a grain to nothing left him holding %d where he held %d — it was destroyed in transit" % [
+			pockets.get_count(&"grain"), his_before])
+
+	world.queue_free()
+
+
+# THE CLAIM THAT KEEPS THE THREE DOORS HONEST, and the one rungs 6b, 7 and 9a
+# will lean on: a world total may move where add or take is called, and NOWHERE
+# ELSE. Stated as a positive as well as a negative — a conservation check that
+# only ever asserts "the number did not move" is satisfied by a system in which
+# nothing works at all.
+func _check_only_creation_and_destruction_move_a_world_total() -> void:
+	var claim := "30 — only add and take move a world total; hand_over never does"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	if zoogs == null or inn == null or plot == null:
+		_require(false, claim, "the scene came up without a Zoogs, an Inn and the Plot")
+		return
+	var pockets := zoogs.get_inventory()
+	var barn := inn.get_inventory()
+	var stone := plot.get_inventory()
+	if pockets == null or barn == null or stone == null:
+		_require(false, claim, "one of Person, Place and Workstation came up without an Inventory")
+		return
+	var everywhere: Array[Inventory] = [pockets, barn, stone]
+
+	pockets.add(&"grain", 7)
+	var settled := _sum_grain(everywhere)
+	_require(settled == 7, claim,
+		"7 grain were created and the town holds %d" % settled)
+
+	pockets.hand_over(&"grain", 3, barn)
+	barn.hand_over(&"grain", 2, stone)
+	stone.hand_over(&"grain", 1, pockets)
+	_require(_sum_grain(everywhere) == settled, claim,
+		"three transfers moved the town's grain from %d to %d — MOVEMENT changed a total" % [
+			settled, _sum_grain(everywhere)])
+
+	pockets.add(&"grain", 4)
+	_require(_sum_grain(everywhere) == settled + 4, claim,
+		"creating 4 grain moved the town's total from %d to %d — CREATION did not change it by 4" % [
+			settled, _sum_grain(everywhere)])
+
+	_require(barn.take(&"grain", 1), claim, "taking 1 grain from the Inn's store came back false")
+	_require(_sum_grain(everywhere) == settled + 3, claim,
+		"destroying 1 grain left the town holding %d where %d was expected" % [
+			_sum_grain(everywhere), settled + 3])
+
+	world.queue_free()
+
+
+# Every grain in a set of inventories. Its own function because the interesting
+# assertions above are all about a number that must or must not move, and a sum
+# written out four times is four chances to sum a different set.
+func _sum_grain(inventories: Array[Inventory]) -> int:
+	var total := 0
+	for inventory in inventories:
+		total += inventory.get_count(&"grain")
+	return total
 
 
 # --- Assertion 4: the node_paths trap -------------------------------------------

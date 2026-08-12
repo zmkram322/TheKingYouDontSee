@@ -85,6 +85,21 @@ var clock: Clock
 @onready var brain: Brain = $Brain
 @onready var readout: Label3D = $Readout
 
+# What he is carrying. A Node under him rather than a field on him, and rather
+# than anything shared: what one man has in his pockets is the most per-person
+# fact in the game, and CLAUDE.md's rule sends different-for-everybody to a Node
+# every time.
+#
+# AUTHORED LAST IN person.tscn, AFTER Readout, AND IT MUST STAY THERE.
+# game.tscn overrides Hobb's Stats BY INDEX — `[node name="Stats" ... index="3"]`
+# carrying his strength of 1.15 — so a node inserted anywhere above Stats
+# renumbers it, the override lands on the wrong node or is dropped, both farmers
+# wake at the same moment, and the dawn race turns back into a coin flip decided
+# by scene order. That failure presents as "the sleep cycle broke", never as "a
+# node moved", which is why it is written down here rather than left to be
+# rediscovered.
+@onready var inventory: Inventory = $Inventory
+
 @onready var _shape: MeshInstance3D = $Shape
 
 
@@ -111,6 +126,12 @@ func _ready() -> void:
 	# which reads as a town that ignores him rather than as a missing wire.
 	if current_place == null:
 		push_warning("%s starts nowhere — no place query will ever find him" % person_name)
+	# Every person carries one, by composition — the same guarantee that keeps
+	# eat and flee on everybody's ballot. Said out loud because a man without one
+	# works a full day and produces nothing, and an empty readout looks exactly
+	# like a man who has not got round to working yet.
+	if inventory == null:
+		push_warning("%s has no Inventory under him — he can carry nothing, and a day's work will vanish" % person_name)
 
 
 # One slice of living, in world HOURS. Not called from here: Population walks
@@ -136,6 +157,18 @@ func think_and_act(hours: float) -> void:
 # place — without a single caller moving. Same reason stats go through get_stat.
 func get_current_place() -> Place:
 	return current_place
+
+
+# What he is carrying. A method rather than a bare field read, so that a person,
+# a place and a workstation are all asked the same question in the same words —
+# `something.get_inventory()` — and a transfer between any two of them reads
+# identically. Rung 6b hands a farmer's quota into a barn and rung 7 hands grain
+# to a merchant; neither wants to know which kind of thing it is holding.
+#
+# It is also the wall where "his pockets" could later become "his pockets, plus
+# the cart he is pulling" without a caller moving.
+func get_inventory() -> Inventory:
+	return inventory
 
 
 # How fast he travels right now, whatever he is travelling by. THE MEANS.
@@ -241,15 +274,29 @@ func _apply_tint() -> void:
 	_shape.material_override = material
 
 
-# What floats over his head — who he is and what he is doing, and deliberately
-# nothing else. It travels with him, so it shrinks with distance and turns
-# side-on, and thirteen stat lists floating over a town is soup. Everything you
-# need to tell one man from another at a glance, and not one line more.
+# What floats over his head — who he is, what he is doing, and what he is
+# carrying. It travels with him, so it shrinks with distance and turns side-on,
+# and thirteen stat lists floating over a town is soup. Everything you need to
+# tell one man from another at a glance, and not one line more.
 #
 # The detail lives in PersonReadout, which sits still in a corner and shows one
 # man closely. That split is why this is short.
+#
+# WHY WHAT HE CARRIES MADE THE CUT, when no stat has. The test for this label is
+# "what tells one man from another at a glance", and from rung 5 that is exactly
+# what his sacks do: two farmers race for one plot, one of them works it, and the
+# winner's grain climbs while the loser's sits at zero. Read off two heads at
+# once, that is the whole rung. A corner panel cannot show it — it watches one
+# man — and a graph makes you infer it. THE DAY THIS GOES SOUPY, and it will
+# around thirteen people with five kinds of goods, this loop is the first thing
+# to cut back; it is listed by reflection, so cutting it is deleting three lines
+# rather than unpicking a list of item names.
 func get_name_plate_text() -> String:
-	return "\n".join([person_name, brain.describe_current_action()])
+	var lines := [person_name, brain.describe_current_action()]
+	if inventory != null:
+		for item_name in inventory.get_item_names():
+			lines.append("%s %d" % [item_name, inventory.get_count(item_name)])
+	return "\n".join(lines)
 
 
 # Everything about him, for something that has the room to show it. The stats
@@ -263,6 +310,13 @@ func get_readout_text() -> String:
 	for stat_name in stats.get_stat_names():
 		var value: Variant = stats.get_stat(stat_name)
 		lines.append("%s %s" % [stat_name, _as_text(value)])
+	# And what he is carrying, listed the same way and for the same reason: an
+	# item that turns up in this world for the first time shows up here without
+	# this file changing, and no string in game/ ends up naming one particular
+	# kind of goods.
+	if inventory != null:
+		for item_name in inventory.get_item_names():
+			lines.append("%s %d" % [item_name, inventory.get_count(item_name)])
 	lines.append("at %s" % _describe_current_place())
 	# Every place in the town gets priced, rather than one named in here. Same
 	# reason the stats above are listed instead of named one by one: adding a
