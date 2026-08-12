@@ -8,7 +8,7 @@ something needs it.
 
 | Folder | What |
 |---|---|
-| `game/` | **The build.** Substrate: `person`, `stats`, `brain`, `action`, `action_step`, `decision_engine`, `clock`, `daylight`. |
+| `game/` | **The build.** Substrate: `person`, `stats`, `brain`, `action`, `action_step`, `decision_engine`, `clock`, `daylight`, `population`, `place`, `town`, `workstation`, `inventory`. |
 | `game/actions/` | The action library. One scene per action, instanced under a person's Brain. |
 | `game/ui/` | Watching and tuning. `stat_graph` plots a person's stats over time; `tuning_board` puts a slider on every exported number of whatever nodes you point it at. Both are their own scenes, both need a `CanvasLayer` parent in a 3D scene, both discover what to show by reflection so neither needs a line per stat or per knob. |
 | `assets/` | Art. `quaternius/` is 3D, `tiny_town`/`tiny_dungeon` are 2D. |
@@ -56,6 +56,15 @@ nothing needs restoring. The brain re-decides every single tick.
 `@export` field from outside `stats.gd`. That accessor is the one wall that
 lets storage graduate (Dictionary → packed array → native) without rewriting
 call sites. The PRD names it the load-bearing architectural wall.
+
+**Goods go through `Inventory`'s three doors, and they mean different things.**
+`get_count` is the same wall as `get_stat`, for the same reason — nothing
+outside `inventory.gd` touches `items`. Above that: **`add` creates, `take`
+destroys, `hand_over` moves.** A world total may change only where `add` or
+`take` is called, which is what makes a conservation check mean anything, and
+`hand_over` is the ONE transfer path — a second one is a second place for a
+half-completed transfer to hide. `hand_over` is take-then-add: both halves or
+neither.
 
 **Upkeep goes in `Brain._update_body`. Effects go in the action.** Two
 different things:

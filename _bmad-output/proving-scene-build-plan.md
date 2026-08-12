@@ -386,15 +386,16 @@ What this arc installs, and what it deliberately refuses.
 | Labour clearing | `Workstation.claim(person) -> bool` — a **day-long tenancy**, renewed by use | 3 |
 | Candidate pull | `Town.find_workstations(person, work_name) -> Array[Workstation]`, **sorted by travel cost** | 3 |
 | Idleness diagnosis | two counters on `Town` | 3 |
-| Carried goods | `Inventory.get_count(item_name) -> int` | 5 |
-| Goods movement | `Inventory.hand_over(item_name, count, to_inventory) -> bool` — the one waist all goods pass through | 5 |
+| Carried goods | `Inventory.get_count(item_name) -> int` — mounted under Person, Place AND Workstation; `get_inventory()` is the accessor on all three | 5 |
+| Goods movement | `Inventory.hand_over(item_name, count, to_inventory) -> bool` — the one waist all goods pass through; take-then-add, both halves or neither | 5 |
+| Yield | `WorkStep.get_yield_per_hour(person) -> float` — a tool, a richer plot, a wound install here. Empty today, and **strength is deliberately not in it** | 5 |
 | Who benefits | `Workstation.owner` / `Place.owner` — may be nobody, may be somebody with no body | 6a |
 | Assigned intent | `Obligation` node under a Person | 6b |
 | Permission | `Workstation.is_permitted_to(person) -> bool` — **employment grants access to land** | 6b |
 | Want | `target − stock`, computed in GATE, stored nowhere | 7 |
 | Exchange | `Trade` action + `can_afford(person, price) -> bool` | 7 |
 | Capability from an object | `is_available_to` reading `Inventory` | 8 |
-| Work that takes time | `Workstation.progress` + the station's own `Inventory`, world state | 9a |
+| Work that takes time | `Workstation.progress` + the station's own `Inventory`, world state. **The field landed early as `Workstation.output_part_made` at rung 5** — a count is whole and a tick is a hundredth of an hour, so the fraction had to live somewhere. 9a widens it; it must not add a second one | 5 / 9a |
 
 ### Refused, with reason
 
@@ -1117,6 +1118,14 @@ arrival check of any kind. No second authored workstation in `game.tscn`.
 
 ### Rung 5 — Things you carry
 
+**SHIPPED 2026-08-11 (`07a147c`), through its gate.** All thirty claims green,
+the schedule unmoved (Zoogs 22:01 / 8.00 h / 06:01, Hobb up 04:41), and Hobb
+takes the plot on every day 0-5 while Zoogs never does — now with grain on it:
+Hobb ends day 5 holding 94, Zoogs holding 0. Three things below were settled by
+building them and are recorded in place: the fraction lives on the station, the
+scale guard shipped as a pin, and `get_inventory()` is the accessor on all
+three mounts.
+
 **Seam:** `Inventory.get_count(item_name) -> int`
 
 Mirrors the `get_stat` / `set_stat` wall exactly, and for the same reason: named
@@ -1145,6 +1154,23 @@ func hand_over(item_name: StringName, count: int, to_inventory: Inventory) -> bo
 `hand_over` moves. Keeping them apart is what makes a conservation probe mean
 something — world totals may change **only** where `add`/`take` are called. And
 it is what stops rungs 6b, 7 and 9a each growing their own transfer path.
+
+> **THE API ABOVE SHIPPED EXACTLY AS WRITTEN, AND IS NOW FROZEN — 6a, 6b, 7, 9a
+> and 9c all consume it.** Three things it also grew that are not in the block
+> above, and that a later rung will otherwise reinvent:
+>
+> - **`get_inventory()` is the accessor, on Person, Place AND Workstation** —
+>   the same words asked of all three, so `hand_over` between a farmer and a
+>   barn (6b) or a farmer and a merchant (7) never has to know which kind of
+>   thing is on either end. **Null is a legitimate answer** for a Place or a
+>   Workstation: a road is somewhere a man can be and nowhere goods are kept.
+>   Only `Person` warns when it has none, by composition.
+> - **`hand_over` is take-then-add, in that order**, so the only way to move a
+>   thing is to have had it, and it refuses a null destination out loud rather
+>   than dropping the goods through the movement door.
+> - **A count spent to zero keeps its key**, so an item stays on his readout and
+>   on the graph at zero rather than vanishing — a line that disappears reads as
+>   broken instrumentation where a line on the axis reads as *he is out*.
 
 Working a plot now yields grain into the farmer's inventory.
 
@@ -1176,12 +1202,55 @@ measured with.**
 **`stat_graph` needs a per-series ignore or scale guard before coin lands.**
 `_get_top_of_scale()` scales to the global maximum, so coin at 500 squashes
 adenosine at 45 flat against the axis and the primary instrument goes unreadable
-exactly when the town gets interesting. Three lines.
+exactly when the town gets interesting.
+
+> **SHIPPED as a pin, not an ignore:** `@export var top_of_scale` — 0.0 fits the
+> axis to the data as before, and any other number holds it there. A line above
+> the pin **rides the top edge** rather than being drawn across the rest of the
+> interface. A pin beats an ignore because an ignored series is invisible, and
+> the merchant's coin is a thing you want to WATCH; what you do not want is it
+> taking the sleep cycle off the screen with it.
+>
+> **The shipped panels are left on 0.0 deliberately**, because at rung 5 grain
+> and adenosine share a range and the thing worth watching is both at once. It
+> stops being true fast — Hobb passes adenosine's 47 before the end of his first
+> working day and ends day 5 at 94 — so **pinning the two stat panels around 60
+> is the first tuning move**, and it is one number in the inspector, not a code
+> change.
+>
+> One thing that is not obvious until an item appears mid-run: a series born
+> after the graph started is **back-filled with NANs** so it lines up in time.
+> Without that it is drawn from the left edge as though it had always existed,
+> and a man's first grain reads as having happened an hour ago.
+
+> **⚠ A COUNT IS WHOLE AND A TICK IS A HUNDREDTH OF AN HOUR — so the yield
+> needed somewhere to keep the fraction, and this was the one thing the rung
+> could not be built without deciding.** One grain an hour is 0.01 of a grain
+> per tick; truncated to a count, every tick of work rounds to zero and a man
+> farms all day for nothing.
+>
+> **Settled by the author 2026-08-11: the fraction lives in the furrow** —
+> `Workstation.output_part_made`, a float in [0, 1). The step adds a tick's
+> worth and takes whole grain OUT the moment it completes. Rejected: paying on
+> the hour off the clock (nothing stored, but it pays by wall time rather than
+> by work done, so two minutes either side of the hour collects a full grain),
+> and a carry on the man's own step (which is stored progress on a PERSON, the
+> one thing the substrate refuses — he would carry a half-turned furrow across
+> town). See the ⚠ box on **rung 9a**, whose `Workstation.progress` this is.
 
 **Probe:** work N ticks, assert grain increases; `take` more than he has returns
 false and changes nothing; **`hand_over` conserves the total across two
 inventories, and fails atomically** — a transfer that cannot complete moves
 neither half.
+
+> **SHIPPED AS SIX CLAIMS, 25 TO 30**, all of them watched failing. Two are
+> stronger than the line above and worth knowing about before you write a
+> seventh: **claim 25 asserts the AMOUNT, not the direction** — sack plus furrow
+> must account for every hundredth of rate × hours, which is what a per-tick
+> instead of per-hour rate fails — and **claim 26 stands a man at the Inn and
+> asserts he produces nothing on the road**, which is the ⚠ box above made
+> mechanical. 26 caught the misplaced yield on the first try when it was
+> deliberately moved above the walk branch.
 
 **Moment:** the readout over the farmer's head gains `grain 3`, and you watch it
 climb while the loser's stays at zero. The difference between the two men
@@ -1576,6 +1645,27 @@ plan's central claim gets *tested* rather than asserted.
 #### Rung 9a — Work that takes time
 
 **Seam:** `Recipe` (shared authored data) + `Workstation.progress` (world state)
+
+> **⚠ THAT WORLD-STATE FIELD ALREADY EXISTS. RUNG 5 SHIPPED IT** as
+> `Workstation.output_part_made`, and this rung must **subsume it, never sit
+> beside it.** Two accumulators on one station is two answers to "how far along
+> is this", and the one the step reads will not be the one the probe sums.
+>
+> Why it landed four rungs early: a count is a whole number and a tick is a
+> hundredth of an hour, so a plot yielding one grain an hour makes 0.01 of a
+> grain per tick. Truncated, every tick of work rounds to zero and a man farms
+> all day for nothing. Rung 5 needed the fraction to survive a tick, and
+> Decision 6 already says where work-in-progress lives — on the world object,
+> never on the person.
+>
+> **What to check when you widen it.** It is denominated in **units of the
+> output**, not in hours of work, so a `Recipe` carrying `hours_of_work` is a
+> change of unit as well as a change of owner — decide which the field holds and
+> say so at the declaration. Nothing resets or sweeps it, deliberately, which is
+> already the behaviour this rung's own probe asks for: *"a miller interrupted
+> mid-grind and replaced by a second miller resumes from the same progress."*
+> Rung 5 gets that free — walk off a part-turned furrow and the fraction stays
+> in it for whoever claims the plot next.
 
 - **Files:** `game/recipe.gd` (`Resource` — same for everyone, so a Resource per
   `CLAUDE.md`'s Node-vs-shared-file rule), one `.tres`; edit
