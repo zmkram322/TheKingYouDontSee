@@ -156,6 +156,9 @@ func _process(_delta: float) -> bool:
 	_check_hunger_never_goes_negative()
 	_check_adenosine_is_written_only_in_brain()
 	_check_eat_is_on_every_person_by_composition()
+	_check_baking_turns_grain_into_bread()
+	_check_bread_wins_over_baking_and_grain_alone_bakes()
+	_check_neither_grain_nor_bread_means_neither_and_hunger_still_rises()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -2014,6 +2017,194 @@ func _check_eat_is_on_every_person_by_composition() -> void:
 			break
 	_require(knows_eat, claim,
 		"a freshly instanced person, nothing else authored, does not know Eat — it must be present by composition, not learned")
+
+	world.queue_free()
+
+
+# --- Assertion 37: baking, driven through the step ----------------------------
+
+# Driven through the STEP directly, the same pattern claims 14, 25 and 32 use
+# — this is about what baking DOES, not about whether the decision layer
+# would choose it at this hour. Both doors are asserted, not just one: a step
+# that consumed grain without producing bread, or produced bread for free,
+# would each satisfy only half of "he baked". And the refusal half — too
+# little grain for even one loaf — has to move NEITHER count, the same
+# all-or-nothing rule Inventory.take() already guarantees generally.
+func _check_baking_turns_grain_into_bread() -> void:
+	var claim := "37 — baking turns three grain into one loaf, and the world's totals move at both doors"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var make_bread := world.get_node_or_null("Population/Zoogs/Brain/MakeBread") as MakeBread
+	if zoogs == null or make_bread == null:
+		_require(false, claim, "the scene came up without a Zoogs or Zoogs' MakeBread action")
+		return
+	var step := make_bread.step as MakeBreadStep
+	var inventory := zoogs.get_inventory()
+	if step == null or inventory == null:
+		_require(false, claim, "MakeBread has no MakeBreadStep under it, or Zoogs has no Inventory under him")
+		return
+
+	var loaf_cost := step.grain_per_loaf
+	inventory.add(&"grain", 7)
+	var grain_before := inventory.get_count(&"grain")
+	var bread_before := inventory.get_count(&"bread")
+
+	step.advance(zoogs, TICK_HOURS)
+
+	_require(inventory.get_count(&"grain") == grain_before - loaf_cost, claim,
+		"one advance() should consume exactly %d grain (the step's own grain_per_loaf) — he holds %d where he started with %d" % [
+			loaf_cost, inventory.get_count(&"grain"), grain_before])
+	_require(inventory.get_count(&"bread") == bread_before + 1, claim,
+		"one advance() should add exactly one loaf — he holds %d bread where he started with %d" % [
+			inventory.get_count(&"bread"), bread_before])
+
+	# STARVE THE STEP. Bring him below one loaf's worth of grain and advance
+	# again: the partial-take refusal must do its job here exactly as it does
+	# in Inventory.take() generally.
+	var grain_left := inventory.get_count(&"grain")
+	if grain_left >= loaf_cost:
+		inventory.take(&"grain", grain_left - loaf_cost + 1)
+	_require(inventory.get_count(&"grain") < loaf_cost, claim,
+		"could not bring Zoogs below one loaf's worth of grain to test the refusal — he holds %d against a cost of %d" % [
+			inventory.get_count(&"grain"), loaf_cost])
+
+	var grain_before_refusal := inventory.get_count(&"grain")
+	var bread_before_refusal := inventory.get_count(&"bread")
+	step.advance(zoogs, TICK_HOURS)
+	_require(inventory.get_count(&"grain") == grain_before_refusal, claim,
+		"with fewer than %d grain, an advance() still took some — he holds %d where he started with %d" % [
+			loaf_cost, inventory.get_count(&"grain"), grain_before_refusal])
+	_require(inventory.get_count(&"bread") == bread_before_refusal, claim,
+		"with too little grain to bake, a loaf still appeared — bread reads %d where it started at %d" % [
+			inventory.get_count(&"bread"), bread_before_refusal])
+
+	world.queue_free()
+
+
+# --- Assertion 38: bread wins over baking, and grain alone bakes ---------------
+
+# THROUGH THE DECISION LAYER, at hour 0 — midnight, a fresh world, he starts
+# awake with StayUp (47.3) and WorkTheField (~43 at midnight) the only other
+# competition. At the shipped numbers a hunger of 90 scores Eat around 94.8
+# and MakeBread around 83.8 — both clear StayUp and WorkTheField — but NEITHER
+# number is asserted here. What's asserted is which ACTION won, so a retune on
+# the board can never make this claim lie about what it's checking: the
+# ordering between Eat and MakeBread is the two weights doing their one job.
+func _check_bread_wins_over_baking_and_grain_alone_bakes() -> void:
+	var claim := "38 — with bread in the bag he eats; with none but grain he bakes"
+
+	var world_a := _add_a_disabled_game_scene()
+	var zoogs_a := world_a.get_node_or_null("Population/Zoogs") as Person
+	var population_a := world_a.get_node_or_null("Population") as Population
+	if zoogs_a == null or population_a == null:
+		_require(false, claim, "the first world came up without a Zoogs and a Population")
+		return
+	var inventory_a := zoogs_a.get_inventory()
+	if inventory_a == null:
+		_require(false, claim, "Zoogs has no Inventory under him")
+		return
+	# Bread AND grain both present — he already holds authored bread (rung
+	# 6a's fourteen loaves), and grain is added through the door for good
+	# measure so this half is a genuine contest, not a default from MakeBread
+	# being gated off.
+	inventory_a.add(&"grain", 10)
+	zoogs_a.stats.set_stat(&"hunger", 90.0)
+	population_a.think_for_everyone(TICK_HOURS)
+	var action_a: Action = zoogs_a.brain.current_action
+	_require(action_a != null and action_a is Eat, claim,
+		"with bread AND grain both in the bag, hunger 90 chose \"%s\", not Eat" % [
+			String(action_a.name) if action_a != null else "nothing"])
+	world_a.queue_free()
+
+	var world_b := _add_a_disabled_game_scene()
+	var zoogs_b := world_b.get_node_or_null("Population/Zoogs") as Person
+	var population_b := world_b.get_node_or_null("Population") as Population
+	if zoogs_b == null or population_b == null:
+		_require(false, claim, "the second world came up without a Zoogs and a Population")
+		return
+	var inventory_b := zoogs_b.get_inventory()
+	if inventory_b == null:
+		_require(false, claim, "Zoogs has no Inventory under him")
+		return
+	# EMPTY THE BREAD BAG EXPLICITLY — state the world this half wants rather
+	# than leaning on a spare starting empty, the same lesson claim 33 paid
+	# for. Grain only, so baking is the one candidate left that can serve
+	# hunger at all.
+	var starting_bread := inventory_b.get_count(&"bread")
+	if starting_bread > 0:
+		inventory_b.take(&"bread", starting_bread)
+	_require(inventory_b.get_count(&"bread") == 0, claim,
+		"could not empty Zoogs' bread before the second half of this check — he still holds %d" % inventory_b.get_count(&"bread"))
+	inventory_b.add(&"grain", 10)
+	zoogs_b.stats.set_stat(&"hunger", 90.0)
+	population_b.think_for_everyone(TICK_HOURS)
+	var action_b: Action = zoogs_b.brain.current_action
+	_require(action_b != null and action_b is MakeBread, claim,
+		"with grain and no bread, hunger 90 chose \"%s\", not MakeBread" % [
+			String(action_b.name) if action_b != null else "nothing"])
+	world_b.queue_free()
+
+
+# --- Assertion 39: the desert case ----------------------------------------------
+
+# BOTH emptied explicitly — the lesson claim 33 already paid for, applied
+# twice over. NAN for both, the same off-the-ballot shape claims 13, 21 and 33
+# already use: a plain low score would mean OUTscored, which is a different
+# and false claim when the truth is he holds nothing that could ever serve
+# either want. And hunger keeps climbing regardless — the want doesn't pause
+# because nobody can answer it, it just keeps growing in silence, which is
+# the whole reason this rung is the one where losing the dawn race finally
+# has a stake.
+func _check_neither_grain_nor_bread_means_neither_and_hunger_still_rises() -> void:
+	var claim := "39 — a man with neither grain nor bread does neither, and goes on getting hungrier"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var population := world.get_node_or_null("Population") as Population
+	var eat := world.get_node_or_null("Population/Zoogs/Brain/Eat") as Eat
+	var make_bread := world.get_node_or_null("Population/Zoogs/Brain/MakeBread") as MakeBread
+	if zoogs == null or population == null or eat == null or make_bread == null:
+		_require(false, claim, "the scene came up without a Zoogs, a Population, Zoogs' Eat action and Zoogs' MakeBread action")
+		return
+	var inventory := zoogs.get_inventory()
+	if inventory == null:
+		_require(false, claim, "Zoogs has no Inventory under him")
+		return
+
+	var starting_bread := inventory.get_count(&"bread")
+	if starting_bread > 0:
+		inventory.take(&"bread", starting_bread)
+	var starting_grain := inventory.get_count(&"grain")
+	if starting_grain > 0:
+		inventory.take(&"grain", starting_grain)
+	_require(inventory.get_count(&"bread") == 0 and inventory.get_count(&"grain") == 0, claim,
+		"could not empty Zoogs' bread and grain before the check — he holds %d bread and %d grain" % [
+			inventory.get_count(&"bread"), inventory.get_count(&"grain")])
+
+	zoogs.stats.set_stat(&"hunger", 90.0)
+	var hungry_before: float = zoogs.stats.get_stat(&"hunger")
+
+	for tick in 5:
+		population.think_for_everyone(TICK_HOURS)
+
+	var eat_score: Variant = zoogs.brain.get_last_scores().get(eat.name)
+	var eat_off_the_ballot := false
+	if eat_score is float:
+		var eat_score_value: float = eat_score
+		eat_off_the_ballot = is_nan(eat_score_value)
+	_require(eat_off_the_ballot, claim,
+		"with neither bread nor grain, Zoogs' Eat score reads %s — it must be off the ballot (NAN)" % str(eat_score))
+
+	var bake_score: Variant = zoogs.brain.get_last_scores().get(make_bread.name)
+	var bake_off_the_ballot := false
+	if bake_score is float:
+		var bake_score_value: float = bake_score
+		bake_off_the_ballot = is_nan(bake_score_value)
+	_require(bake_off_the_ballot, claim,
+		"with neither bread nor grain, Zoogs' MakeBread score reads %s — it must be off the ballot (NAN)" % str(bake_score))
+
+	_require(zoogs.stats.get_stat(&"hunger") > hungry_before, claim,
+		"having nothing to eat or bake stopped hunger rising over 5 ticks — it went from %.4f to %.4f" % [
+			hungry_before, zoogs.stats.get_stat(&"hunger")])
 
 	world.queue_free()
 

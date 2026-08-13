@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/actions/make_bread.gd" id="1_make_bread"]
+[ext_resource type="Script" path="res://game/actions/make_bread_step.gd" id="2_baking"]
+
+[node name="MakeBread" type="Node"]
+script = ExtResource("1_make_bread")
+label = "make bread"
+baking_worth = 115.0
+bite = 3.0
+
+[node name="Baking" type="Node" parent="."]
+script = ExtResource("2_baking")
+grain_per_loaf = 3
