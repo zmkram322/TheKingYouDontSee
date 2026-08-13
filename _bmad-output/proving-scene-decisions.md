@@ -458,6 +458,15 @@ is a query (loop the people and ask), not a posted list.
 
 ## Decision 3 — How rung 6 gets cut
 
+> **⚠ AMENDED BY DECISION 25 (2026-08-12) — READ 25 FIRST.** The cut into 6a–6d
+> stands and is not reopened. **What 25 changes is 6a's contents:** this section
+> puts `social` AND the tavern in 6a, and its Moment says *"three drives on one
+> graph and you watch which wins."* Nothing reads `social` until 6d, so it can
+> neither bid nor win, and nobody enters the tavern until 6d either. **6a lands
+> hunger only.** Everything else here — the seven-debut argument, the 6b/6c/6d
+> split, beer moving to rung 7, a man eating his own bread at 6a — is unchanged
+> and still governs.
+
 **Settled 2026-08-09. Author's call. Do not reopen.**
 
 ### The question
@@ -3069,3 +3078,278 @@ it. **Not called.**
 | Decision 1, Seam 2 | Has a shape: a role's work reads a ledger. Still uncalled. | not yet |
 | Rung 6b | `is_permitted_to()` should record a *not permitted* failure when it refuses. Cheapest moment to add the third kind. | not yet |
 | `work_the_field.gd` | Its telemetry comment will need amending the first time anything reads those counters back. Not yet — nothing does. | not yet |
+
+---
+
+## Decision 25 — Rung 6a lands hunger only
+
+**Settled 2026-08-12. Author's call.** **Amends Decision 3, which carries a
+banner pointing here.** The 6a–6d cut is not reopened; only 6a's contents change.
+
+### The error
+
+Decision 3 puts **hunger AND social** in 6a and says in as many words:
+
+> *"hunger and social both rising in UPKEEP and both bidding against adenosine,
+> and you watch which wins."*
+
+Its Moment is *"three drives on one graph and you watch which wins."*
+
+**`Socialise` is rung 6d.** At 6a there is no action anywhere that reads
+`social`, so it cannot bid and it cannot win — it would be a line climbing
+forever and touching nothing, for three gates. **The same applies to the
+tavern**, which nothing visits until 6d: `Eat` is explicitly from the man's own
+inventory, and `Drink` is rung 7.
+
+This is the first case in the file where a settled decision's **prose** is wrong
+rather than its code, and it is recorded as a caution: the standing scepticism
+about pasted snippets applies to reasoning too.
+
+### What was settled
+
+> **Rung 6a lands hunger only** — the stat, its upkeep line, and `Eat` that
+> consumes it. One drive, one consumer, one gate: the same clean shape rung 5
+> had.
+>
+> **6d lands `social` + `Socialise` + the tavern together**, where the first
+> thing that reads the stat arrives with it.
+
+Two reasons, and the second is the one that decided it:
+
+- A stat nothing reads and a place nobody enters are both **substrate before
+  need** by the project's own rule.
+- **The Moment would be false advertising.** "Three drives compete" would in fact
+  be two drives competing and a spectator line rising in the corner.
+
+### What is NOT part of this
+
+**`Workstation.owner` ships at 6a regardless.** One exported field, may be null,
+**no reader at all this rung** — 6b's `is_permitted_to()` is its first. Unowned
+land is the king's, which is the same answer as nobody's. A single null field is
+not the same weight as a whole stat or a whole place.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Build plan, Rung 6a | Remove `social` and the tavern from the file list, the job list and the Moment. The Moment becomes **two** drives on one graph. | not yet |
+| Build plan, Rung 6d | Gains `social`, its upkeep line and the tavern, alongside `Socialise`. | not yet |
+| Rung 6a session prompt | Its Call 1 is answered. | not yet |
+
+---
+
+## Decision 26 — Where bread comes from, and the rung that closes the loop
+
+**Settled 2026-08-12. Author's call.**
+
+### The hole the author found
+
+The build plan routes bread as:
+
+> **Eats bread if hungry** — **6a** authored into his starting stock → **7**
+> bought from the tavern → **9b** the baker actually bakes it
+
+At 7 the tavern's bread is **also authored**. So **nothing in the world makes
+bread until 9b**, the second-to-last rung, and food is a fiction for the entire
+ladder. The real chain — grain → miller → flour → tavern owner → baker → bread —
+is five links long and none of it exists at 6a.
+
+### Part one — the starting stock
+
+> **Bread is authored per farmer in `game.tscn`, not on `person.tscn`.**
+> **Fourteen loaves each**, which is about a week at the shipped cadence.
+
+`person.tscn` is the template of a **body**, not of a life. Stats belong there —
+every body has adenosine, hunger, strength. Possessions do not, and a newly
+created person owning nothing is the honest default. It also matches how rung 5
+authored the Fields', the Inn's and the Plot's inventories: in `game.tscn`.
+
+`inventory.gd`'s own comment predicts this — *"a starting stock (rung 6a authors
+bread onto a farmer)"* — though that is a prediction rather than a spec, the same
+status as `stats.gd` predicting strength would feed the yield, which rung 5
+deliberately declined to cash.
+
+**Consequence for the probe:** its spare people start with empty bags, and the
+*"a man with no bread cannot eat"* claim must still **empty a bag explicitly**
+rather than lean on that. Rung 4 paid for this lesson twice — a check states the
+world it wants instead of inheriting one, which is what `_stand_at` exists for.
+
+### Part two — `MakeBread`, and where it goes
+
+> **Anyone with grain can make bread.** Costlier and cruder than a baker's, and
+> it is what lets the world stand up before a society exists to feed it.
+
+The shape, deliberately minimal:
+
+| | |
+|---|---|
+| **Gate** | awake, and has grain |
+| **Score** | the same hunger gap `Eat` uses, at a **lower weight** — with bread in the bag he eats; with none he bakes |
+| **Step** | one tick: take 3 grain, add 1 loaf |
+
+That closes the metabolism for the first time in the project: **work → grain →
+bread → eat → work**, with no authored fiction anywhere in the loop.
+
+**Three grain a loaf is the make-or-buy gap.** A baker's oven gets one for one,
+so buying is plainly better and employing a baker at 9b is worth doing rather
+than a formality. The efficiency difference *is* the choice, and it needs no
+extra mechanism.
+
+**NOT a workstation, and this is a constraint not a preference.**
+`WorkStep.YIELD_NAME` is a `const`, and rung 5 refused to export it on the stated
+grounds that a station making something other than grain *"comes from a Recipe
+(rung 9a), which owns the output and the time it takes together."* A hearth
+workstation lands 9a's Recipe five rungs early against a recorded refusal. A
+standalone one-tick action does not touch it.
+
+**Which is also why it cannot cost world time yet.** Duration needs somewhere to
+bank the fraction, and that is a station, and that is the Recipe. The cost is
+paid in **grain**, not hours, until the Recipe exists.
+
+### Where it lands: its own gate, immediately after 6a
+
+Not inside 6a — that rung is hunger versus work and adding a producer blurs it.
+Not deferred to 9b — that is four gates of authored food.
+
+**The reason to do it early is measured, not aesthetic.** Rung 5 established that
+Hobb takes the plot every day and gains ~16 grain, and **Zoogs never takes it and
+gains zero.** With `MakeBread`, Zoogs eats his fourteen loaves and then has
+nothing, no grain, and no way to get any. **The man who loses the dawn race
+starves.** That is the first time contention has a stake instead of a bigger
+number on somebody's head.
+
+### Left open
+
+**Make-or-buy as a choice within getting fed.** The author's framing, and it is
+right. Two forms:
+
+| Form | Shape | Cost |
+|---|---|---|
+| **cheap** (this rung) | `Eat`, `MakeBread` and later `BuyBread` all score off the same hunger gap at different weights, so a seller being present makes buying win on its own | he is hand-to-mouth: he only gets bread once he is already hungry |
+| **better** (wants 6b) | bread gets a **stock target**, so `MakeBread` and `BuyBread` score off `target − stock` (Decision 1) and he restocks on a quiet afternoon | needs the quota machinery 6b builds |
+
+Not called. The cheap form is what ships with the rung; the better one is a
+natural thing to fold in when 6b gives quotas a home.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Build plan, Rung 6a | Bread authored in `game.tscn`, fourteen loaves, per farmer. | not yet |
+| Build plan | **A new gate between 6a and 6b** for `MakeBread`. Numbering and name are the author's — inserting a gate moves the "fifteen gates" count quoted in the plan and in `CLAUDE.md`. | **not yet — needs the author's call on numbering** |
+| Build plan, line 585 | The bread row becomes: 6a authored → **new gate** made from grain → 7 bought → 9b baked properly. | not yet |
+| Rung 9b | Unthreatened. The baker is still worth employing because his oven is three times as efficient. | n/a |
+
+---
+
+## Decision 27 — Hunger is two gaps, and only the slow one is a lens
+
+**Settled 2026-08-12. Author's call.** Corrects a proposal made in the same
+session and rejected by the author; the rejection is the decision.
+
+### Part one — the cadence is forced, and `bite` does not set it
+
+Over a day, what goes in equals what built up:
+
+```
+meals per day  =  24 × hunger per hour  ÷  what a loaf fixes
+```
+
+**`bite` does not appear.** Whatever the curve looks like, he must put back what
+he burned. `bite` decides **when** each meal happens and therefore **what he is
+willing to interrupt** — a higher `bite` makes him more stoic, not more prompt.
+
+This matters because three natural wishes are mutually inconsistent:
+
+| Wish | Forces |
+|---|---|
+| a week to reach the top of the scale | rate ≈ 0.6/hour |
+| a loaf fixes 50 | one loaf covers three and a half days |
+| eats twice a day | a loaf must fix ~7, not 50 |
+
+At rate 0.6 with a 7-point loaf he lives his whole life between hunger 7 and 14 —
+the bottom seventh of the scale, where the curve never engages and nothing ever
+competes with anything.
+
+**Shipped: rate 4 per world hour, a loaf fixes 50, two meals a day.** `bite` is
+the author's on the tuning board.
+
+### Part two — hunger and starving are different gaps
+
+> **Hunger** is the gap between fed and not. It **saturates in a day**, and 100
+> means *"as hungry as a person gets"*, never *"dead"*.
+>
+> **Starving** is the gap between healthy and wasting. It only begins accruing
+> once hunger has been **pinned at the top**, and that is the one that takes a
+> week.
+
+Exactly the adenosine parallel: 100 adenosine is not death by sleep deprivation.
+Reading a felt gap as a lethal one is what forced the inconsistency above.
+
+**Starving is not built.** Nothing at 6a has a consequence for it. The week lives
+in fourteen authored loaves (Decision 26) until there is something for the second
+gap to do.
+
+### Part three — the drive to work stays whole
+
+A damper was proposed and **rejected**: hunger multiplying down the weight of
+work and leisure, so that `Eat` wins earlier without `Eat`'s own score moving.
+
+The author's rejection, and it is the right one:
+
+> **Hunger drives some men to work harder.** The direction is not universal, and
+> a lens is a claim about everyone. Something that points opposite ways for
+> different people is not a lens — it is **personality**, and personality's home
+> is Decision 21's tendencies and per-person weights.
+
+Two things follow:
+
+- **Nothing hunger does touches another want's weight.** The competition between
+  `Eat` and work is decided by the two curves alone, which is what keeps the
+  tuning legible.
+- **When "hunger makes him work harder" does arrive, it is temperament and never
+  reasoning.** He cannot want to work *because* work eventually becomes bread —
+  that is two steps of foresight, and Decision 20 refused lookahead on purpose.
+
+### Part four — starving cuts production, and that is legibility
+
+> **Starving is a lens on the RATE, not on wanting.** It lands in
+> `WorkStep.get_yield_per_hour(person)` — the seam rung 5 built and deliberately
+> left empty.
+
+Hunger does **not** land there. So **`get_yield_per_hour` stays empty at 6a**,
+and rung 5's intent survives another rung intact. Its first occupant is
+starvation, whenever that lands — a better first occupant than `strength` would
+have been, because it is a **state** rather than an identity: the same man
+produces differently on different days.
+
+**The author's framing is the point: this is a reportable event.** Two different
+signals reach a lord from one starving man, and neither is a petition
+(Decision 24):
+
+| | The signal |
+|---|---|
+| **direct** | he wanted food and did not get it — recorded where it failed |
+| **indirect** | the grain stopped coming off that plot |
+
+Nobody reported anything. The lord notices a field producing less, and can act on
+it, or not, and be wrong about why.
+
+### The hazard this creates, named before it is built
+
+**Starving cuts production, and production is what feeds you. That is a positive
+feedback loop with no floor** — a man who slips far enough cannot climb back.
+
+That is a **feature**: a spiral is legible in a way a flat penalty is not, and it
+is precisely what earns a lord's intervention. But it needs either a floor on how
+far output may fall, or an outside rescue (charity, a neighbour, the lord), and
+**that must be chosen on purpose rather than discovered when the town dies.**
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Rung 6a | `hunger` rises at **4 per world hour**, awake and asleep alike — one line, no branch, and it is why he wakes hungry. A loaf fixes **50**. | not yet |
+| Rung 6a | **`get_yield_per_hour` stays empty.** Hunger does not modify production; starving will. | not yet |
+| Rung 6a | Nothing hunger does may touch another action's weight. | not yet |
+| Build plan | `starvation` as a second, slower gap is named as a future need with two jobs — a production lens and a ledger signal. Not scheduled. | not yet |
