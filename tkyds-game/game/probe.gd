@@ -150,6 +150,12 @@ func _process(_delta: float) -> bool:
 	_check_handing_over_conserves_and_is_all_or_nothing()
 	_check_only_creation_and_destruction_move_a_world_total()
 	_check_every_scene_is_wired()
+	_check_hunger_rises_for_an_idle_man()
+	_check_eating_drops_hunger_and_a_loaf()
+	_check_no_bread_means_off_the_ballot()
+	_check_hunger_never_goes_negative()
+	_check_adenosine_is_written_only_in_brain()
+	_check_eat_is_on_every_person_by_composition()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -1737,6 +1743,279 @@ func _require(is_true: bool, claim: String, detail: String) -> void:
 	if is_true or _first_failure.has(claim):
 		return
 	_first_failure[claim] = detail
+
+
+# --- Assertions 31-34: hunger, the second drive ------------------------------------
+
+# The mirror of claim 5, for the new drive. On a FRESH world, one hour must
+# move hunger by exactly its own accumulation rate — AMOUNT, not direction, for
+# the same reason claim 5 reads that way: a rate applied per tick instead of
+# per world hour still moves the number in the right direction, just by the
+# wrong amount, and only an exact check catches that. Doing nothing at all
+# means whatever StayUp he starts on; upkeep must move him regardless of what
+# he chose, which is the whole point of it living in Brain rather than in an
+# action.
+func _check_hunger_rises_for_an_idle_man() -> void:
+	var claim := "31 — hunger rises for a man doing nothing at all, by exactly one hour's worth in one hour"
+	var world := _add_a_disabled_game_scene()
+	var person := world.get_node_or_null("Population/Zoogs") as Person
+	var population := world.get_node_or_null("Population") as Population
+	if person == null or population == null:
+		_require(false, claim, "a second game scene came up without a Population and a Zoogs in it")
+		return
+
+	var hungry_before: float = person.stats.get_stat(&"hunger")
+	population.think_for_everyone(1.0)
+	var moved: float = person.stats.get_stat(&"hunger") - hungry_before
+	var expected: float = person.brain.get_hunger_accumulation()
+
+	_require(absf(moved - expected) < 0.001, claim,
+		"one hour moved hunger by %.4f where one hour's worth is %.4f" % [moved, expected])
+
+	world.queue_free()
+
+
+# Both halves of "he ate": the stat fell AND the count went down by one, so a
+# step that changed hunger for free could not satisfy this. Driven through the
+# STEP directly, the same way claims 14 and 25 do — this is about what eating
+# DOES, not about whether the decision layer would choose it at this hour.
+# The drop is read off the step's own export rather than hardcoded, so a
+# retune on the board cannot make this claim lie about what it's checking.
+func _check_eating_drops_hunger_and_a_loaf() -> void:
+	var claim := "32 — eating drops hunger and consumes exactly one loaf, both halves"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var eat := world.get_node_or_null("Population/Zoogs/Brain/Eat") as Eat
+	if zoogs == null or eat == null:
+		_require(false, claim, "the scene came up without a Zoogs or Zoogs' Eat action")
+		return
+	var step := eat.step as EatStep
+	var inventory := zoogs.get_inventory()
+	if step == null or inventory == null:
+		_require(false, claim, "Eat has no EatStep under it, or Zoogs has no Inventory under him")
+		return
+
+	zoogs.stats.set_stat(&"hunger", 90.0)
+	var bread_before := inventory.get_count(&"bread")
+	_require(bread_before >= 1, claim,
+		"Zoogs is authored with %d bread — expected at least one loaf to eat" % bread_before)
+
+	step.advance(zoogs, TICK_HOURS)
+
+	var expected_drop: float = step.hunger_a_loaf_fixes
+	_require(inventory.get_count(&"bread") == bread_before - 1, claim,
+		"one advance() should consume exactly one loaf — he holds %d where he started with %d" % [
+			inventory.get_count(&"bread"), bread_before])
+	_require(absf(zoogs.stats.get_stat(&"hunger") - (90.0 - expected_drop)) < 0.001, claim,
+		"hunger should have fallen by exactly %.2f (the step's own hunger_a_loaf_fixes) and reads %.2f instead of %.2f" % [
+			expected_drop, zoogs.stats.get_stat(&"hunger"), 90.0 - expected_drop])
+
+	world.queue_free()
+
+
+# EMPTIES THE BAG EXPLICITLY, per the rung's own warning: a spare starting
+# empty is not the same claim as a man who WAS fed and then ran out, and a
+# check states the world it wants rather than inheriting one. NAN, not merely
+# a low score — the same off-the-ballot shape claims 13 and 21 already use,
+# because a plain low number would mean he was OUTscored, which is a
+# different and false claim. And having nothing to eat must not stop the
+# upkeep line running — hunger is a fact about his body, not about his
+# larder.
+func _check_no_bread_means_off_the_ballot() -> void:
+	var claim := "33 — a man with no bread cannot eat: Eat is off his ballot entirely, and hunger keeps rising regardless"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var population := world.get_node_or_null("Population") as Population
+	var eat := world.get_node_or_null("Population/Zoogs/Brain/Eat") as Eat
+	if zoogs == null or population == null or eat == null:
+		_require(false, claim, "the scene came up without a Zoogs, a Population and Zoogs' Eat action")
+		return
+	var inventory := zoogs.get_inventory()
+	if inventory == null:
+		_require(false, claim, "Zoogs has no Inventory under him")
+		return
+
+	var starting_bread := inventory.get_count(&"bread")
+	if starting_bread > 0:
+		inventory.take(&"bread", starting_bread)
+	_require(inventory.get_count(&"bread") == 0, claim,
+		"could not empty Zoogs' bread before the check — he still holds %d" % inventory.get_count(&"bread"))
+
+	zoogs.stats.set_stat(&"hunger", 90.0)
+	var hungry_before: float = zoogs.stats.get_stat(&"hunger")
+
+	population.think_for_everyone(TICK_HOURS)
+
+	var score: Variant = zoogs.brain.get_last_scores().get(eat.name)
+	var off_the_ballot := false
+	if score is float:
+		var score_value: float = score
+		off_the_ballot = is_nan(score_value)
+	_require(off_the_ballot, claim,
+		"with no bread, Zoogs' Eat score reads %s — an empty sack must take Eat off the ballot entirely (NAN), not merely outscore it" % str(score))
+	_require(zoogs.stats.get_stat(&"hunger") > hungry_before, claim,
+		"having no bread stopped hunger rising over one tick — it went from %.4f to %.4f" % [
+			hungry_before, zoogs.stats.get_stat(&"hunger")])
+
+	world.queue_free()
+
+
+# Set well below what a loaf fixes, so a step that didn't clamp would drive
+# the stat negative and this would catch it on the first meal, not the fifth.
+func _check_hunger_never_goes_negative() -> void:
+	var claim := "34 — hunger never goes negative, however much he eats"
+	var world := _add_a_disabled_game_scene()
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var eat := world.get_node_or_null("Population/Zoogs/Brain/Eat") as Eat
+	if zoogs == null or eat == null:
+		_require(false, claim, "the scene came up without a Zoogs or Zoogs' Eat action")
+		return
+	var step := eat.step as EatStep
+	var inventory := zoogs.get_inventory()
+	if step == null or inventory == null:
+		_require(false, claim, "Eat has no EatStep under it, or Zoogs has no Inventory under him")
+		return
+
+	zoogs.stats.set_stat(&"hunger", 3.0)
+	var bread_before := inventory.get_count(&"bread")
+	_require(bread_before >= 1, claim,
+		"Zoogs is authored with %d bread — expected at least one loaf to eat" % bread_before)
+
+	step.advance(zoogs, TICK_HOURS)
+
+	_require(is_zero_approx(zoogs.stats.get_stat(&"hunger")), claim,
+		"hunger starting at 3.0, well below what a loaf fixes, reads %.4f after one meal instead of clamping at 0.0" % [
+			zoogs.stats.get_stat(&"hunger")])
+	_require(inventory.get_count(&"bread") == bread_before - 1, claim,
+		"a meal that clamped at the floor should still have consumed one loaf — he holds %d where he started with %d" % [
+			inventory.get_count(&"bread"), bread_before])
+
+	world.queue_free()
+
+
+# --- Assertion 35: adenosine is written from nowhere outside brain.gd --------------
+
+# THE MECHANICAL FORM of the upkeep-vs-effects rule. A TEXT SCAN, in the shape
+# SceneWiring already establishes for .tscn files: at runtime "was this ever
+# written outside brain.gd" isn't something a pumped run can catch by itself —
+# you'd have to already know where to look before you could watch for it, and
+# a scan over the source text doesn't need to.
+#
+# Exactly three exemptions, each for a different reason: brain.gd is the one
+# legitimate write site (upkeep); stats.gd carries the declaration itself,
+# which is not a write in the sense this claim means; probe.gd is the harness
+# authoring situations by hand, the same exemption _stand_at already takes for
+# current_place.
+#
+# DELIBERATELY NOT EXTENDED TO HUNGER. Eat MUST write hunger — that's an
+# effect the design permits, not upkeep sneaking in through a side door — so a
+# parallel scan over "hunger" would be asserting the opposite of what this
+# rung built.
+#
+# THE POSITIVE CONTROL matters as much as the scan: a scan finding nothing
+# could just as easily be reading the wrong pattern or the wrong folder, and a
+# claim that can only ever pass proves nothing. So this also asserts brain.gd
+# DOES contain a write — if that pattern ever stops matching brain.gd's own
+# upkeep line, this claim fails for that reason rather than going on passing
+# vacuously forever.
+const _ADENOSINE_SCAN_EXEMPT_FILES: Array[String] = [
+	"res://game/brain.gd",       # the one legitimate write site — upkeep
+	"res://game/stats.gd",       # the declaration, not a write
+	"res://game/probe.gd",       # the harness authoring situations by hand
+]
+
+func _check_adenosine_is_written_only_in_brain() -> void:
+	var claim := "35 — adenosine is written from nowhere outside brain.gd"
+	var script_paths := _find_gd_files("res://game")
+	_require(not script_paths.is_empty(), claim,
+		"found no .gd files at all under res://game — the scan read nothing")
+
+	# Direct assignment, GDScript's typed-declaration colon included, so both
+	# `adenosine = x` and `adenosine := x` are caught alongside `+=` and
+	# friends. The word boundary is what keeps this from tripping over
+	# `adenosine_ceiling` or `base_adenosine_per_hour` — both have a
+	# non-boundary character sitting where this pattern needs a break.
+	var assignment_regex := RegEx.create_from_string("\\badenosine\\b\\s*:?[-+*/]?=(?!=)")
+
+	var offenders: Array[String] = []
+	var brain_has_a_write := false
+	for script_path: String in script_paths:
+		var file_text := FileAccess.get_file_as_string(script_path)
+		if FileAccess.get_open_error() != OK:
+			continue
+		var writes := file_text.contains("set_stat(&\"adenosine\"") \
+			or assignment_regex.search(file_text) != null
+		if script_path == "res://game/brain.gd":
+			brain_has_a_write = writes
+			continue
+		if _ADENOSINE_SCAN_EXEMPT_FILES.has(script_path):
+			continue
+		if writes:
+			offenders.append(script_path)
+
+	_require(offenders.is_empty(), claim,
+		"adenosine is written outside brain.gd in: %s" % ", ".join(offenders))
+	_require(brain_has_a_write, claim,
+		"brain.gd itself reads as having no write to adenosine — the scan's pattern is not matching its own upkeep line, so a scan that finds nothing proves nothing")
+
+
+# The same DirAccess walk SceneWiring.find_scene_files uses, rewritten here for
+# .gd rather than .tscn. Kept in probe.gd rather than folded into SceneWiring,
+# which is about .tscn wiring specifically and isn't the right home for a
+# write-site scan over source text.
+func _find_gd_files(root_dir: String) -> PackedStringArray:
+	var found := PackedStringArray()
+	_gather_gd_files(root_dir, found)
+	return found
+
+
+func _gather_gd_files(dir_path: String, found: PackedStringArray) -> void:
+	var directory := DirAccess.open(dir_path)
+	if directory == null:
+		return
+	directory.list_dir_begin()
+	var entry_name := directory.get_next()
+	while entry_name != "":
+		if entry_name != "." and entry_name != "..":
+			var entry_path := dir_path.path_join(entry_name)
+			if directory.current_is_dir():
+				if entry_name != ".godot" and entry_name != ".import" and entry_name != "addons":
+					_gather_gd_files(entry_path, found)
+			elif entry_name.ends_with(".gd"):
+				found.append(entry_path)
+		entry_name = directory.get_next()
+	directory.list_dir_end()
+
+
+# --- Assertion 36: Eat is on every person by composition ---------------------------
+
+# FR86's guarantee made mechanical, the same way claim 7 makes composition
+# mechanical for a man's place. A fresh person.tscn, nothing authored beyond
+# what the scene itself ships with — no bread, no hunger set by hand — and Eat
+# still has to be in his repertoire, because it's in every person scene rather
+# than something learned.
+func _check_eat_is_on_every_person_by_composition() -> void:
+	var claim := "36 — Eat is on every person by composition"
+	var world := _add_a_disabled_game_scene()
+	var population := world.get_node_or_null("Population") as Population
+	if population == null:
+		_require(false, claim, "a second game scene came up without a Population in it")
+		return
+
+	var newcomer := _add_a_person(population, "Newcomer")
+	if newcomer == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+
+	var knows_eat := false
+	for action in newcomer.brain.get_known_actions():
+		if action is Eat:
+			knows_eat = true
+			break
+	_require(knows_eat, claim,
+		"a freshly instanced person, nothing else authored, does not know Eat — it must be present by composition, not learned")
+
+	world.queue_free()
 
 
 func _report() -> void:

@@ -176,6 +176,11 @@ func think_and_act(hours: float) -> void:
 @export var base_adenosine_cleared_per_hour := 5.0      # while asleep
 @export var adenosine_ceiling := 100.0
 
+# Unlike the pair above, hunger gets no awake/asleep split at all — see the
+# unbranched line in _update_body below for why.
+@export var base_hunger_per_hour := 4.0
+@export var hunger_ceiling := 100.0
+
 func _update_body(hours: float) -> void:
 	var tired: float = person.stats.get_stat(&"adenosine")
 	if is_awake():
@@ -183,6 +188,16 @@ func _update_body(hours: float) -> void:
 	else:
 		tired -= get_adenosine_recovery() * hours
 	person.stats.set_stat(&"adenosine", clampf(tired, 0.0, adenosine_ceiling))
+
+	# ONE LINE, NO BRANCH — and the missing branch is deliberate. Adenosine
+	# above reads differently awake versus asleep because sleep is the thing
+	# that clears it; nothing clears hunger by sleeping, only eating does (see
+	# eat_step.gd), so upkeep has exactly one behaviour for this stat, all day
+	# and all night alike. That is exactly why he wakes up hungry: the eight
+	# hours he spent asleep were eight more hours of this line running.
+	var hungry: float = person.stats.get_stat(&"hunger")
+	hungry += get_hunger_accumulation() * hours
+	person.stats.set_stat(&"hunger", clampf(hungry, 0.0, hunger_ceiling))
 
 
 # How fast he's tiring right now, per world hour, after everything that affects it.
@@ -203,6 +218,16 @@ func _update_body(hours: float) -> void:
 # 6×. At four factors, revisit; not before.
 func get_adenosine_accumulation() -> float:
 	return base_adenosine_per_hour * get_exertion()
+
+
+# How fast he's hungering right now, per world hour. The same seam shape as
+# the accumulation above it — everything that will ever change how fast
+# someone hungers (illness, cold, a hard day's work, a growing boy) lands in
+# here as one more factor, and no caller anywhere has to change to get it. A
+# function doing arithmetic today; a rate you can plot rather than reason
+# about, same as its neighbour.
+func get_hunger_accumulation() -> float:
+	return base_hunger_per_hour
 
 
 # How fast he's recovering, per world hour. The mirror of the above, and the

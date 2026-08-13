@@ -70,6 +70,27 @@ extends Node
 @export var strength := 1.0
 
 
+# --- Hunger -------------------------------------------------------------------
+# The gap between what he's eaten and being fed. It rises the whole time he is
+# alive — awake or asleep, working or idle, per Brain._update_body's one
+# unbranched line — because a body burns fuel regardless of what its owner is
+# up to. It falls only when he eats (see actions/eat_step.gd), which is the
+# one effect this stat is allowed to have written into it from outside upkeep.
+#
+# 0–100, where 0 is a man who just ate and 100 means "as hungry as a person
+# gets" — NOT "dead". Read that the same way adenosine's ceiling above already
+# asks you to: a hundred adenosine is a man desperate to sleep, not a man
+# killed by sleep deprivation, and a hundred hunger is the same shape of claim
+# about food. Treating a felt gap as a lethal one is exactly the mistake
+# Decision 27 was written to head off.
+#
+# Starving — how long a want this large has gone unanswered — is a second,
+# slower gap layered on top of this one, and it is NOT built here. This stat
+# only ever says how hungry he feels right now, never how long he's been that
+# way.
+@export var hunger := 0.0
+
+
 # Note what is NOT here: whether he's awake. That's not a fact he carries, it's
 # a fact about what he's currently doing, so it's read off the brain
 # (Brain.is_awake) rather than stored. A stored copy could disagree with what

@@ -101,6 +101,9 @@ current_place = NodePath("../../Town/Inn")
 
 [node name="WorkTheField" parent="Population/Zoogs/Brain" index="3" instance=ExtResource("11_work_the_field")]
 
+[node name="Inventory" parent="Population/Zoogs" index="5"]
+items = {&"bread": 14}
+
 [node name="Hobb" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 0, 3.5)
 person_name = "Hobb"
@@ -111,6 +114,9 @@ current_place = NodePath("../../Town/Inn")
 
 [node name="Stats" parent="Population/Hobb" index="3"]
 strength = 1.15
+
+[node name="Inventory" parent="Population/Hobb" index="5"]
+items = {&"bread": 14}
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.788, 0.616, 0, -0.616, 0.788, -2, 17, 22)

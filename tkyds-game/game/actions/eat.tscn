@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/actions/eat.gd" id="1_eat"]
+[ext_resource type="Script" path="res://game/actions/eat_step.gd" id="2_eating"]
+
+[node name="Eat" type="Node"]
+script = ExtResource("1_eat")
+label = "eat"
+starving_worth = 130.0
+bite = 3.0
+
+[node name="Eating" type="Node" parent="."]
+script = ExtResource("2_eating")
+hunger_a_loaf_fixes = 50.0

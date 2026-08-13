@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cbxfrobp7ktlj"]
+[gd_scene load_steps=11 format=3 uid="uid://cbxfrobp7ktlj"]
 
 [ext_resource type="Script" uid="uid://4loqu0l5vvxy" path="res://game/person.gd" id="1_person"]
 [ext_resource type="Script" path="res://game/inventory.gd" id="7_inventory"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://game/actions/stay_up.tscn" id="4_stay_up"]
 [ext_resource type="PackedScene" path="res://game/actions/sleep.tscn" id="5_sleep"]
 [ext_resource type="PackedScene" path="res://game/actions/wake.tscn" id="6_wake"]
+[ext_resource type="PackedScene" path="res://game/actions/eat.tscn" id="8_eat"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
 radius = 0.35
@@ -35,6 +36,8 @@ script = ExtResource("3_brain")
 [node name="Sleep" parent="Brain" instance=ExtResource("5_sleep")]
 
 [node name="Wake" parent="Brain" instance=ExtResource("6_wake")]
+
+[node name="Eat" parent="Brain" instance=ExtResource("8_eat")]
 
 [node name="Stats" type="Node" parent="."]
 script = ExtResource("2_stats")

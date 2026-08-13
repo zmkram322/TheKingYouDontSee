@@ -29,9 +29,9 @@ extends Node3D
 # what would earn it is an Action that scores giving a station up EARLY, so
 # that somebody else can have it before tonight. Nothing scores that yet.
 #
-# Note what is also not here: an `owner`, and is_permitted_to(). This plot is
-# common land — the king's, which is the same answer as nobody's — and both
-# arrive at rung 6 when there is finally an Obligation for them to read.
+# Note what is_permitted_to() is not: nothing reads owned_by yet (below). This
+# plot is common land — the king's, which is the same answer as nobody's — and
+# a reader arrives at rung 6b when there is finally an Obligation to consult it.
 
 # What kind of work is done here. Town.find_workstations matches on this, so it
 # is what makes a plot answer "field work" and a millstone, one day, not.
@@ -41,6 +41,22 @@ extends Node3D
 # clock.day() ever returns.
 var claimed_by: Person = null
 var claimed_on_day := -1
+
+# Who OWNS this spot, may be null. Unowned land is the king's, which is the
+# same answer as nobody's — same reading as claimed_by == null above, just at
+# a longer timescale: claimed_by is who has it today, owned_by is whose it is
+# at all.
+#
+# NOT NAMED `owner` — Node already declares a built-in `owner` property (the
+# scene owner a node belongs to for saving purposes), and redeclaring it is a
+# GDScript compile error. `owned_by` was chosen to match `claimed_by` above it.
+# The plan's documents call this field `owner`; it is `owned_by` here for
+# exactly that reason.
+#
+# NO READER AT ALL THIS RUNG. Nothing in game/ asks this question yet — 6b's
+# is_permitted_to() is its first reader, and until that lands this field is
+# authored and inert.
+@export var owned_by: Person = null
 
 # Work done here that has not yet come to anything — a furrow part turned, in
 # units of whatever this station makes. The step adds a tick's worth every tick
