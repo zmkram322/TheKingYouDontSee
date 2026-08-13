@@ -2468,3 +2468,604 @@ wire to it.
 
 None yet — no rung on this ladder animates anything. Relevant the first time a
 Moment is meant to be *read* rather than measured off a graph.
+
+---
+
+## Decision 19 — Every want is a gap
+
+**Settled 2026-08-12. Author's call.** Closes the question Decision 1 explicitly
+left open. Does not overturn it — Decision 1's `target − stock` is this rule,
+stated for one case.
+
+### The question
+
+Decision 1 settled where want comes from **for trade**, and said the body's
+appetites might be the same rule without settling it. Rung 6a brings `hunger`,
+the first appetite, and the ladder has no account of what wanting *is*. Every
+`get_utility_score` in `game/` is a hand-written formula answerable to nothing
+but itself, and the count of them is about to grow.
+
+### What was settled
+
+> **A want is a gap between how things are and how they should be.**
+
+One sentence, and it covers everything on the ladder:
+
+| The want | The should-be | The is | Where the gap lives |
+|---|---|---|---|
+| tired | rested | `adenosine` | the body |
+| hungry | fed | `hunger` | the body |
+| lonely (6d) | company wanted | company had | the body |
+| a miller's quota (7) | `target` | `stock` | a barn |
+| an obligation (6b) | owed | delivered | the agreement |
+
+Decision 1's `target − stock` is the barn row. Nothing about it changes; it stops
+being a rule about trade and becomes one case of a rule about wanting.
+
+### What this immediately exposes
+
+**`WorkTheField`'s `pull = 73` is not a design choice. It is a placeholder
+standing in for a gap that has not been built yet.** Work has no should-be behind
+it at 6a — the 73 is a hand-placed constant doing the job a quota will do at 6b,
+and the same is true of `StayUp`'s 67.3 (see Decision 21).
+
+This is worth stating because it changes how those numbers should be read when
+they cause trouble. A flat pull that has to be re-tuned every time a new action
+lands is not a tuning problem; it is a **missing gap**, and the fix is to build
+the gap rather than to re-place the constant. Expect most of the 73 to dissolve
+at 6b.
+
+### The test that keeps it honest
+
+> **If he did this constantly, would he stop wanting it?**
+
+Yes → it is a gap. Eat constantly and you stop wanting food. No → it is something
+else, and Decisions 21 and 22 are where the something-elses live.
+
+This test is the guard against the model becoming vacuous. Any behaviour can be
+dressed as a gap by inventing a hollow for it ("a whittling deficit"), and once
+that is allowed the rule has stopped saying anything. Apply the test before
+adding a stat.
+
+### Where a gap comes from — the seam this names
+
+A gap has a **source**, and the source is a thing in the world. The body for
+appetites, a barn for a farmer's quota, an agreement for an obligation, and — see
+Decision 24 — a town's ledger for a lord's work.
+
+**A role is which ledger your work reads.** Same person, same formula, same
+temperament; only the source of the gap differs. That is what makes promotion
+mechanically real later, and it is why this is one seam and not a family of
+special cases.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Rung 6a | `hunger` is the first gap with a body behind it. Its stat comment should say *what it is the gap to* (fed), not merely what it counts. | not yet |
+| Rung 6b | Work's quota is not a new mechanism — it is `WorkTheField` finally getting the gap its 73 stands in for. Expect the flat pull to shrink when it lands. | not yet |
+| Decision 1 | Unchanged and uncontradicted. A forward-pointer banner on it is the author's call; none was added, since append-only means an edit needs a reason stronger than tidiness. | n/a |
+
+---
+
+## Decision 20 — The want formula
+
+**Settled 2026-08-12. Author's call.** Rests on Decision 19.
+
+### The question
+
+Given that a want is a gap, how does a gap become a number on the ballot? And
+can one formula serve every action, so that a new behaviour slots in and competes
+intuitively without re-placing every existing constant?
+
+### What was settled
+
+> ```
+> want = weight × gap ^ bite
+> ```
+>
+> - **`gap`** — 0 to 1. How far from how it should be.
+> - **`bite`** — how sharply it amplifies. The author's word for this is
+>   **urgency**: a buildup that can no longer be ignored, where the *type* of
+>   urgency sets how fast the amplification comes on.
+> - **`weight`** — what it is worth when the gap is total. May be a function of
+>   the world. This is where the sun lands, and where lenses land (Decision 22).
+>
+> A want with no gap yet is `gap = 1`, and the formula collapses to
+> `want = weight`.
+
+### Why this one: it reproduces every shipped number exactly
+
+This is the argument that carried it. It is not a rewrite — it is a way of
+**reading** the four numbers already measured and living in `game/actions/`:
+
+| Shipped | weight | gap | bite | comes out as |
+|---|---|---|---|---|
+| `StayUp` | `67.3 + 20 × sun` | 1 | — | `67.3 + 20 × sun` ✓ |
+| `WorkTheField` | `73 + 30 × sun` | 1 | — | `73 + 30 × sun` ✓ |
+| `Sleep` | `100` | `adenosine / 100` | 1 | `adenosine` ✓ |
+| `Wake` | `10` | 1 | — | `10` ✓ |
+
+Every action in the game today is this formula with one of the two interesting
+parts switched off. `Sleep` is the only one with a real gap, and its `bite` is 1,
+which is exactly why it is a straight line and why the graph reads so cleanly.
+
+**Rung 6a's `Eat` is the first want in the game with both parts live.** Nothing
+needs retuning to adopt this; adopting it tells you which knob each existing
+action is missing.
+
+### The sun modifies weight, not gap and not bite
+
+"Work is worth more while the sun is up" is the world changing what a thing is
+worth. On `gap` it would be nonsense — the sun does not make you less hungry —
+and on `bite` it would be a claim about temperament changing hourly.
+
+### Why `bite` above 1 is not optional at 6a
+
+A straight-line `Eat` is arithmetically incapable of the thing rung 6a exists to
+let you tune, and the failure is in both directions:
+
+- Work at midday is **103**, and a stat with a 100 ceiling scored linearly can
+  never reach it. A meal could never interrupt work, at any hunger, ever.
+- `StayUp` at 22:00 is **50.0**, so a linearly-scored man half-empty in the
+  evening scores 50 and eats. Then eats again. And again.
+
+Straight line gives exactly the wrong day: never at noon, constantly at night.
+`bite` is what makes "a bit hungry" mean *keep working*.
+
+### Worked examples — ILLUSTRATIVE ONLY, DO NOT PASTE
+
+The standing hazard applies with full force: **these are a worked check that the
+shape behaves, not the settled numbers.** Call 4 of the rung 6a prompt is the
+author's, at the keyboard, on the tuning board. Taking `Eat` at weight 130 and
+bite 3 against the measured scale:
+
+| When | The ballot | Outcome |
+|---|---|---|
+| midday, hunger 60 | Eat `28`, Work `103` | keeps working, does not think about it |
+| midday, hunger 90 | Eat `95`, Work `103` | pushes through the last of the job — the knife edge |
+| midday, hunger 97 | Eat `119`, Work `103` | stops. Only when nearly empty |
+| 22:00, hunger 75, adenosine 50 | Eat `55`, Leisure `50`, Sleep `50`, Work `47` | eats his supper |
+
+The last row is worth reading twice. Meals land in the **valleys of the waking
+ladder** — the evening gap after work falls and before sleep wins — because that
+is the cheapest hour on it. Supper is emergent, not authored.
+
+### This answers rung 6a's Call 3 by arithmetic rather than by policy
+
+Call 3 asks whether `Eat` is permitted to move bedtime, and frames it as the
+author choosing between a protected baseline and better fiction. Under an
+impulse meal (Call 2, and see Decision 23) it is neither — it is a measurement:
+
+**`Eat` can hold the top waking bid for exactly one tick**, because the tick it
+wins is the tick hunger collapses. One tick is 0.01 world hours. Bedtime moves by
+at most 36 world-seconds, and only on a night hunger happens to cross within one
+tick of 22:01.
+
+The regression baseline is protected **structurally**, not by a tuning invariant
+somebody has to re-check at every future rung — the same class of guarantee
+`work_the_field.gd` argues for when it keeps travel cost out of the sum.
+
+### What is deliberately NOT in the formula
+
+Two candidate terms were designed and rejected during the same session. Both are
+recorded because both are the obvious thing to reach for again:
+
+| Rejected | What it was for | Why not |
+|---|---|---|
+| **`haste`** — a factor rising as a window closes | one-time events: a merchant in town today only, an invitation for tonight | The pressure does not need to be felt, because **the gap keeps growing across the misses.** Skip three market days and the cloth gap is three times bigger, and it outbids work on its own. Nobody sprints to market because it is nearly dusk; they go because their boots have been failing for a month. `haste` was a number standing in for a gap that was already doing the work. |
+| **a lookahead term** — "will this still be available later?" | the same | It would be the first time anything in this world reasons about the future, and that door does not close again. Re-deciding every tick from current facts is what makes interruption free. Not worth trading for a case the growing gap already covers. |
+
+**What stays unhandled, on purpose:** a true one-shot — a ship that sails once
+and never returns. The gap stays open forever and nothing discharges it. That is
+a story, not a bug, and the remedy belongs in the world being fair rather than in
+the brain being clever. Same for a breached invitation: the obligation gap simply
+stays open, and the consequence is social.
+
+### Left open
+
+- Whether `bite` is a property of the gap **type** (all hunger bites the same) or
+  of the **person** (a stoic and a whiner differ). Both are one exported number;
+  the fork is where it is authored. Nothing needs it settled until two people are
+  meant to differ in temperament rather than in strength.
+- Whether **how good the best available candidate is** may feed back into how
+  much the action is wanted at all — "he stays up late for a good book but not to
+  stare at a wall", "he has a drink because he is already at the inn". Decision 15
+  bans cost from the sum, and its argument is about cost *suppressing* a want;
+  both of these are cost *creating* one. **Retired for now** — the author's
+  ruling is that this is quantity-demanded-scales-with-price, which is a market
+  mechanism and there are no prices. Revisit when there are.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Rung 6a | `Eat`'s score must be non-linear in hunger. Two authored numbers, both plain English: *what starving is worth* (the one that decides whether a meal can ever interrupt work — must exceed 103 if it ever should) and *how sharply it bites*. | not yet |
+| Rung 6a, Call 3 | Answered above. Not an author preference — a consequence of the impulse meal. Baseline holds to within one tick. | not yet |
+| Build plan, rungs 6b+ | New actions are expressed as `weight × gap^bite`, not as a fresh constant placed by hand against every existing one. | not yet |
+
+---
+
+## Decision 21 — The baseline is a personality, not a floor
+
+**Settled 2026-08-12. Author's call.** The author's word — *baseline*, not floor
+— is load-bearing and is the reason the decision came out this way.
+
+### The question
+
+`StayUp` is documented as *"the placeholder every other waking action will
+eventually outbid"*. Under Decision 19 it has no gap, so what is it a placeholder
+**for**? And its `pull = 67.3` is doing two unrelated jobs at once:
+
+- **the bar every action in the game must clear** — anything scoring below it
+  never happens, all day
+- **the bedtime threshold** — bedtime is where adenosine crosses the top waking
+  bid, and in the evening that is `StayUp`
+
+Want him to turn in later? Raise it — and you have silently made him pickier
+about everything else he might have done all day. That coupling is the mechanism
+behind rung 6a's Call 3 and it will recur at 6b, 6d and 7.
+
+### Why "floor" was the wrong word
+
+A **floor** is a minimum everything must clear, which is a ranking, and a ranking
+authored by hand is the hierarchy this whole model exists to avoid. A
+**baseline** is what is normally happening until something pulls you off it — and
+a baseline can obviously differ from man to man, where a floor sounds universal.
+
+### What was settled
+
+> **`StayUp` is not a placeholder for a missing gap. It is a placeholder for a
+> person.**
+>
+> What a man does when nothing is pressing is the most characterful thing about
+> him. That becomes **one action — `Leisure`** — with whittling, drinking,
+> praying and the rest as its **candidates**, chosen by his tendencies.
+
+**One action, not several.** The author's call, and it is the correction that
+makes this work: a bag of small tastes each bidding on the main ladder would put
+personality in among the appetites and distort everything. `Leisure` is scored
+once, and *which* leisure is a candidate question — the same two-stage shape
+`WorkTheField` already uses for plots, and the same place travel cost and
+candidate quality already live.
+
+### What this fixes, and why the coupling stops being a bug
+
+Bedtime is still where the tiredness gap crosses the top waking want, and in the
+evening that is still the baseline. The coupling does not go away. **What changes
+is that the number acquires a meaning.**
+
+| | To move bedtime you change… | Which means |
+|---|---|---|
+| today | "what idling is worth" | nothing, and it silently re-tunes his whole day |
+| with `Leisure` | "how much Zoogs likes whittling" | something, and bedtime follows for a reason you can point at on screen |
+
+A man with a rich evening stays up. A man with nothing turns in early. Two men
+with identical bodies visibly differ all evening from nothing but their
+tendencies. That is fiction the current 67.3 cannot express at any value.
+
+### Tendencies live in candidates, and only there
+
+A tendency is *which*, not *whether* — "beer over wine" is not how much he wants
+a drink. Candidate ranking is where it belongs, alongside travel cost and quality,
+and it must not leak back into the action's score (Decision 15, and Decision 20's
+Left Open).
+
+### NOT this rung
+
+`Leisure` is not rung 6a's work and must not be built there. 6a's job is `hunger`
+and `Eat` against the shipped `StayUp`. This decision exists so that the hunger
+curve is tuned by someone who knows the baseline is about to change shape.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Build plan | `StayUp` is scheduled to become `Leisure` at whichever rung first gives a man something to do with an evening. It is not scheduled for deletion. | not yet |
+| Rung 6a | No code change. A note that 67.3 is currently doing two jobs, so hunger numbers tuned against it may want revisiting when the baseline gains tendencies. | not yet |
+
+---
+
+## Decision 22 — What may touch a want, and where
+
+**Settled 2026-08-12. Author's call.** Two mechanisms that both look like they
+modify wanting, and only one of them may.
+
+### Part one — the gate is where the world answers back
+
+`stay_up.gd` already carries the rule for its own case: *"IT IS A SCORE TERM AND
+NEVER A GATE."* Generalised:
+
+> **A gate asks about the world. It never asks how much he wants it.**
+
+Every gate in `game/` is one of exactly two things, and both are facts:
+
+| Kind | Asks | Examples |
+|---|---|---|
+| **candidate** | *do I know of anything that could serve this want?* | `WorkTheField` (find stations, find one free), `Eat` (have I bread), `Drink` (do I know of water) |
+| **posture** | *is my body in a state where this is even a question?* | `Wake` needs him asleep; `StayUp` and `WorkTheField` need him awake |
+
+Neither ever reads the size of the gap. **"Not hungry enough" is want, not
+possibility**, and putting it in a gate is barring in a new coat.
+
+### What the gate buys, which is the whole desert case
+
+Because the gap grows whether or not anything can answer it, **a want with no
+outlet is invisible on the ballot and not remotely idle.** It keeps building.
+
+A man crossing a desert who knows of no water has `Drink` off the ballot for two
+days while the gap goes to maximum in silence. He tops a dune, sees green, and
+the gate opens on a want that has been screaming into nothing. He drinks
+greedily. Nothing rose quickly — **something enormous simply became sayable.**
+
+That is suffering modelled for free, and it is why no `haste` term was needed
+(Decision 20).
+
+The two branches are worth stating separately, because they are the two halves of
+what a gate does:
+
+- **He knows of an oasis, three days off** → `Drink` is *on* the ballot and
+  winning hugely, and its step is a walk. He crosses the desert **because he is
+  thirsty**, the want never dips, and on arrival the step stops walking and
+  starts drinking. This is `WorkTheField` + `GoToStep` exactly.
+- **He knows of no water at all** → no candidate, off the ballot, silent.
+
+**Searching is a shared step**, in the `GoToStep` mould — one step several actions
+borrow when a want's candidate is unknown, rather than each action growing its
+own. Not built; named here so it is not reinvented per action.
+
+### Part two — a lens changes weight or rate. Never gap, never the gate.
+
+A **lens** is a state of a person that changes how everything else is weighed
+rather than proposing anything itself: fear, drink, illness, grief. It is not a
+competitor on the ballot.
+
+> **A lens may multiply `weight`, or change a rate. It may never touch `gap`, and
+> it may never gate.**
+
+**Never `gap`,** because the gap is the truth about a body and the world, and
+nothing is allowed to lie about it. Drink does not make a man less hungry; it
+makes him care less. Same principle as `Workstation.is_free_for` reporting the
+plain truth while the *action* handles what a man knows of it.
+
+**Never the gate,** because gating is barring. "Distress disables work and
+leisure" must be *distress crushes their weight* instead — the man does not
+whittle because whittling is worth 3 while everything urgent is worth 100, not
+because whittling was removed. The case that decides it is the panicking man
+standing next to the rope that would save him: crush the weight and something
+urgent enough still cuts through; close the gate and he cannot take it. **Outbid,
+never barred** — the rule `CLAUDE.md` keeps by composition and refuses to give
+back with a flag.
+
+Where each lens lands is a one-sentence test a person would recognise:
+
+| Lens | Lands on | Effect |
+|---|---|---|
+| fever | rate | tiredness builds faster |
+| drink | weight | every gap is still there; he cares less about all of them |
+| fear | weight | one want enormous, baseline crushed — a terrified man does not whittle |
+| grief | weight | appetites untouched; he simply stops doing what he liked |
+
+**The rate half already exists.** `Brain.get_adenosine_accumulation()` and
+`get_adenosine_recovery()` are documented as *"the seam every future modifier
+lands in — illness, age, cold, a stimulant, a wound."* That seam was built at
+rung 0 without being named; this names it.
+
+**And `brain.gd`'s warning stands unchanged:** name the places a lens can land,
+because names are free; do **not** build a registry of modifiers with priorities
+and stacking rules. There is one modifier in the whole game today (`strength`)
+and it is a bare multiply. *"Systems built before they're needed get thrown
+away."*
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| **Rung 6a — correction to the session prompt** | Call 2's table specifies `Eat.is_available_to` = *hungry AND has bread*. **The hunger half must be dropped.** Gate on bread and being awake only; hunger belongs entirely in the score. A man at hunger 5 already loses to the baseline's 47.3 floor without help, and dropping it also means `Eat`'s line is drawn rising and losing all day instead of as a gap — better instrumentation for a rung whose Moment is a graph. Probe claim 3 tests the bread half and is unaffected. | **not yet — read before writing `eat.gd`** |
+| Rung 6a | The `is_awake` gate on `Eat` stands, and is a posture gate. Without it a man whose hunger crosses at 03:00 gets up and eats in the dark, presenting as a broken sleep cycle. | not yet |
+
+---
+
+## Decision 23 — Failure marks the candidate; success marks the world
+
+**Settled 2026-08-12. Author's call.**
+
+### The question
+
+Two problems that turn out to be one. **Twitching:** an action whose score
+collapses by only a tick's worth when taken will win, lose, win, lose across
+consecutive ticks. **Spamming:** a man tries a locked door, nothing changes, so
+next tick he tries the locked door. Both are the cost of re-deciding every tick
+with nothing stored, and both invite the same wrong fix — a damping number or a
+cooldown timer.
+
+### What was settled
+
+> **Every action leaves a mark. Success marks the world; failure marks the
+> candidate — never the want.**
+
+Succeeds: the loaf is gone, the plot is claimed, he is somewhere else. Fails: the
+well is dry, the man refused, the door is locked — and that lands on **that well,
+that man, that door**, which sinks to the bottom of the candidate list.
+
+He does not stop wanting water. That would be barring. He picks the next-best
+candidate; if there is none the gate closes and the want goes silent and keeps
+growing (Decision 22).
+
+### Why this removes cooldowns entirely
+
+**"Try again later" costs nothing and is never written**, because the brain
+re-decides every tick anyway. The well refills, it stops being a bad candidate,
+he goes back. Retry is free.
+
+The test for any cooldown anyone proposes:
+
+> **What is recovering during it?**
+
+Name it and build *that*; the cooldown disappears:
+
+| The cooldown | What is actually recovering | Where it belongs |
+|---|---|---|
+| "he can't swing again yet" | stamina | a gap on the body — and a strong man recovers faster for free |
+| "the well is dry for an hour" | the well's water | world state, not a rule about people |
+| "only at matins" | nothing — it is a schedule | the clock, read by the gate |
+| "don't ask him again straight away" | nothing — he is simply a worse candidate now | candidate ranking, where quality already lives |
+
+**If you cannot name what is recovering, the cooldown is hiding a design hole and
+should be refused.** Same shape as `haste` in Decision 20: a number standing in
+for something that should have been changing on its own.
+
+### The hysteresis rule this generalises
+
+Rung 5 put the fraction in the furrow; `wake.gd` gets its band from a posture
+change; `Eat` gets its band from the loaf leaving the bag. All three are the same
+thing:
+
+> **You do not twitch when the world actually changed.**
+
+Which gives the check for any new action: *what in the world is different after I
+do this once?* If the honest answer is "nothing", that action will twitch, and
+the fix is the action — never a damping number, never a commitment bonus on
+`current_action`.
+
+**A commitment bonus is specifically refused.** `brain.gd` says `current_action`
+is *"kept ONLY so you can see it… never fed back into the ranking"*, and it
+already feeds `is_awake()`. That is the line: **current state may change what is
+possible; it may never change what is wanted.** A stored preference for what you
+were already doing makes "why did he keep doing that" unanswerable from anything
+on screen.
+
+### This settles rung 6a's Call 2
+
+Call 2 argues one-tick-one-loaf from integer truncation — a count is a whole
+number, 0.01 of a loaf per tick truncates to zero forever, and consumption from a
+man's own pocket has no world object to hang a remainder on.
+
+The hysteresis lens reaches the same answer independently and more strongly: **a
+time-based meal needs a home for the meal-in-progress, and that is the identical
+missing thing as the home for the fractional loaf.** One absence, two symptoms.
+An impulse meal gets its band from the loaf leaving the bag and needs neither.
+
+> **Rung 6a ships `Eat` as one tick, one loaf.** Consistent with Decision 6's
+> *"one-tick resolution is accepted for now"*.
+
+**The honest cost, which the Call 2 table understates:** a meal is a one-tick
+label flicker. The hunger line shows it; the man does not. 6a's Moment is a graph
+Moment, so it survives — but if a *visible* lunch break is ever wanted, the shape
+is an episode with a home in the world (walk to the inn, eat, walk back, with
+`GoToStep` doing the duration and his position holding all the state), and that
+is 6d/7 territory, not 6a's.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Rung 6a, Call 2 | Settled: one tick, one loaf. | not yet |
+| Build plan, all rungs | No cooldown fields, anywhere. A proposed cooldown is a prompt to name the depleted thing. | not yet |
+| Rung 7+ | A refused trade partner is a *worse candidate*, not a blocked action. The want is untouched. | not yet |
+
+---
+
+## Decision 24 — Unmet need is recorded where it failed
+
+**Settled 2026-08-12. Author's call.** Gives Decision 1's Seam 1 a shape, and
+promotes two existing counters from telemetry to signal.
+
+### The question
+
+Decision 1 named two seams and left both empty: **record** (something accumulates
+unmet demand and excess supply) and **revise** (something reads it and moves a
+quota). Decision 23 leaves a residue — failure marks the candidate, but a failure
+nobody aggregates teaches the world nothing. Both want the same object.
+
+### The seed already in the code
+
+`Town.note_no_candidates_existed()` and `Town.note_every_candidate_was_taken()`,
+called from `WorkTheField.is_available_to`, are already a record of unmet want,
+written at the moment of failure, held by the town. **They already found the
+distinction that matters:** *"there was nothing"* and *"there was something and it
+was not for me"* are different failures with different remedies.
+
+**This crosses a line those counters explicitly draw.** `work_the_field.gd` calls
+them *"TELEMETRY, NOT WORLD STATE"*, and the whole justification for writing them
+from a gate is that *"nothing ever reads these counters back into a decision, so
+they cannot change what anybody does."* Promoting them ends that exemption. It is
+recorded here as a deliberate crossing rather than allowed to happen by drift —
+and the gate-writes-telemetry exemption does **not** widen: a gate may note that
+it failed, and nothing more.
+
+### What was settled
+
+> **When a want fails, the place it failed at records that it did. The record is
+> a gap like any other, and it decays.**
+
+The failure kinds are a small closed list, and each points at a different remedy
+— which is exactly why they are recorded apart rather than as one counter:
+
+| Why it failed | He does | What it says |
+|---|---|---|
+| nothing exists | searches, or goes silent | make one exist |
+| all taken | tries elsewhere, or later | not enough of them |
+| too far | walks — not a failure at all | build one closer |
+| refused | asks someone else | a person problem |
+| not permitted | — | a rights problem |
+
+The first two exist. The rest arrive with their rungs — **"not permitted" is
+rung 6b's `is_permitted_to()`**, so the ledger and the permission check land
+together.
+
+**The record decays**, at a rate, like every other gap (Decision 19). A well dug
+last year stops showing thirst on its own. Without decay it is a log file and it
+grows forever.
+
+### Seam 2, and the thing worth holding on to
+
+> **A lord does not need his own decision system. His *work* reads a bigger
+> ledger.**
+
+The author's refinement, and it is the correct one: a lord is still a person. He
+gets hungry, he sleeps, his appetites are gaps on his body like anyone's. **What
+differs is the source of the gap behind his work** — a farmer's is his barn, a
+miller's is the queue at his mill, a bailiff's is one district, a lord's is the
+town. Same formula, same `bite`, different ledger. That is Decision 19's source
+seam, and it is what makes promotion mechanically real: hand a man a bigger
+ledger and he becomes a bigger man, with no new decision machinery anywhere.
+
+His **candidates** are remedies — dig a well, clear a field, appoint a bailiff,
+send a merchant — and the failure kinds above are what tell them apart.
+
+That is Decision 1's Seam 2 with a shape. Still nothing calls it, and that is
+still correct.
+
+### The property worth protecting: pressure, not petitions
+
+Nobody asks. Nobody files anything. Men simply fail to get what they wanted, and
+**the failing is the message.** The lord reads a heat map of frustration and acts
+on it late, partially, or not at all, and the men never know a decision was made
+about them.
+
+This falls out of the mechanism rather than being written on top of it, and it
+means the lord can be **wrong** — he can read pressure at the north field and dig
+in the wrong place, with nothing to correct him but more pressure. A request queue
+would have none of that.
+
+### Left open — and it is a one-way door
+
+**Does the ledger record who, or only how many?**
+
+| | Buys | Costs |
+|---|---|---|
+| **anonymous** | the lord genuinely cannot see individuals — he knows the north field is thirsty, not that Hobb is. Fits the title exactly. Keeps the ledger tiny. | no favour, no grievance, no bailiff who knows whose plot is failing |
+| **attributed** | favour, grievance, taxation, singling a man out. Much richer. | the king becomes someone you might be seen by |
+
+Attribution is easy to add later and very hard to remove once anything depends on
+it. **Not called.**
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Decision 1, Seam 1 | Has a shape: recorded at the place of failure, by kind, decaying. Still uncalled. | not yet |
+| Decision 1, Seam 2 | Has a shape: a role's work reads a ledger. Still uncalled. | not yet |
+| Rung 6b | `is_permitted_to()` should record a *not permitted* failure when it refuses. Cheapest moment to add the third kind. | not yet |
+| `work_the_field.gd` | Its telemetry comment will need amending the first time anything reads those counters back. Not yet — nothing does. | not yet |
