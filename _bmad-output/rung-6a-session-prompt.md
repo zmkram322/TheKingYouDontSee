@@ -1,112 +1,51 @@
 # Rung 6a — session prompt
 
-Copy everything below the line into a fresh session. Written 2026-08-11, the day
-rung 5 closed.
+Copy everything below the line into a fresh session.
+
+**Written 2026-08-11, the day rung 5 closed. REWRITTEN 2026-08-12 against
+Decisions 19–27.** The first version carried **four open calls** to be settled
+with the author at the top of the session. **All four are now settled and written
+into `proving-scene-decisions.md`.** Nothing below is a question any more; where
+this document and an older one disagree, the decisions file wins and the highest
+decision number wins within it.
 
 **This rung is NOT routed to Fable** (Fable is for 6b, 6d, 7 and 8). So this
 prompt spells the corrected shapes out rather than saying *"re-derive this"*.
 **Nothing below is optional detail.**
 
-**Unlike the rung 4 and rung 5 prompts, this one does NOT arrive with its design
-calls already made.** Four are open, and one of them changes what the rung *is*.
-They are the first section below, with the shapes and the costs, and they are to
-be settled **with the author, at the top of the session, before a line is
-written.** Do not settle them by implementation drift — that is the exact failure
-the decisions file exists to prevent.
-
 ---
 
 Build **rung 6a** of the proving-scene ladder. One rung, then stop at the gate.
 
-## THE OPEN CALLS — SETTLE THESE FIRST
+## WHAT WAS SETTLED, SO YOU DO NOT RE-DERIVE IT
 
-### ⚠ CALL 1 — does 6a ship `social` and the tavern? THIS ONE CHANGES THE RUNG
+Read `_bmad-output/proving-scene-decisions.md` **19 through 27** before anything
+else. They were worked out from first principles rather than reverse-engineered
+from scenes, and they are the reason this rung is smaller than it used to be.
 
-**There is an error in a settled decision, and it has to be resolved before the
-rung has a defined scope.** Decision 3 puts **hunger AND social** in 6a, and says
-in as many words:
+**The five that change what you type:**
 
-> *"hunger and social both rising in UPKEEP and both bidding against adenosine,
-> and you watch which wins."*
+- **19 — every want is a gap** (should-be minus is). Hunger and Decision 1's
+  `target − stock` are one rule. It also names what `WorkTheField.pull = 73` and
+  `StayUp.pull = 67.3` really are: **placeholders for gaps not yet built.**
+- **20 — `want = weight × gap ^ bite`.** It reproduces all four shipped actions
+  exactly, so it is a way of reading them, not a rewrite. **`Eat` is the first
+  want in the game with both parts live.**
+- **22 — gates ask the world, never how much he wants it.** This corrects the
+  first version of this prompt, which specified `Eat.is_available_to` as *hungry
+  AND has bread*. **The hunger half is wrong and must not be written.**
+- **23 — one tick, one loaf**, and why: failure marks the candidate, success
+  marks the world, and an action that changes nothing in the world twitches.
+- **25, 26, 27 — what this rung actually contains.** 25 takes `social` and the
+  tavern out. 26 settles where bread comes from. 27 settles the numbers and rules
+  out a lens on work.
 
-and its Moment is *"three drives on one graph and you watch which wins."*
+**And two that will save you an argument with yourself:**
 
-**`Socialise` is rung 6d.** At 6a there is no action anywhere that reads
-`social`, so it cannot bid and it cannot win. It would be a line that climbs
-forever and touches nothing, for three gates. **The same applies to the tavern**,
-which 6a's file list includes and which nothing visits until 6d — `Eat` is
-explicitly from the man's *own* inventory, and `Drink` is rung 7.
-
-Three ways out, and the author picks:
-
-| | Shape | Cost |
-|---|---|---|
-| **Defer both to 6d** | 6a lands **hunger only** — the stat, its upkeep line, and `Eat` that consumes it. One drive, one consumer, one gate: the same clean shape rung 5 had. 6d then lands `social` + `Socialise` + the tavern together. | Amends Decision 3, which is marked *do not reopen* — so it needs a **new numbered decision with a banner on 3**, never an edit (append-only, the author's explicit call 2026-08-11). |
-| **Ship both as written** | Decision 3 stands untouched. Social's curve is visible on the instrument for three gates before anything reads it, which is arguably how you tune its rate. | A stat nothing reads and a place nobody goes are both *substrate before need* by the project's own rule, and the Moment's "three drives compete" is false — you would watch two drives and a spectator line. |
-| **Social, no tavern** | The stat is one line in `_update_body` and plots for free; a `Place` is a scene node that changes the town's geography and every travel-cost query in it. | Still a stat with no reader; the Moment still overstates what can be watched. |
-
-**`Workstation.owner` ships at 6a regardless** and is not part of this call. It is
-one exported field, it may be null, and **6b genuinely needs it** — a single null
-field is not the same weight as a whole stat or a whole place.
-
-### ⚠ CALL 2 — does eating take world time, or is it one tick?
-
-**The fraction problem from rung 5 comes back, from the consumption side, and it
-has no furrow to live in this time.** A count is a whole number and a tick is
-0.01 world hours. So "eat one loaf per hour" is 0.01 of a loaf per tick, `take`
-takes an `int`, and truncated it is zero forever — the identical failure that
-made rung 5 put the remainder on the workstation. **Consumption out of a man's
-own pocket has no world object to hang a remainder on**, and putting one on the
-person is the stored progress the substrate refuses.
-
-| | Shape | Cost |
-|---|---|---|
-| **One tick, one loaf** *(the cheap answer)* | `Eat.is_available_to` = hungry **and** has bread. The step does `take(&"bread", 1)` and drops hunger by an authored amount, in a single tick. No fraction anywhere, no remainder to store. Decision 6 already accepted exactly this for trade: *"One-tick resolution is accepted for now."* It also makes `Eat` a natural **spike** — the tick he eats, hunger collapses and `Eat` leaves the ballot — which is what Call 3 below needs. | A meal is instantaneous, which is not what a meal looks like. Nothing yet needs it to look like anything. |
-| **A meal takes world time** | Decision 18: *the sim owns duration.* Hunger falls per world hour while `Eat` is the current action, so a meal is a legible stretch of the day and is outbiddable the whole way through — a fire breaks out mid-meal and he drops the loaf. | **The loaf has to be taken at a moment**, and "the start of the meal" is remembered state, which is the thing an ActionStep may not hold. Answering that is real design work and it is not what this rung is about. |
-
-**Recommended: one tick, one loaf.** Take the time-based meal when something
-actually needs to watch a man eat — probably alongside the wind-down step
-Decision 18 describes, which is not ported.
-
-### ⚠ CALL 3 — is `Eat` allowed to move bedtime?
-
-**This is a consequence, not a preference, and it is the one most likely to eat a
-day.** Bedtime is not authored anywhere. It is **wherever rising adenosine
-crosses the highest WAKING bid.** Rung 6a adds a new waking bid.
-
-`work_the_field.gd`'s header already documents this exact hazard, and rung 3's
-numbers were chosen to dodge it:
-
-> *"Flat and high enough to beat StayUp at noon (87+), work would still be
-> winning at 22:00, where StayUp has fallen to 50 — and bedtime is wherever
-> rising adenosine crosses the top waking bid, so the farmers' turning-in hour
-> would quietly move."*
-
-**`Eat` inherits that, whole.** If `Eat` can score above ~50 in the evening,
-bedtime moves — and **claims 10, 11 and 12 go red presenting as "the sleep cycle
-broke."** If `Eat` is a spike that collapses the moment he is fed, bedtime is
-untouched.
-
-The author's call is whether the regression baseline is **protected** (Eat must
-never be the top waking bid at bedtime) or whether a genuinely starving man is
-**allowed** to push his own bedtime later. The second is better fiction and it
-means the baseline in this document changes deliberately, with the new numbers
-recorded — which is legitimate, but it must be a decision and not a surprise.
-
-### ⚠ CALL 4 — the curves, which is what this rung is actually for
-
-The plan calls 6a *"the rung where the curves actually get tuned."* Two numbers
-and they are the author's, at the keyboard, on the tuning board:
-
-- **`base_hunger_per_hour`** — how fast he gets hungry.
-- **What a loaf is worth** — how much hunger one drops.
-
-**Do not guess these in code and move on.** The scale they have to land on is in
-*THE UTILITY SCALE* below, measured, so nobody re-derives it. What the two
-numbers decide is **how many times a day he eats and whether a meal ever
-interrupts work** — which is the entire visible content of this rung.
-
----
+- **21 — the baseline is a personality.** `StayUp` becomes `Leisure` at a later
+  rung. **Not here.** Tune hunger against the shipped `StayUp` and know the
+  baseline is going to change shape afterwards.
+- **24 — unmet need is recorded where it failed.** Nothing this rung.
 
 ## ORIENT
 
@@ -120,25 +59,22 @@ claims** that gates every rung.
 **Rung 6a is where the body stops being one-dimensional.** Every rung so far has
 had exactly one drive: tiredness rises, the sun says when, and everything else is
 a flat pull competing against it. A man has never once had to choose between two
-things his *body* wanted. Rung 6a gives him a second appetite and something to
-answer it with, and the day stops being "work until you sleep."
+things his *body* wanted.
 
 ## READ FIRST, IN THIS ORDER
 
-1. **`CLAUDE.md`** (repo root) — naming rules, design rules, Godot traps. Governs.
-   Note the goods rule added at rung 5: **`add` creates, `take` destroys,
-   `hand_over` moves**, and `Eat` is the first consumer in the game.
-2. **`_bmad-output/proving-scene-decisions.md`** — there are **EIGHTEEN**
-   decisions. For this rung: **3** (how rung 6 got cut, and the source of Call 1
-   — read the *"the correction: at rung 6, a man eats his own bread"* section
-   twice), then **1** (where want comes from — 6b's quota subtracts against
-   stock, and hunger is the *deficit against a body* that Decision 1 explicitly
-   left open as possibly-the-same-rule), then **11** (the sleep cycle hangs on
-   the sun — this is what Call 3 is about), then **5** (every rate is per world
-   hour). **Where two decisions disagree the HIGHEST NUMBER WINS.**
-3. **`_bmad-output/proving-scene-build-plan.md`** — the "Rung 6a" section only,
-   plus the rung 5 section immediately above it, which now carries what rung 5
-   settled by building it.
+1. **`CLAUDE.md`** (repo root) — naming rules, design rules, Godot traps.
+   Governs. Note the goods rule added at rung 5: **`add` creates, `take`
+   destroys, `hand_over` moves**, and `Eat` is the first consumer in the game.
+2. **`_bmad-output/proving-scene-decisions.md`** — there are **TWENTY-SEVEN**
+   decisions. **19–27 in full** (above). Then **1** (where want comes from),
+   **11** (the sleep cycle hangs on the sun), **5** (every rate is per world
+   hour), and **3** — which now carries a banner pointing at 25. **Where two
+   decisions disagree the HIGHEST NUMBER WINS.**
+3. **`_bmad-output/proving-scene-build-plan.md`** — the "Rung 6a" section, which
+   was revised 2026-08-12 and carries the settled version, plus the rung 5
+   section above it. Glance at **6a2** immediately after, which is the next gate
+   and is NOT yours.
 4. **`game/brain.gd`** (`_update_body` and the two rate seams), **`game/stats.gd`**,
    **`game/inventory.gd`**, **`game/actions/stay_up.gd`**, **`game/actions/sleep.gd`**,
    **`game/actions/wake.gd`**, **`game/actions/work_the_field.gd`**,
@@ -159,6 +95,9 @@ Committed on `poc-v2`:
 07a147c  rung 5   Inventory's three doors, the yield seam, the fraction in the furrow
 23bdb38           claim 26's tick-produces-something check accepts either half
 98e9d90           the unbuilt rungs warned about what rung 5 moved
+20541fc           the first version of this prompt, and the index trap disproved
+842c6cf           decisions 19-24 — the utility model
+4226503           decisions 25-27 — what this rung actually lands
 ```
 
 ```
@@ -183,8 +122,7 @@ Brain's children:               StayUp, Sleep, Wake   (+ WorkTheField, added per
                                 instance by game.tscn at index="3")
 ```
 
-**REGRESSION BASELINE — all of this must still be true when you are done, unless
-Call 3 deliberately changes it:**
+**REGRESSION BASELINE — all of this must still be true when you are done:**
 
 ```
 cold start   turns in hour 21.11 (21:07), up at 29.67 (05:40)
@@ -216,76 +154,157 @@ Everything is scored on one scale and the highest bid wins. `sun` is
 | `Sleep` | `adenosine` (0–100 ceiling) | — | — | — |
 | `Wake` | flat `10.0` (gated to a sleeping man) | 10 | 10 | 10 |
 
-**The three crossings that produce the shipped day, and what `Eat` has to live
-between:**
+Read in Decision 20's terms, every one of those is `weight × gap^bite` with one
+part switched off: `StayUp` and `WorkTheField` have `gap = 1`, `Sleep` is
+`weight 100 × (adenosine/100) ^ 1`.
+
+**The three crossings that produce the shipped day:**
 
 - **~20:45** — work falls under `StayUp` and hands the evening back.
 - **22:01** — adenosine (~50) crosses `StayUp` (**50.0 at 22:00**) and he turns
-  in. **This is bedtime, and it is the number Call 3 is about.**
+  in. **This is bedtime.**
 - **04:41 / 06:01** — adenosine falls under `Wake`'s flat 10 and he gets up;
   work is worth 62.8 there against `StayUp`'s 60.5, so he goes straight to the
   field.
-
-So an `Eat` that must **interrupt work at noon** has to clear **103**, and an
-`Eat` that must **not disturb bedtime** has to sit under **50** in the evening.
-The gap between those two is the whole tuning problem of Call 4.
 
 `Brain` for reference: `base_adenosine_per_hour = 2.5` awake,
 `base_adenosine_cleared_per_hour = 5.0` asleep (× `strength`), ceiling 100.
 
 ## THE JOB
 
-Three things, or four depending on Call 1.
+Four things, and nothing else.
 
-1. **`hunger` in `game/stats.gd`** — a stat like `adenosine`, with the same kind
-   of comment explaining what it means and why the number is what it is.
-2. **`Brain._update_body` gains a line** — hunger rises per world hour.
-   **UPKEEP, never inside an action**, per `CLAUDE.md`'s load-bearing rule: put
-   it in `Eat` and the next action you write silently doesn't have it. Give it
-   the same **`get_…()` seam treatment** the two adenosine rates have
-   (`get_adenosine_accumulation` / `get_adenosine_recovery`), because illness,
-   cold, a hard day's work and a growing boy all land there later — and because
-   a rate you can plot is a rate you can tune.
-3. **`game/actions/eat.{gd,tscn}`** — `Eat` (Action) + its step. **In
-   `person.tscn`, so every person has it by composition** — FR86's protected
-   categories are present by construction and can only be outbid, never pruned.
-   **It takes bread from his OWN inventory** (`person.get_inventory()`), authored
-   into his starting stock on `person.tscn` or per instance in `game.tscn`. No
-   transfer, no place, no owner, no trade — that is what keeps this rung clean of
-   rung 7's seam.
-4. **`Workstation.owner`** — one `@export var owner: Person`, may be null,
-   **with no reader at all this rung.** Unowned land is the king's, which is the
-   same answer as nobody's. 6b adds `is_permitted_to()` that reads it; do not
-   write that here.
+### 1. `hunger` in `game/stats.gd`
 
-*(Plus `social` and/or the tavern, if Call 1 says so.)*
+A stat like `adenosine`, with the same kind of comment explaining what it means
+and why the number is what it is. **0–100, where 100 means "as hungry as a person
+gets", NOT "dead"** — exactly as 100 adenosine is not death by sleep deprivation.
+Say that in the comment, because reading a felt gap as a lethal one is the
+mistake Decision 27 was written to stop. **Starving is a second, slower gap and
+is NOT built here.**
 
-**Authoring the bread is a real decision, not a detail.** Bread on `person.tscn`
-means every person ever instanced starts fed — including the probe's spares and
-every villager at 9d. Bread in `game.tscn` per farmer means the probe's spares
-start with none, and a man with no bread cannot eat. Both are defensible; pick
-one on purpose and say which in the commit.
+### 2. `Brain._update_body` gains one line
+
+Hunger rises per world hour. **UPKEEP, never inside an action**, per `CLAUDE.md`'s
+load-bearing rule: put it in `Eat` and the next action you write silently doesn't
+have it. Grep `game/actions/` for `adenosine`; it should return nothing, and the
+same should become true of hunger everywhere except `Eat` itself.
+
+Give it the same **`get_…()` seam treatment** the two adenosine rates have
+(`get_adenosine_accumulation` / `get_adenosine_recovery`), because illness, cold,
+a hard day's work and a growing boy all land there later — and because a rate you
+can plot is a rate you can tune.
+
+> **`base_hunger_per_hour = 4.0`, awake and asleep alike. One line, no branch.**
+
+The lack of a branch is deliberate and it is why he wakes up hungry.
+
+### 3. `game/actions/eat.{gd,tscn}`
+
+`Eat` (Action) + its step. **In `person.tscn`, so every person has it by
+composition** — FR86's protected categories are present by construction and can
+only be outbid, never pruned. **It takes bread from his OWN inventory**
+(`person.get_inventory()`). No transfer, no place, no owner, no trade.
+
+**The gate — and read this twice, because the first version of this prompt got
+it wrong:**
+
+> **Gate on being AWAKE and HAVING BREAD. Never on hunger.**
+
+*"Not hungry enough"* is want, not possibility, and putting it in a gate is
+barring in a new coat — the same mistake `stay_up.gd`'s header already warns
+about in its own case. A man at hunger 5 loses to `StayUp`'s 47.3 without any
+help. Leaving it out also means `Eat`'s line is drawn **rising and losing all
+day** rather than as a gap, which is better instrumentation for a rung whose
+Moment is a graph.
+
+**The `is_awake` half is required.** `StayUp` and `WorkTheField` both gate on
+`person.brain.is_awake()` and both document why. A man whose hunger crosses at
+03:00 will get up and eat in the dark if you forget, and it will present as a
+broken sleep cycle. Note that `Sleep` itself does **not** gate on being awake,
+deliberately; `Wake` gates on being asleep. Read all four before writing the
+fifth.
+
+**The step:**
+
+> **One tick, one loaf.** `take(&"bread", 1)`, and hunger drops by an authored
+> amount, in a single tick.
+
+No fraction anywhere, no remainder to store. A timed meal would need somewhere to
+hold the meal-in-progress, and that is the identical missing thing as the
+fractional loaf's home — one absence, two symptoms (Decision 23). It also makes
+`Eat` a natural **spike**, which is what keeps bedtime still.
+
+**The score — non-linear, and this is not optional:**
+
+> `weight × (hunger / 100) ^ bite`
+
+Two authored numbers, both plain English:
+
+- **what starving is worth** — the `weight`. This is the one that decides whether
+  a meal can ever interrupt work. **It must clear 103 if it ever should.**
+- **how sharply it bites** — the exponent. This is what makes *a bit hungry* mean
+  *keep working*.
+
+**A straight line gives exactly the wrong day and it is arithmetic, not
+opinion:** a 100-ceiling stat scored linearly can never reach work's 103, so a
+meal could never interrupt work at any hunger — while half-empty at 22:00 scores
+50 and beats `StayUp`'s 50.0, so he would nibble every evening and never eat by
+day.
+
+**A loaf fixes 50.** With `base_hunger_per_hour = 4.0` that is **two meals a
+day**, and that cadence is forced by conservation — `meals/day = 24 × rate ÷
+loaf` — so **`bite` does not change how often he eats.** It changes *when*, and
+therefore what he is willing to interrupt. A higher `bite` makes him more stoic,
+not more prompt.
+
+**Two things hunger may NOT do** (Decision 27):
+
+- **It may not touch another action's weight.** A damper on work was proposed and
+  rejected: hunger drives some men to work harder, so the direction is not
+  universal, which makes it personality rather than a lens.
+- **It may not enter `WorkStep.get_yield_per_hour()`.** That seam **stays
+  empty**. *Starving* will land there when it exists; hunger does not.
+
+### 4. `Workstation.owner`
+
+One `@export var owner: Person`, may be null, **with no reader at all this
+rung.** Unowned land is the king's, which is the same answer as nobody's. 6b adds
+`is_permitted_to()` that reads it; do not write that here.
+
+### And the bread
+
+> **Fourteen loaves each, authored on Zoogs and Hobb in `game.tscn`. NOT on
+> `person.tscn`.**
+
+`person.tscn` is the template of a **body**, not of a life: stats belong there,
+possessions do not, and a newly created person owning nothing is the honest
+default. It also matches how rung 5 authored the Fields', the Inn's and the
+Plot's inventories. Fourteen is about a week at the cadence above, which is what
+makes the cold start easy.
+
+**Consequence you must handle:** the probe's spare people start with empty bags.
+The *"a man with no bread cannot eat"* claim must still **empty a bag
+explicitly** rather than lean on that. Rung 4 paid for this lesson twice — a
+check states the world it wants instead of inheriting one, which is what
+`_stand_at` exists for.
 
 ## ⚠ THE TRAPS
 
-**THE INDEX TRAP IS DEAD. MEASURED 2026-08-11 — DO NOT TIPTOE AROUND IT.** The
-rung 4 and rung 5 prompts both carried a loud warning that `game.tscn` overrides
-nodes BY INDEX, so inserting a node into `person.tscn` would drop Hobb's
-`strength = 1.15` and turn the dawn race back into a coin flip. **It was tested
-directly and it is false, in both of its forms:**
+**THE INDEX TRAP IS DEAD. MEASURED 2026-08-11 — DO NOT TIPTOE AROUND IT.** Both
+of its forms were tested directly and both are false:
 
 - A node inserted **before `Stats`** (making Stats index 4) — **Hobb still reads
   1.15.** A property override on an existing child resolves by **name**; the
   index is a positioning hint.
-- **A node added to `person.tscn`'s Brain**, which is the case this rung hits
-  because `WorkTheField` is *inserted* at `index="3"` — Brain came out
-  `StayUp, Sleep, Wake, WorkTheField, Eat` and **all 30 claims stayed green.**
-  An added node takes position 3; a new base-scene sibling sorts after it.
+- **A node added to `person.tscn`'s Brain**, which is the case this rung hits —
+  Brain came out `StayUp, Sleep, Wake, WorkTheField, Eat` and **all 30 claims
+  stayed green.**
 
-**Author `Eat` wherever it reads best.** The one real consequence of ordering is
-much narrower and worth knowing: `DecisionEngine.get_highest_scoring` breaks
-**exact ties** by *"whichever came first"*, so Brain child order decides only
-between two actions scoring **identically**.
+**Author `Eat` wherever it reads best.** The one real consequence of ordering:
+`DecisionEngine.get_highest_scoring` breaks **exact ties** by *"whichever came
+first"*, so Brain child order decides only between two actions scoring
+**identically**.
 
 **THE TRAP THAT IS REAL — a new competing action can break claims that assert
 what a man is DOING.** Three existing claims name an action or a ballot:
@@ -305,55 +324,60 @@ the answer was to **pin the world the claim wants** (`_stand_at`) rather than
 weaken the assertion. There is no `_feed` helper yet; if claim 13 needs one, that
 is the shape.
 
-**The other real trap: `Eat` must not be able to fire while he is asleep.**
-`StayUp` and `WorkTheField` both gate on `person.brain.is_awake()` and both
-document why. A man whose hunger crosses the threshold at 03:00 will get up and
-eat in the dark if you forget — and it will present as a broken sleep cycle. Note
-that `Sleep` itself does **not** gate on being awake, deliberately; `Wake` gates
-on being asleep. Read all four before writing the fifth.
-
 ## THE GATE
 
-**Probe, then Moment. All thirty existing claims stay green** (or move
-deliberately, per Call 3, with the new baseline recorded). **New claims start at
-31.**
+**Probe, then Moment. All thirty existing claims stay green. New claims start
+at 31.**
 
 1. **Hunger rises for a man doing nothing at all** — it is upkeep, so it must
    move for somebody whose current action is `StayUp`, and it must move by
-   exactly one hour's worth in one hour. Assert the amount, not the direction.
+   exactly one hour's worth in one hour. **Assert the amount, not the direction.**
 2. **Eating drops hunger, and consumes exactly one loaf.** Both halves: the stat
    fell *and* the count went down by one, so "he ate" cannot be satisfied by a
    step that changes hunger for free.
 3. **A man with no bread cannot eat** — `Eat` is off his ballot entirely (NAN in
    `get_last_scores`, the same off-the-ballot shape claims 13 and 21 already
    use), not merely outscored. And having no bread must not stop hunger rising.
+   **Empty the bag explicitly; do not rely on a spare starting empty.**
 4. **Hunger never goes negative**, however much he eats.
 5. **`adenosine` is written from nowhere outside `brain.gd`** — a **text scan**,
    in the shape `SceneWiring` already establishes, over every `.gd` in `game/`.
    This is the mechanical form of the upkeep-vs-effects rule and it is the claim
    that stops the farmhand-who-never-tires bug from ever being written.
    **Deliberately NOT extended to hunger:** `Eat` **must** write hunger, that is
-   an effect, and the design permits it. *(The build plan's original wording said
-   neither stat may be written from `game/actions/`. That is wrong and would fail
-   on correct code — it is already corrected in the plan, do not restore it.)*
+   an effect, and the design permits it.
 6. **`Eat` is on every person by composition** — instance `person.tscn` fresh,
    with nothing authored, and assert the newcomer knows it. That is FR86's
-   guarantee made mechanical, and it is what a later rung would break by moving
-   `Eat` into `game.tscn` per person.
+   guarantee made mechanical.
 
-**Moment — accepted as it unfolds, not staged.** Two drives on one graph and you
-watch which wins: the first time the sleep cycle has a competitor that is not a
-flat number. **Watch it at a SHORTENED day** — this is a once-a-day beat
-repeating, so Decision 13's instrument applies (rung 4's long day is the
-opposite case and does not apply here).
+**Moment — accepted as it unfolds, not staged.** **TWO** drives on one graph and
+you watch which wins: the first time the sleep cycle has a competitor that is not
+a flat number. **Watch it at a SHORTENED day** — this is a once-a-day beat
+repeating, so Decision 13's instrument applies (rung 4's long day is the opposite
+case and does not apply here).
+
+**What the numbers are predicted to produce**, so the Moment is a prediction to
+check and never a target to engineer:
+
+- **Two meals a day**, one in the late morning that genuinely interrupts work,
+  one in the evening gap after work falls and before sleep wins.
+- Meals land in the **valleys of the waking ladder**, because that is the
+  cheapest hour on it. Supper is emergent, not authored.
+- **Bedtime does not move.** `Eat` can hold the top waking bid for exactly the
+  one tick it takes to eat, so 22:01 shifts by at most 0.01 world hours.
+
+If what actually happens differs, **that is information, not a failure** — ask
+the author whether what happens is sufficient before tuning toward the
+prediction. Rung 4 paid for that lesson: a Moment is a prediction about what the
+causes produce, not a spec to satisfy.
 
 **Two instrument notes, both learned at rung 5:**
 
-- `stat_graph` now has **`top_of_scale`** (0.0 = fit to the data). Grain already
-  passes adenosine's 47 inside a working day and reaches 94 by day 5, so the
-  stat panels are **already crowded before hunger arrives**. Pinning the two
-  stat panels is one number in the inspector and is probably the first thing you
-  do when you sit down to watch this.
+- `stat_graph` has **`top_of_scale`** (0.0 = fit to the data). Grain already
+  passes adenosine's 47 inside a working day and reaches 94 by day 5, so the stat
+  panels are **already crowded before hunger arrives**. Pinning the two stat
+  panels is one number in the inspector and is probably the first thing you do
+  when you sit down to watch this.
 - Items and stats both list by reflection, so `hunger` appears on both readouts
   and both graphs, and bread appears over every head, **with no line written for
   either.** If it does not appear, something is wrong with the stat's export
@@ -361,17 +385,19 @@ opposite case and does not apply here).
 
 ## DO NOT BUILD
 
-`Drink`, beer, the tavern's storage being anybody else's, or buying anything —
-that is **rung 7**, and shipping a transfer path here is exactly what Decision 3
-split this rung to avoid. `Obligation`, `WorkForHire`, quotas, discharge,
-`is_permitted_to()` — **6b** (`owner` ships as a field with no reader; that is
-the whole of it). Beds, and `Sleep` gaining a place requirement — **6c**.
-`Socialise`, `Town.find_people_at` being consumed, the distance damper — **6d**.
-A hunger *quota* or any attempt to unify hunger with Decision 1's `target −
-stock` — **Decision 1 explicitly left that open and it is not this rung's to
-close.** Cooking, recipes, food that spoils, an item database, weight, carry
-capacity. `release()` on `Workstation` — still no caller, still deliberately
-absent.
+**`MakeBread` — that is 6a2, the very next gate**, and this rung's bread is
+authored and will not run out inside a probe run. **`social`, `Socialise`, the
+tavern, `Town.find_people_at` being consumed, the distance damper — 6d**
+(Decision 25 moved them there; Decision 3 carries a banner saying so).
+**`Leisure`, or renaming `StayUp` — a later rung** (Decision 21). **Starving, and
+anything that reads it** (Decision 27). `Drink`, beer, or buying anything —
+**rung 7**. `Obligation`, `WorkForHire`, quotas, discharge, `is_permitted_to()` —
+**6b** (`owner` ships as a field with no reader; that is the whole of it). Beds,
+and `Sleep` gaining a place requirement — **6c**. A hunger *quota* or any attempt
+to unify hunger with Decision 1's `target − stock` — Decision 19 says they are
+the same rule, but closing that is not this rung's job. Cooking, recipes, food
+that spoils, an item database, weight, carry capacity. `release()` on
+`Workstation` — still no caller, still deliberately absent.
 
 ## ENGINE FACTS — MEASURED. DO NOT REDISCOVER.
 
@@ -384,7 +410,7 @@ absent.
   `@onready` vars **do not exist yet**. Setup in `_initialize`; assertions from
   the first `_process` frame. **And `quit()` called from `_initialize()` does not
   take — the process hangs.** Do the work in `_process` and return `true`, the
-  way `probe.gd` does. (Cost five minutes on 2026-08-11.)
+  way `probe.gd` does.
 - The harness advances `Clock` itself. Nothing else will.
 - **The run line is TWO commands.** `--script` does not build the class cache:
   ```
@@ -430,15 +456,15 @@ absent.
 Delegate a chunk that is self-contained, mechanically specifiable, and has ground
 truth to check itself against.
 
-**Good candidates:** the `adenosine`-is-only-written-in-`brain.gd` text scan (it
-is a pure function over file text with an exact expected answer, and it mirrors
+**Good candidates:** the `adenosine`-is-only-written-in-`brain.gd` text scan (a
+pure function over file text with an exact expected answer, and it mirrors
 `scene_wiring.gd` closely enough to hand over with the existing file as the
 model). And a six-day measurement run reporting the schedule, who claimed the
 plot when, each man's grain at each dusk **and how many times each man ate** —
 hand over the regression table above and have it report HOLDS/DEVIATES per line.
 
-**Do NOT delegate:** the four open calls, the curve tuning, or the decision about
-whether a red claim 13 is a tuning problem or a claim problem.
+**Do NOT delegate:** the curve tuning, or the decision about whether a red claim
+13 is a tuning problem or a claim problem.
 
 ## BEFORE YOU CLAIM DONE
 
@@ -451,29 +477,30 @@ whether a red claim 13 is a tuning problem or a claim problem.
   per-file `git restore` is safe during the break pass; **never `git restore .`**.
   **Watch which claims each break turns red** — a break that reddens a claim you
   were not aiming at is telling you the two overlap.
-- **The sleep cycle has not moved** — Zoogs 22:01 / 8.00 h / 06:01, Hobb 04:41 —
-  **or it has moved exactly as Call 3 decided, and the new numbers are written
-  into the build plan and this baseline.** "It moved and I am not sure why" is a
-  failed gate.
+- **The sleep cycle has not moved** — Zoogs 22:01 / 8.00 h / 06:01, Hobb 04:41.
+  "It moved and I am not sure why" is a failed gate.
 - **Hobb still takes the plot every day and Zoogs still never does.**
 - **A man eats.** Say how often, at what hours, and whether a meal ever
   interrupted work — that is the rung's actual content and a green probe does not
   show it.
-- Report the probe output, then **STOP**. Do not begin rung 6b.
+- Report the probe output, then **STOP**. Do not begin 6a2.
 
 ## STANDING HAZARDS
 
 - **Treat every code snippet in `proving-scene-decisions.md` AND in the build plan
   as intent to be re-derived, not code to paste.** Five have been wrong so far and
-  only the probe caught them. **Call 1 above is the first case where a settled
-  decision's PROSE is wrong rather than its code** — the same scepticism applies
-  to it.
+  only the probe caught them. **Decision 25 is the case where a settled
+  decision's PROSE was wrong rather than its code** — the same scepticism applies
+  to reasoning, not only to snippets.
+- **The worked numbers in Decision 20 (weight 130, bite 3) are ILLUSTRATIVE.**
+  They are a check that the shape behaves. The tuning is the author's, at the
+  keyboard, on the board.
 - **Watch for assertions that cannot fail.** This is the ladder's most reliable
   source of wasted work.
 - **When this rung ships, grep the UNBUILT rungs for what it changed.** Rung 4
   moved a seam under 5, 6a, 6d and 7; rung 5 landed 9a's `Workstation.progress`
   four rungs early as `output_part_made`. That is now part of the ritual, and 6a
-  introduces `hunger`, which 6b, 6d, 7 and 9b all sit downstream of — and
+  introduces `hunger`, which 6a2, 6b, 6d, 7 and 9b all sit downstream of — and
   `Workstation.owner`, whose first reader is 6b.
 - **The working tree on `poc-v2` is clean** except for a `[display]` block in
   `project.godot` (window maximized, so the UI stops dominating a 2K screen),
