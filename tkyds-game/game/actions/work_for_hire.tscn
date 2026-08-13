@@ -1,0 +1,17 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/actions/work_for_hire.gd" id="1_work_for_hire"]
+[ext_resource type="Script" path="res://game/actions/work_for_hire_step.gd" id="2_work_for_hire_step"]
+[ext_resource type="Script" path="res://game/actions/go_to_step.gd" id="3_go_to_step"]
+
+[node name="WorkForHire" type="Node"]
+script = ExtResource("1_work_for_hire")
+label = "work for hire"
+work_name = &"field work"
+daylight_pull = 30.0
+
+[node name="Work" type="Node" parent="."]
+script = ExtResource("2_work_for_hire_step")
+
+[node name="GoTo" type="Node" parent="Work"]
+script = ExtResource("3_go_to_step")

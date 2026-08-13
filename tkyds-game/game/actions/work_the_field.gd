@@ -66,15 +66,32 @@ func is_available_to(person: Person) -> bool:
 		person.town.note_no_candidates_existed()
 		return false
 	if _find_first_candidate(stations, person) == null:
-		# The other idleness, and a different world — the town has work and no
-		# room, not no work. See town.gd for why these are two counters.
-		#
-		# Under the knowledge rule below this counter got TRUER: it now counts
-		# men who turned up and found no room, rather than men who theoretically
-		# could not have worked from wherever they happened to be standing.
-		person.town.note_every_candidate_was_taken()
+		# TELEMETRY, NOT WORLD STATE, same exemption as above — and as of rung
+		# 6b there are TWO different ways to have no candidate rather than one,
+		# so a single ask can see both at once if more than one station sits at
+		# his own place: a station he has no RIGHT to (a rights problem, more
+		# land needed) and a station somebody else already holds (a room
+		# problem, more room needed on land already open to him). Each gets its
+		# own counter with its own fix, so this notes every kind of refusal it
+		# actually saw rather than picking one.
+		_note_why_no_candidate(stations, person)
 		return false
 	return true
+
+
+# Which of the two rung-6b-and-later refusals a failed gate actually saw, for
+# every station that could have told the difference. Only a station AT his
+# own place can say anything at all — the knowledge rule below means a
+# distant station is always still "a candidate" as far as this classification
+# goes, so it is silently skipped rather than misreported.
+func _note_why_no_candidate(stations: Array[Workstation], person: Person) -> void:
+	for station in stations:
+		if person.get_current_place() != station.get_place():
+			continue
+		if not station.is_permitted_to(person):
+			person.town.note_was_not_permitted()
+		elif not station.is_free_for(person):
+			person.town.note_every_candidate_was_taken()
 
 
 # How much he wants to work: the sun's arc, worth more than idling all day.

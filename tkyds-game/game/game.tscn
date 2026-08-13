@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=21 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
@@ -10,8 +10,9 @@
 [ext_resource type="Script" uid="uid://c3yankxrk447k" path="res://game/place.gd" id="8_place"]
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_person_readout"]
 [ext_resource type="Script" uid="uid://vyb3v2wjgr7e" path="res://game/workstation.gd" id="10_workstation"]
-[ext_resource type="PackedScene" path="res://game/actions/work_the_field.tscn" id="11_work_the_field"]
+[ext_resource type="PackedScene" path="res://game/actions/work_for_hire.tscn" id="11_work_for_hire"]
 [ext_resource type="Script" path="res://game/inventory.gd" id="12_inventory"]
+[ext_resource type="Script" path="res://game/obligation.gd" id="13_obligation"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
@@ -66,11 +67,12 @@ mesh = SubResource("PlaneMesh_place")
 script = ExtResource("8_place")
 place_name = "the grain fields"
 
-[node name="Plot" type="MeshInstance3D" parent="Town/Fields"]
+[node name="Plot" type="MeshInstance3D" parent="Town/Fields" node_paths=PackedStringArray("owned_by")]
 transform = Transform3D(0.12, 0, 0, 0, 1, 0, 0, 0, 0.12, 0.2, 0.01, 0.15)
 material_override = SubResource("StandardMaterial3D_plot")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
+owned_by = NodePath("../../../Population/Marle")
 
 [node name="Inventory" type="Node" parent="Town/Fields/Plot"]
 script = ExtResource("12_inventory")
@@ -99,10 +101,15 @@ person_name = "Zoogs"
 tint = Color(0.82, 0.46, 0.3, 1)
 current_place = NodePath("../../Town/Inn")
 
-[node name="WorkTheField" parent="Population/Zoogs/Brain" index="3" instance=ExtResource("11_work_the_field")]
+[node name="WorkForHire" parent="Population/Zoogs/Brain" index="3" instance=ExtResource("11_work_for_hire")]
 
 [node name="Inventory" parent="Population/Zoogs" index="5"]
 items = {&"bread": 14}
+
+[node name="Obligation" type="Node" parent="Population/Zoogs"]
+script = ExtResource("13_obligation")
+owed_count = 12
+place_name = "the grain fields"
 
 [node name="Hobb" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 0, 3.5)
@@ -110,12 +117,26 @@ person_name = "Hobb"
 tint = Color(0.42, 0.58, 0.8, 1)
 current_place = NodePath("../../Town/Inn")
 
-[node name="WorkTheField" parent="Population/Hobb/Brain" index="3" instance=ExtResource("11_work_the_field")]
+[node name="WorkForHire" parent="Population/Hobb/Brain" index="3" instance=ExtResource("11_work_for_hire")]
 
 [node name="Stats" parent="Population/Hobb" index="3"]
 strength = 1.15
 
 [node name="Inventory" parent="Population/Hobb" index="5"]
+items = {&"bread": 14}
+
+[node name="Obligation" type="Node" parent="Population/Hobb"]
+script = ExtResource("13_obligation")
+owed_count = 12
+place_name = "the grain fields"
+
+[node name="Marle" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0, 5.5)
+person_name = "Marle"
+tint = Color(0.62, 0.55, 0.28, 1)
+current_place = NodePath("../../Town/Inn")
+
+[node name="Inventory" parent="Population/Marle" index="5"]
 items = {&"bread": 14}
 
 [node name="Camera" type="Camera3D" parent="."]
@@ -163,7 +184,8 @@ person = NodePath("../../Population/Zoogs")
 clock = NodePath("../../Clock")
 
 [node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
-watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake"), NodePath("../../Population/Zoogs/Brain/WorkTheField"), NodePath("../../Population/Hobb/Stats")])
+watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake"), NodePath("../../Population/Zoogs/Brain/WorkForHire"), NodePath("../../Population/Zoogs/Obligation"), NodePath("../../Population/Hobb/Stats")])
 
 [editable path="Population/Zoogs"]
 [editable path="Population/Hobb"]
+[editable path="Population/Marle"]

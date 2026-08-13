@@ -171,6 +171,36 @@ func get_inventory() -> Inventory:
 	return inventory
 
 
+# Everything he owes, by walking his children — the same shape
+# Brain.reload_known_actions uses for what he knows. An obligation is
+# authored the same way: a Node under him rather than an entry in a list kept
+# somewhere else, so a man's agreements are visible in exactly the tree you'd
+# already look in to see what he can do.
+func get_obligations() -> Array[Obligation]:
+	var found: Array[Obligation] = []
+	for child in get_children():
+		if child is Obligation:
+			found.append(child)
+	return found
+
+
+# Does an UNEXPIRED obligation of his name this place. DISCHARGED STILL
+# COUNTS — a man who met today's quota is not evicted from the land he is
+# employed on, he is merely done wanting for today. Permission and want are
+# two different questions: this answers the first (can he set foot here at
+# all), WorkForHire.get_utility_score answers the second (does he still want
+# to).
+func has_obligation_at(place: Place) -> bool:
+	if place == null:
+		return false
+	for obligation in get_obligations():
+		if obligation.is_expired():
+			continue
+		if obligation.place_name == place.place_name:
+			return true
+	return false
+
+
 # How fast he travels right now, whatever he is travelling by. THE MEANS.
 #
 # Its own call site rather than a read of walk_speed, because walking is only

@@ -159,6 +159,11 @@ func _process(_delta: float) -> bool:
 	_check_baking_turns_grain_into_bread()
 	_check_bread_wins_over_baking_and_grain_alone_bakes()
 	_check_neither_grain_nor_bread_means_neither_and_hunger_still_rises()
+	_check_unmet_quota_chooses_work_and_discharge_outbids()
+	_check_expired_obligation_leaves_the_candidate_set()
+	_check_discharge_moves_grain_to_barn_and_stops_at_the_cap()
+	_check_owned_plot_refuses_the_unemployed_and_counts_it()
+	_check_quota_met_today_is_owed_again_tomorrow()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -362,11 +367,12 @@ func _check_the_town_survives_losing_somebody() -> void:
 	population.move_child(bystander, 0)
 
 	population.think_for_everyone(1.0)
-	# 3 = the two authored farmers plus Doomed. This number reads the authored
-	# population, so adding a person to game.tscn moves it — rung 3 took it from
-	# 2 to 3 when Hobb was authored in.
-	_require(population.get_people().size() == 3, claim,
-		"expected 3 people under Population and found %d — the marker node was counted as one" % [
+	# 4 = the three authored people (Zoogs, Hobb, Marle) plus Doomed. This
+	# number reads the authored population, so adding a person to game.tscn
+	# moves it — rung 3 took it from 2 to 3 when Hobb was authored in, and
+	# rung 6b took it from 3 to 4 when Marle, the farm owner, was.
+	_require(population.get_people().size() == 4, claim,
+		"expected 4 people under Population and found %d — the marker node was counted as one" % [
 			population.get_people().size()])
 
 	# Freed outright rather than queue_free()d: queued deletion doesn't land
@@ -381,8 +387,8 @@ func _check_the_town_survives_losing_somebody() -> void:
 
 	_require(absf(moved - expected) < 0.001, claim,
 		"after a death the survivor moved %.4f where one tick's worth is %.4f" % [moved, expected])
-	_require(population.get_people().size() == 2, claim,
-		"expected 2 people left and found %d" % population.get_people().size())
+	_require(population.get_people().size() == 3, claim,
+		"expected 3 people left and found %d" % population.get_people().size())
 
 	world.queue_free()
 
@@ -458,10 +464,11 @@ func _check_who_is_where_is_asked_not_remembered() -> void:
 	var population := world.get_node_or_null("Population") as Population
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
+	var marle := world.get_node_or_null("Population/Marle") as Person
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var inn := world.get_node_or_null("Town/Inn") as Place
-	if town == null or population == null or zoogs == null or hobb == null or fields == null or inn == null:
-		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, a Hobb, Fields and an Inn")
+	if town == null or population == null or zoogs == null or hobb == null or marle == null or fields == null or inn == null:
+		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, a Hobb, a Marle, Fields and an Inn")
 		return
 
 	var mara := _add_a_person(population, "Mara")
@@ -477,15 +484,16 @@ func _check_who_is_where_is_asked_not_remembered() -> void:
 	# The expected sets read the AUTHORED population, so they move whenever the
 	# authored placement does. Hobb joined the Fields at rung 3; at rung 4 BOTH
 	# farmers were re-authored to the Inn, so the fields hold nobody but the
-	# spare the probe puts there.
+	# spare the probe puts there. Marle, the farm owner, joined the Inn at
+	# rung 6b.
 	_require_exactly(town.find_people_at(fields), [mara], claim, "at the fields")
-	_require_exactly(town.find_people_at(inn), [zoogs, hobb, bram], claim, "at the Inn")
+	_require_exactly(town.find_people_at(inn), [zoogs, hobb, marle, bram], claim, "at the Inn")
 
 	# Nothing is invalidated, nothing is notified, nothing is re-posted. The next
 	# call simply asks again, which is the whole argument for a query.
 	mara.current_place = inn
 	_require_exactly(town.find_people_at(fields), [], claim, "at the fields once Mara left")
-	_require_exactly(town.find_people_at(inn), [zoogs, hobb, bram, mara], claim, "at the Inn once Mara arrived")
+	_require_exactly(town.find_people_at(inn), [zoogs, hobb, marle, bram, mara], claim, "at the Inn once Mara arrived")
 
 	# STRUCTURALLY SATISFIED TODAY — say so rather than let it read as covered.
 	# find_people_at asks the living, and free() takes Bram out of the child list
@@ -498,7 +506,7 @@ func _check_who_is_where_is_asked_not_remembered() -> void:
 	# until the end of the frame, so within one pumped tick he would still be a
 	# perfectly valid child and this would be testing nothing at all.
 	bram.free()
-	_require_exactly(town.find_people_at(inn), [zoogs, hobb, mara], claim, "at the Inn once Bram died")
+	_require_exactly(town.find_people_at(inn), [zoogs, hobb, marle, mara], claim, "at the Inn once Bram died")
 
 	# Nobody is at nowhere. If this ever returns Wisp, then every man walking a
 	# road counts as standing with every other man walking a road, and rung 7
@@ -704,9 +712,10 @@ func _get_sun_height_at(hour_of_day: float) -> float:
 
 # --- Assertions 13-18: two farmers, one plot -------------------------------------
 
-# Rung 3's whole point, made mechanical: one Workstation, two men who both know
-# WorkTheField, and a schedule that is supposed to be the thing that decides
-# between them rather than which node happens to sit first under Population.
+# Rung 3's whole point, made mechanical: one Workstation, two men who both
+# know WorkForHire (as of rung 6b — see below), and a schedule that is
+# supposed to be the thing that decides between them rather than which node
+# happens to sit first under Population.
 
 # Both farmers are put to bed together — adenosine above StayUp's 50 sends both
 # to Sleep on the very next tick, from the same hour, same place, same debt.
@@ -725,9 +734,9 @@ func _check_two_farmers_one_plot() -> void:
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
 	var fields := world.get_node_or_null("Town/Fields") as Place
-	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
 	if population == null or clock == null or zoogs == null or hobb == null or plot == null or fields == null or work_action == null:
-		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Plot, the Fields and Zoogs' WorkTheField")
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Plot, the Fields and Zoogs' WorkForHire")
 		return
 
 	# BOTH MEN PINNED ON THE FIELDS, and this is the whole point of the pin. This
@@ -784,11 +793,11 @@ func _check_two_farmers_one_plot() -> void:
 		var score_value: float = score
 		zoogs_score_is_off_the_ballot = is_nan(score_value)
 	_require(zoogs_score_is_off_the_ballot, claim,
-		"Zoogs' last WorkTheField score reads %s — the loser must be OFF the ballot (NAN), not merely outscored" % str(score))
+		"Zoogs' last WorkForHire score reads %s — the loser must be OFF the ballot (NAN), not merely outscored" % str(score))
 
 	var hobb_action: Action = hobb.brain.current_action
 	_require(hobb_action != null and String(hobb_action.name) == String(work_action.name), claim,
-		"Hobb's current action reads \"%s\", not WorkTheField" % [
+		"Hobb's current action reads \"%s\", not WorkForHire" % [
 			String(hobb_action.name) if hobb_action != null else "nothing"])
 
 	world.queue_free()
@@ -807,9 +816,9 @@ func _check_a_claim_survives_a_day_boundary() -> void:
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
 	var fields := world.get_node_or_null("Town/Fields") as Place
-	var hobb_work := world.get_node_or_null("Population/Hobb/Brain/WorkTheField") as WorkTheField
+	var hobb_work := world.get_node_or_null("Population/Hobb/Brain/WorkForHire") as WorkForHire
 	if clock == null or zoogs == null or hobb == null or plot == null or fields == null or hobb_work == null:
-		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb, the Plot, the Fields and Hobb's WorkTheField")
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, a Hobb, the Plot, the Fields and Hobb's WorkForHire")
 		return
 
 	# Pinned rather than taken on trust from the scene — see _stand_at. This
@@ -988,9 +997,9 @@ func _check_no_stations_and_every_station_taken_are_different_counters() -> void
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
 	var fields := world.get_node_or_null("Town/Fields") as Place
-	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
 	if town == null or zoogs == null or plot == null or fields == null or work == null:
-		_require(false, claim, "the scene came up without a Town, a Zoogs, the Plot, the Fields and Zoogs' WorkTheField")
+		_require(false, claim, "the scene came up without a Town, a Zoogs, the Plot, the Fields and Zoogs' WorkForHire")
 		return
 
 	# Pinned in the furrow — see _stand_at. Standing him ON the plot's place is
@@ -1051,7 +1060,7 @@ func _check_a_man_walks_the_gap_shut() -> void:
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var inn := world.get_node_or_null("Town/Inn") as Place
-	var walk := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField/Work/GoTo") as GoToStep
+	var walk := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire/Work/GoTo") as GoToStep
 	if zoogs == null or fields == null or inn == null or walk == null:
 		_require(false, step_claim, "the scene came up without a Zoogs, Fields, an Inn and Zoogs' GoToStep")
 		return
@@ -1111,9 +1120,9 @@ func _check_a_plot_is_invisible_from_afar_until_he_arrives() -> void:
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var inn := world.get_node_or_null("Town/Inn") as Place
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
-	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
 	if population == null or clock == null or zoogs == null or hobb == null or fields == null or inn == null or plot == null or work_action == null:
-		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, Fields, an Inn, the Plot and Zoogs' WorkTheField")
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, Fields, an Inn, the Plot and Zoogs' WorkForHire")
 		return
 
 	# Midday — where work scores 103 and beats StayUp's 87.3, so a man actually
@@ -1166,7 +1175,7 @@ func _check_a_plot_is_invisible_from_afar_until_he_arrives() -> void:
 		var score_value: float = score
 		zoogs_score_is_off_the_ballot = is_nan(score_value)
 	_require(zoogs_score_is_off_the_ballot, claim,
-		"Zoogs' WorkTheField score, standing at the Fields with the plot already Hobb's, reads %s — the loser must be OFF the ballot (NAN), not merely outscored" % str(score))
+		"Zoogs' WorkForHire score, standing at the Fields with the plot already Hobb's, reads %s — the loser must be OFF the ballot (NAN), not merely outscored" % str(score))
 
 	_require(plot.claimed_by == hobb, claim,
 		"after the race the plot reads held by %s, not Hobb — arriving and losing must not let the loser take it off him" % [
@@ -1192,9 +1201,9 @@ func _check_he_does_not_bid_for_a_plot_he_can_see_is_taken() -> void:
 	var hobb := world.get_node_or_null("Population/Hobb") as Person
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
-	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
 	if population == null or clock == null or zoogs == null or hobb == null or fields == null or plot == null or work_action == null:
-		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Fields, the Plot and Zoogs' WorkTheField")
+		_require(false, claim, "the scene came up without a Population, a Clock, a Zoogs, a Hobb, the Fields, the Plot and Zoogs' WorkForHire")
 		return
 
 	clock.advance(12.0)
@@ -1239,10 +1248,22 @@ func _check_the_nearer_station_wins_and_moving_a_place_changes_it() -> void:
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var inn := world.get_node_or_null("Town/Inn") as Place
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
-	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
-	if town == null or zoogs == null or fields == null or inn == null or plot == null or work_action == null:
-		_require(false, near_claim, "the scene came up without a Town, a Zoogs, Fields, an Inn, the Plot and Zoogs' WorkTheField")
+	if town == null or zoogs == null or fields == null or inn == null or plot == null:
+		_require(false, near_claim, "the scene came up without a Town, a Zoogs, Fields, an Inn and the Plot")
 		return
+
+	# A BARE WorkTheField, built by hand rather than pulled off Zoogs' Brain —
+	# as of rung 6b both farmers know WorkForHire, not WorkTheField, and
+	# WorkForHire scopes its candidates to the place its OBLIGATION names
+	# (see work_for_hire.gd's _is_a_candidate_for). This claim is about pure
+	# geography — the ordering find_workstations hands back — and routing it
+	# through WorkForHire would make it a claim about employment scoping
+	# instead, for a reason that has nothing to do with what it is testing.
+	# get_best_candidate and _find_first_candidate need no tree membership and
+	# no step, so an unparented instance is enough — the same
+	# instantiate-and-use-directly pattern Place.new() and Workstation.new()
+	# already use two lines below.
+	var work_action := WorkTheField.new()
 
 	# A second, hand-built station — never authored into game.tscn for this.
 	# Parented to its place BEFORE the place enters the tree, so
@@ -1281,6 +1302,11 @@ func _check_the_nearer_station_wins_and_moving_a_place_changes_it() -> void:
 	_require(far_first == plot, moved_claim,
 		"after moving the near field out to (300, 0, 300), the best candidate still reads \"%s\", not the Plot — the ordering did not re-read the new geometry" % far_first_name)
 
+	# work_action was never parented anywhere — a deliberately unparented
+	# instance, per its own comment above — so it is the one thing in this
+	# claim world.queue_free() below cannot reach. Freed by hand rather than
+	# left to leak.
+	work_action.free()
 	world.queue_free()
 
 
@@ -1303,6 +1329,13 @@ func _check_the_nearer_station_wins_and_moving_a_place_changes_it() -> void:
 # expected answer sits one float rounding away from paying out a grain that has
 # not quite finished, and the claim would flicker for a reason that has nothing
 # to do with the code under it.
+# RE-ANCHORED AT RUNG 6B. The claim's point — pay at exactly the seam's rate,
+# every hundredth accounted for — is unchanged; WHERE the pay lands moved
+# because Zoogs is now EMPLOYED. His authored obligation owes 12 grain a day
+# to the grain fields, far more than 2.5 hours at 1/hour could ever produce,
+# so WorkForHireStep's delivery leg moves every whole grain into the BARN the
+# instant it is made. His own sack should therefore read EMPTY throughout —
+# not full, as it did before this rung.
 func _check_working_a_plot_yields_grain() -> void:
 	var claim := "25 — working a plot yields grain at exactly the rate the seam reports"
 	var world := _add_a_disabled_game_scene()
@@ -1310,14 +1343,15 @@ func _check_working_a_plot_yields_grain() -> void:
 	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
 	var fields := world.get_node_or_null("Town/Fields") as Place
-	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
 	if clock == null or zoogs == null or plot == null or fields == null or work == null:
-		_require(false, claim, "the scene came up without a Clock, a Zoogs, the Plot, the Fields and Zoogs' WorkTheField")
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, the Plot, the Fields and Zoogs' WorkForHire")
 		return
 	var step := work.step as WorkStep
 	var inventory := zoogs.get_inventory()
-	if step == null or inventory == null:
-		_require(false, claim, "WorkTheField has no WorkStep under it, or Zoogs has no Inventory under him")
+	var barn := fields.get_inventory()
+	if step == null or inventory == null or barn == null:
+		_require(false, claim, "WorkForHire has no WorkStep under it, Zoogs has no Inventory under him, or the Fields has none")
 		return
 
 	# Standing him in the furrow is required, and it is this rung's second trap:
@@ -1326,6 +1360,8 @@ func _check_working_a_plot_yields_grain() -> void:
 	_stand_at(zoogs, fields)
 	_require(inventory.get_count(&"grain") == 0, claim,
 		"Zoogs starts the day holding %d grain — nothing has authored him any" % inventory.get_count(&"grain"))
+	_require(barn.get_count(&"grain") == 0, claim,
+		"the Fields' barn starts the day holding %d grain — nothing has authored it any" % barn.get_count(&"grain"))
 	_require(is_zero_approx(plot.output_part_made), claim,
 		"the plot starts with %.4f of a grain already part-made" % plot.output_part_made)
 
@@ -1338,16 +1374,20 @@ func _check_working_a_plot_yields_grain() -> void:
 	var hours_worked := worked_ticks * TICK_HOURS
 	var owed := rate * hours_worked
 	var expected_whole := int(floorf(owed))
-	_require(inventory.get_count(&"grain") == expected_whole, claim,
-		"%.2f hours at %.2f grain an hour should put %d whole grain in his sack and he is holding %d" % [
-			hours_worked, rate, expected_whole, inventory.get_count(&"grain")])
-	# Sack plus furrow accounts for every hundredth. This is the half that makes
-	# the claim exact rather than approximate: a rate applied per tick instead of
-	# per hour, or a fraction dropped on the floor each tick, both land here.
-	var accounted := float(inventory.get_count(&"grain")) + plot.output_part_made
+	_require(inventory.get_count(&"grain") == 0, claim,
+		"%.2f hours of employed work should leave his own sack empty — delivered to the barn on the spot — and he is holding %d" % [
+			hours_worked, inventory.get_count(&"grain")])
+	_require(barn.get_count(&"grain") == expected_whole, claim,
+		"%.2f hours at %.2f grain an hour should put %d whole grain in the barn and it holds %d" % [
+			hours_worked, rate, expected_whole, barn.get_count(&"grain")])
+	# Sack plus barn plus furrow accounts for every hundredth. This is the half
+	# that makes the claim exact rather than approximate: a rate applied per
+	# tick instead of per hour, or a fraction dropped on the floor each tick,
+	# both land here — now with a third container in the sum, not a new sum.
+	var accounted := float(inventory.get_count(&"grain")) + float(barn.get_count(&"grain")) + plot.output_part_made
 	_require(absf(accounted - owed) < 0.0001, claim,
-		"%.2f hours at %.2f an hour owes %.4f grain, and sack (%d) plus furrow (%.4f) accounts for %.4f" % [
-			hours_worked, rate, owed, inventory.get_count(&"grain"), plot.output_part_made, accounted])
+		"%.2f hours at %.2f an hour owes %.4f grain, and sack (%d) plus barn (%d) plus furrow (%.4f) accounts for %.4f" % [
+			hours_worked, rate, owed, inventory.get_count(&"grain"), barn.get_count(&"grain"), plot.output_part_made, accounted])
 
 	world.queue_free()
 
@@ -1371,14 +1411,15 @@ func _check_a_walking_man_produces_nothing() -> void:
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var inn := world.get_node_or_null("Town/Inn") as Place
-	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkTheField") as WorkTheField
+	var work := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
 	if clock == null or zoogs == null or plot == null or fields == null or inn == null or work == null:
-		_require(false, claim, "the scene came up without a Clock, a Zoogs, the Plot, the Fields, an Inn and Zoogs' WorkTheField")
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, the Plot, the Fields, an Inn and Zoogs' WorkForHire")
 		return
 	var step := work.step as WorkStep
 	var inventory := zoogs.get_inventory()
-	if step == null or inventory == null:
-		_require(false, claim, "WorkTheField has no WorkStep under it, or Zoogs has no Inventory under him")
+	var barn := fields.get_inventory()
+	if step == null or inventory == null or barn == null:
+		_require(false, claim, "WorkForHire has no WorkStep under it, Zoogs has no Inventory under him, or the Fields has none")
 		return
 
 	_stand_at(zoogs, inn)
@@ -1394,6 +1435,13 @@ func _check_a_walking_man_produces_nothing() -> void:
 		_require(inventory.get_count(&"grain") == 0, claim,
 			"%.4f units short of the Fields and already carrying %d grain — the yield is being paid for walking" % [
 				zoogs.global_position.distance_to(fields.global_position), inventory.get_count(&"grain")])
+		# THE BARN — a third place a walking man's pay must not appear, new at
+		# rung 6b: the delivery leg gives grain a second home besides his own
+		# sack, and this check would be silently incomplete watching only the
+		# one place WorkStep alone ever wrote to.
+		_require(barn.get_count(&"grain") == 0, claim,
+			"%.4f units short of the Fields and the barn already holds %d grain — delivery is happening from the road" % [
+				zoogs.global_position.distance_to(fields.global_position), barn.get_count(&"grain")])
 		_require(is_zero_approx(plot.output_part_made), claim,
 			"%.4f units short of the Fields and the plot already reads %.4f of a grain part-made — work is being banked from the road" % [
 				zoogs.global_position.distance_to(fields.global_position), plot.output_part_made])
@@ -1407,24 +1455,26 @@ func _check_a_walking_man_produces_nothing() -> void:
 	# whole journey, arrival included, has to have paid exactly nothing.
 	_require(inventory.get_count(&"grain") == 0, claim,
 		"the walk from the Inn to the Fields paid him %d grain" % inventory.get_count(&"grain"))
+	_require(barn.get_count(&"grain") == 0, claim,
+		"the walk from the Inn to the Fields delivered %d grain to the barn" % barn.get_count(&"grain"))
 	_require(is_zero_approx(plot.output_part_made), claim,
 		"the walk from the Inn to the Fields banked %.4f of a grain on the plot" % plot.output_part_made)
 
-	# And now that he IS there, one tick of the same step must pay. Without this
-	# the claim above could be satisfied by a step that never produces anything
-	# at all, anywhere — which is the vacuous form of it.
+	# And now that he IS there, one tick of the same step must pay somewhere.
+	# Without this the claim above could be satisfied by a step that never
+	# produces anything at all, anywhere — which is the vacuous form of it.
 	#
-	# EITHER HALF COUNTS, and that is not laziness. A tick's work lands in the
-	# furrow while it is a fraction and in his sack once it is whole, so which of
-	# the two moves depends entirely on the authored rate. Naming only the furrow
-	# would make this go red for a rate of one grain per tick — which is a real
-	# defect, but it is claim 25's to catch, and a claim that fails for somebody
-	# else's reason is a claim you stop believing.
+	# THREE PLACES COUNT, not two, as of rung 6b — a tick's work lands in the
+	# furrow while it is a fraction, in his sack once it is whole, OR straight
+	# in the barn if the delivery leg moves it on the very tick it completes.
+	# Naming only the furrow would go red for a rate of one grain per tick —
+	# a real defect, but it is claim 25's to catch, and a claim that fails for
+	# somebody else's reason is a claim you stop believing.
 	clock.advance(TICK_HOURS)
 	step.advance(zoogs, TICK_HOURS)
-	_require(inventory.get_count(&"grain") > 0 or plot.output_part_made > 0.0, claim,
-		"standing in the furrow with the plot claimed, one worked tick left him holding %d grain and the plot holding %.4f — the step produces nothing ANYWHERE, so the walking half of this claim proves nothing" % [
-			inventory.get_count(&"grain"), plot.output_part_made])
+	_require(inventory.get_count(&"grain") > 0 or barn.get_count(&"grain") > 0 or plot.output_part_made > 0.0, claim,
+		"standing in the furrow with the plot claimed, one worked tick left him holding %d grain, the barn holding %d, and the plot holding %.4f — the step produces nothing ANYWHERE, so the walking half of this claim proves nothing" % [
+			inventory.get_count(&"grain"), barn.get_count(&"grain"), plot.output_part_made])
 
 	world.queue_free()
 
@@ -2084,10 +2134,11 @@ func _check_baking_turns_grain_into_bread() -> void:
 # --- Assertion 38: bread wins over baking, and grain alone bakes ---------------
 
 # THROUGH THE DECISION LAYER, at hour 0 — midnight, a fresh world, he starts
-# awake with StayUp (47.3) and WorkTheField (~43 at midnight) the only other
-# competition. At the shipped numbers a hunger of 90 scores Eat around 94.8
-# and MakeBread around 83.8 — both clear StayUp and WorkTheField — but NEITHER
-# number is asserted here. What's asserted is which ACTION won, so a retune on
+# awake with StayUp (47.3) and WorkForHire (~43 at midnight, off his own
+# authored obligation) the only other competition. At the shipped numbers a
+# hunger of 90 scores Eat around 94.8 and MakeBread around 83.8 — both clear
+# StayUp and WorkForHire — but NEITHER number is asserted here. What's
+# asserted is which ACTION won, so a retune on
 # the board can never make this claim lie about what it's checking: the
 # ordering between Eat and MakeBread is the two weights doing their one job.
 func _check_bread_wins_over_baking_and_grain_alone_bakes() -> void:
@@ -2205,6 +2256,301 @@ func _check_neither_grain_nor_bread_means_neither_and_hunger_still_rises() -> vo
 	_require(zoogs.stats.get_stat(&"hunger") > hungry_before, claim,
 		"having nothing to eat or bake stopped hunger rising over 5 ticks — it went from %.4f to %.4f" % [
 			hungry_before, zoogs.stats.get_stat(&"hunger")])
+
+	world.queue_free()
+
+
+# --- Assertion 40: discharge outbids, it never delists ---------------------------
+
+# The distinction this rung's whole scoring shape hinges on, made mechanical:
+# an unmet quota wins the tick a hungry-for-work man would expect it to, and
+# a MET one stops winning WITHOUT leaving the ballot — Decision 22's "outbid,
+# never barred" read onto Obligation specifically. Claim 41 is this claim's
+# mirror for the other case (expiry, which DOES delist).
+func _check_unmet_quota_chooses_work_and_discharge_outbids() -> void:
+	var claim := "40 — a farmer with an unmet quota chooses work over rest at equal tiredness, and at quota he does not"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
+	if clock == null or population == null or zoogs == null or fields == null or work_action == null:
+		_require(false, claim, "the scene came up without a Clock, a Population, a Zoogs, the Fields and Zoogs' WorkForHire")
+		return
+	var obligation := work_action.get_standing_obligation(zoogs)
+	if obligation == null:
+		_require(false, claim, "Zoogs has no standing obligation to test against")
+		return
+
+	_stand_at(zoogs, fields)
+	# 08:00 — sun height 0.5, so StayUp reads 67.3 + 20×0.5 = 77.3 and
+	# WorkForHire reads 73 + 30×0.5 = 88 off the unmet obligation's own
+	# weight. Adenosine 60 keeps Sleep well under both.
+	clock.advance(8.0)
+	zoogs.stats.set_stat(&"adenosine", 60.0)
+
+	population.think_for_everyone(TICK_HOURS)
+	var chosen: Action = zoogs.brain.current_action
+	_require(chosen != null and chosen is WorkForHire, claim,
+		"with an unmet quota, 08:00 and adenosine 60 (work ~88 beats StayUp ~77.3 and Sleep 60), Zoogs chose \"%s\", not WorkForHire" % [
+			String(chosen.name) if chosen != null else "nothing"])
+
+	# DISCHARGE BY HAND — the whole of today's quota met in one stroke, so the
+	# very next pass has to see a man who wants nothing further from this
+	# plot today.
+	obligation.note_delivery(obligation.get_remaining_today())
+	_require(obligation.is_discharged(), claim,
+		"handing over exactly what remained today should discharge the obligation, and is_discharged() reads false")
+
+	population.think_for_everyone(TICK_HOURS)
+	var chosen_after: Action = zoogs.brain.current_action
+	_require(not (chosen_after != null and chosen_after is WorkForHire), claim,
+		"at quota, Zoogs is still choosing \"%s\" — discharge should have handed the tick to something else" % [
+			String(chosen_after.name) if chosen_after != null else "nothing"])
+
+	# THE DISTINCTION THIS CLAIM EXISTS FOR: a real number, ON the ballot.
+	# Discharge OUTBIDS (Decision 22) rather than delisting the way expiry
+	# does (claim 41), so WorkForHire's own last score has to read an actual
+	# score — 0.0 — never NAN.
+	var score: Variant = zoogs.brain.get_last_scores().get(work_action.name)
+	var score_is_a_real_zero := false
+	if score is float:
+		var score_value: float = score
+		score_is_a_real_zero = not is_nan(score_value) and absf(score_value) < 0.0001
+	_require(score_is_a_real_zero, claim,
+		"a discharged WorkForHire's last score reads %s — discharge must outbid at exactly 0.0, still ON the ballot (NAN is expiry's shape, claim 41's)" % str(score))
+
+	world.queue_free()
+
+
+# --- Assertion 41: expiry, the mirror of discharge --------------------------------
+
+# The other half of the gate/score split in work_for_hire.gd's header: EXPIRY
+# takes the candidate out of the world entirely, unlike discharge (claim 40),
+# which only empties the want. Same off-the-ballot shape claims 13, 21 and 33
+# already use for a different reason (a lost race, a plot he can see is
+# taken, an empty larder) — this is a fourth cause producing the identical
+# effect, which is the point: NAN always means "never asked", regardless of
+# why.
+func _check_expired_obligation_leaves_the_candidate_set() -> void:
+	var claim := "41 — an expired obligation leaves the candidate set"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
+	if clock == null or population == null or zoogs == null or fields == null or plot == null or work_action == null:
+		_require(false, claim, "the scene came up without a Clock, a Population, a Zoogs, the Fields, the Plot and Zoogs' WorkForHire")
+		return
+	var obligation := work_action.get_standing_obligation(zoogs)
+	if obligation == null:
+		_require(false, claim, "Zoogs has no standing obligation to expire")
+		return
+
+	obligation.expires_on_day = 0
+	_stand_at(zoogs, fields)
+	clock.advance(30.0) # day 1, mid-morning — well past expires_on_day
+	_require(obligation.is_expired(), claim,
+		"expires_on_day = 0 on day %d should read expired and does not" % clock.day())
+
+	population.think_for_everyone(TICK_HOURS)
+	_require(not work_action.is_available_to(zoogs), claim,
+		"an expired obligation still left WorkForHire available to Zoogs")
+
+	var score: Variant = zoogs.brain.get_last_scores().get(work_action.name)
+	var score_is_off_the_ballot := false
+	if score is float:
+		var score_value: float = score
+		score_is_off_the_ballot = is_nan(score_value)
+	_require(score_is_off_the_ballot, claim,
+		"an expired obligation's WorkForHire score reads %s — expiry must take the candidate OFF the ballot (NAN), the same shape claims 13, 21 and 33 already use" % str(score))
+
+	_require(not plot.is_permitted_to(zoogs), claim,
+		"the plot still reads permitted for Zoogs after his only obligation naming it expired")
+
+	world.queue_free()
+
+
+# --- Assertion 42: discharge through the step, and the cap ------------------------
+
+# Driven through the STEP directly, the claims 14/25 pattern — this is about
+# what delivery DOES, not about the decision layer. A DELIBERATELY TINY
+# owed_count (2, against 4.5 hours of work at 1/hour) is what forces the
+# post-discharge behaviour to actually run inside a claim this short: without
+# it every grain made would still be under quota and the cap would never
+# fire.
+#
+# A FIVE-GRAIN HEAD START IS NOT DECORATION — it is what makes the cap
+# actually testable. Measured by breaking it: organic production arrives in
+# single whole-grain increments once an hour, which happens to cross
+# owed_count's boundary in lockstep with it (deliver 1, deliver 1, exactly
+# discharged) — an UNCAPPED delivery leg produces the identical barn, sack
+# and delivered_count in that shape, because it never gets the chance to
+# move more than "remaining" in one call. Pre-loading 5 grain before the
+# first tick forces the very first delivery attempt to see carrying (5)
+# exceed remaining (2) at once, which is the one situation where a missing
+# cap and a working one actually disagree.
+func _check_discharge_moves_grain_to_barn_and_stops_at_the_cap() -> void:
+	var claim := "42 — discharge moves grain into the barn, conserves the total, and stops at what is owed today"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
+	if clock == null or zoogs == null or fields == null or plot == null or work_action == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs, the Fields, the Plot and Zoogs' WorkForHire")
+		return
+	var step := work_action.step as WorkForHireStep
+	var obligation := work_action.get_standing_obligation(zoogs)
+	var inventory := zoogs.get_inventory()
+	var barn := fields.get_inventory()
+	if step == null or obligation == null or inventory == null or barn == null:
+		_require(false, claim, "WorkForHire has no WorkForHireStep under it, has no standing obligation, or an Inventory is missing somewhere")
+		return
+
+	obligation.owed_count = 2
+	# CREATION, through its own door — a starting stock, same as the probe's
+	# other head-starts (claim 27's three grain, claim 30's seven). Not part
+	# of what this session of work owes; part of what forces the cap's own
+	# arithmetic to run.
+	inventory.add(&"grain", 5)
+
+	_stand_at(zoogs, fields)
+	var worked_ticks := 450
+	for tick in worked_ticks:
+		clock.advance(TICK_HOURS)
+		step.advance(zoogs, TICK_HOURS)
+
+	# THE FIRST TICK delivers min(5, 2) = 2 to the barn and discharges the
+	# obligation right there, leaving 3 of the head start in his own sack.
+	# 4.5 HOURS AT 1 GRAIN/HOUR THEN OWES 4.5 MORE GRAIN FROM THE WORK ITSELF
+	# — 4 whole, 0.5 in the furrow — and every one of those 4 lands in his
+	# sack too, because delivery never runs again once discharged. Sack:
+	# 3 + 4 = 7. Barn stays at exactly 2 for the whole rest of the run.
+	_require(barn.get_count(&"grain") == 2, claim,
+		"an obligation capped at 2 a day should leave the barn holding exactly 2 and it holds %d" % barn.get_count(&"grain"))
+	_require(inventory.get_count(&"grain") == 7, claim,
+		"the 3 grain left over from the capped delivery, plus 4 more made and never delivered after discharge, should leave him holding 7 — he holds %d" % inventory.get_count(&"grain"))
+	_require(obligation.delivered_count == 2, claim,
+		"the obligation's own delivered_count should stop at 2 (what was owed), not the 5 he was carrying when discharge fired — it reads %d" % obligation.delivered_count)
+	_require(absf(plot.output_part_made - 0.5) < 0.0001, claim,
+		"4.5 hours at 1 grain/hour should leave 0.5 of a grain in the furrow and it reads %.4f" % plot.output_part_made)
+
+	# CREATION MOVED THE TOTAL; THE TRANSFER DID NOT — hand_over conserves, so
+	# sack + barn + furrow has to equal the 5-grain head start PLUS the 4.5
+	# grain this session of work owes, and nothing else: 9.5.
+	var accounted := float(inventory.get_count(&"grain")) + float(barn.get_count(&"grain")) + plot.output_part_made
+	_require(absf(accounted - 9.5) < 0.0001, claim,
+		"a 5-grain head start plus 4.5 grain of work owes 9.5 total, and sack (%d) plus barn (%d) plus furrow (%.4f) accounts for %.4f" % [
+			inventory.get_count(&"grain"), barn.get_count(&"grain"), plot.output_part_made, accounted])
+
+	world.queue_free()
+
+
+# --- Assertion 43: owned land refuses the unemployed, and it is its own counter ---
+
+# THE LIBRARY ACTION, not WorkForHire. work_the_field.tscn stays in the
+# library after this rung with nothing authored using it any more — both
+# farmers were switched to WorkForHire in game.tscn — and this is what
+# exercises it: a plain WorkTheField still has to gate correctly on OWNED
+# land, with no employment logic of its own standing between it and the
+# station. Permission lives on Workstation, not on the Action, so any Action
+# that walks up to owned land has to respect it identically.
+func _check_owned_plot_refuses_the_unemployed_and_counts_it() -> void:
+	var claim := "43 — an owned plot is not a candidate for a man with no obligation, and the refusal is its own counter"
+	var world := _add_a_disabled_game_scene()
+	var town := world.get_node_or_null("Town") as Town
+	var population := world.get_node_or_null("Population") as Population
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var marle := world.get_node_or_null("Population/Marle") as Person
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	if town == null or population == null or zoogs == null or marle == null or fields == null or plot == null:
+		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, a Marle, the Fields and the Plot")
+		return
+
+	var spare := _add_a_person(population, "Spare")
+	if spare == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+	var work_scene: PackedScene = load("res://game/actions/work_the_field.tscn") as PackedScene
+	if work_scene == null:
+		_require(false, claim, "could not load res://game/actions/work_the_field.tscn")
+		return
+	var spare_work := spare.brain.learn(work_scene) as WorkTheField
+	if spare_work == null:
+		_require(false, claim, "Brain.learn() did not hand back a WorkTheField")
+		return
+
+	_stand_at(spare, fields)
+	_stand_at(zoogs, fields)
+
+	_require(not plot.is_permitted_to(spare), claim,
+		"an owned plot read permitted for a man with no claim on it at all")
+	_require(plot.is_permitted_to(marle), claim,
+		"the plot's own owner read not permitted on his own land")
+	_require(plot.is_permitted_to(zoogs), claim,
+		"Zoogs, whose obligation names the grain fields, read not permitted on it")
+
+	var no_candidates_before: float = town.no_candidates_existed_pressure
+	var every_taken_before: float = town.every_candidate_was_taken_pressure
+	var not_permitted_before: float = town.was_not_permitted_pressure
+
+	_require(not spare_work.is_available_to(spare), claim,
+		"a plain WorkTheField still read available to a man with no obligation and no ownership on land that is owned")
+
+	_require(absf(town.was_not_permitted_pressure - not_permitted_before - 1.0) < 0.0001, claim,
+		"a not-permitted refusal should move was_not_permitted_pressure by exactly 1.0, moved it by %.1f" % [
+			town.was_not_permitted_pressure - not_permitted_before])
+	_require(town.no_candidates_existed_pressure == no_candidates_before, claim,
+		"a not-permitted refusal moved no_candidates_existed_pressure — that counter is for a town with no field at all")
+	_require(town.every_candidate_was_taken_pressure == every_taken_before, claim,
+		"a not-permitted refusal moved every_candidate_was_taken_pressure — that counter is for a permitted man finding no room")
+
+	world.queue_free()
+
+
+# --- Assertion 44: the quota renews ------------------------------------------------
+
+# LAZY, LIKE CLAIM 15's LAPSE. Nothing sweeps an obligation clean at
+# midnight — the day comparison inside is_discharged() does the whole job at
+# read time, the identical mechanism a day-long claim on a plot already uses.
+func _check_quota_met_today_is_owed_again_tomorrow() -> void:
+	var claim := "44 — a quota met today is owed again tomorrow"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var work_action := world.get_node_or_null("Population/Zoogs/Brain/WorkForHire") as WorkForHire
+	if clock == null or zoogs == null or work_action == null:
+		_require(false, claim, "the scene came up without a Clock, a Zoogs and Zoogs' WorkForHire")
+		return
+	var obligation := work_action.get_standing_obligation(zoogs)
+	if obligation == null:
+		_require(false, claim, "Zoogs has no standing obligation to discharge")
+		return
+
+	obligation.note_delivery(obligation.get_remaining_today())
+	_require(obligation.is_discharged(), claim,
+		"handing over exactly what remained today should discharge the obligation, and is_discharged() reads false")
+
+	clock.advance(24.0)
+	_require(not obligation.is_discharged(), claim,
+		"a full day later, with nothing delivered today, is_discharged() still reads true")
+	_require(obligation.get_remaining_today() == obligation.owed_count, claim,
+		"a fresh day should owe the whole quota again — get_remaining_today() reads %d against owed_count %d" % [
+			obligation.get_remaining_today(), obligation.owed_count])
+
+	# Even at the CHEAPEST hour on WorkForHire's own curve — midnight, sun
+	# -1, exactly where 24.0 hours from a fresh start lands — weight(73)
+	# minus daylight(30) leaves 43: a real, positive want. A still-discharged
+	# obligation would have read exactly 0.0 here instead.
+	var score := work_action.get_utility_score(zoogs)
+	_require(score > 0.0, claim,
+		"the day after discharge, WorkForHire's score reads %.2f — it should have gone back to wanting rather than staying at the discharged 0.0" % score)
 
 	world.queue_free()
 

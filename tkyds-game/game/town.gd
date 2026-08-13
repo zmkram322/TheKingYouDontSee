@@ -85,6 +85,15 @@ func get_places() -> Array[Place]:
 var no_candidates_existed_pressure := 0.0
 var every_candidate_was_taken_pressure := 0.0
 
+# "He is not permitted here." A THIRD world with a third fix, landing at rung
+# 6b alongside is_permitted_to (Decision 24): the land has an owner or an
+# employer and this man carries neither claim to it, which is a RIGHTS
+# problem — more land granted to him — and nothing like "there was no field"
+# (more land needed at all) or "every field was taken" (more room needed on
+# land already open to him). Same accumulator shape, same telemetry-from-gate
+# exemption, documented again at the write site in work_the_field.gd.
+var was_not_permitted_pressure := 0.0
+
 
 # Every station in this town where that kind of work is done, STABLY SORTED by
 # what the journey costs the asking person, node path as tiebreak — never
@@ -127,6 +136,12 @@ func note_no_candidates_existed() -> void:
 # hands than places to put them.
 func note_every_candidate_was_taken() -> void:
 	every_candidate_was_taken_pressure += 1.0
+
+
+# "He is not permitted here." The town has plenty of room and plenty of work,
+# and this particular man still cannot have it.
+func note_was_not_permitted() -> void:
+	was_not_permitted_pressure += 1.0
 
 
 func find_people_at(place: Place) -> Array[Person]:

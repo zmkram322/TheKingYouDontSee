@@ -29,9 +29,9 @@ extends Node3D
 # what would earn it is an Action that scores giving a station up EARLY, so
 # that somebody else can have it before tonight. Nothing scores that yet.
 #
-# Note what is_permitted_to() is not: nothing reads owned_by yet (below). This
-# plot is common land — the king's, which is the same answer as nobody's — and
-# a reader arrives at rung 6b when there is finally an Obligation to consult it.
+# is_permitted_to() is below, now that rung 6b has given owned_by a reader and
+# an Obligation to consult. Unowned land stays the king's, which is the same
+# answer as nobody's, and permission stays wide open on it.
 
 # What kind of work is done here. Town.find_workstations matches on this, so it
 # is what makes a plot answer "field work" and a millstone, one day, not.
@@ -53,9 +53,7 @@ var claimed_on_day := -1
 # The plan's documents call this field `owner`; it is `owned_by` here for
 # exactly that reason.
 #
-# NO READER AT ALL THIS RUNG. Nothing in game/ asks this question yet — 6b's
-# is_permitted_to() is its first reader, and until that lands this field is
-# authored and inert.
+# is_permitted_to() below is its first reader.
 @export var owned_by: Person = null
 
 # Work done here that has not yet come to anything — a furrow part turned, in
@@ -125,6 +123,12 @@ func get_inventory() -> Inventory:
 # the asking action's business. The world is not obliged to lie on his behalf.
 # Standing here is still claim()'s question alone.
 func is_free_for(person: Person) -> bool:
+	# PERMISSION FIRST. An unpermitted man gets "not free" regardless of
+	# whether anybody else holds it — he could no more claim an EMPTY owned
+	# plot than a held one. This is also what stops claim() below from ever
+	# succeeding for him: claim() calls is_free_for and nothing else.
+	if not is_permitted_to(person):
+		return false
 	# A holder who has been freed is not a holder.
 	#
 	# UNREACHABLE TODAY — measured 2026-08-10 by deleting it: the probe stayed
@@ -147,6 +151,32 @@ func is_free_for(person: Person) -> bool:
 	if claimed_on_day < person.clock.day():
 		return true
 	return claimed_by == person
+
+
+# Is this person allowed to work this station AT ALL — a different, and
+# earlier, question than whether it is free RIGHT NOW. Unowned land is common
+# — the king's, which is the same answer as nobody's — so permission is the
+# default; ownership only NARROWS it, to the owner himself or to whoever
+# carries an obligation naming this station's place.
+#
+# THE FIRST CAPABILITY THAT CAN VANISH MID-WORK. Every gate before this one
+# either never changes (is he awake) or changes only because HE acted (has he
+# walked here). An obligation is the first fact that can be revoked by
+# somebody ELSE'S clock while he stands in the furrow with his hands on it —
+# expires_on_day ticking past under him doesn't ask his permission. That is
+# why this is asked EVERY TICK, here and in WorkTheField's own gate, and never
+# cached or assumed by a step: an obligation expiring at noon has to be able
+# to end the work AT NOON, not at the next moment somebody happens to re-ask.
+func is_permitted_to(person: Person) -> bool:
+	# A freed owner is not an owner — the same one-liner claimed_by uses below,
+	# for the same engine reason (freed-compares-null; see is_free_for).
+	if not is_instance_valid(owned_by):
+		owned_by = null
+	if owned_by == null:
+		return true
+	if owned_by == person:
+		return true
+	return person.has_obligation_at(get_place())
 
 
 # Take it, or re-stamp it if it is already his. Written in DO, and only by a
