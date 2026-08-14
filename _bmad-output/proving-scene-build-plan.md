@@ -1637,6 +1637,50 @@ in the town. `owner` itself lands at 6a because 6b's barn needs it.)*
 
 ---
 
+> **⚠ WHAT RUNG 6 AS BUILT MOVED UNDER EVERYTHING BELOW (2026-08-14, rungs
+> 6a–6d shipped).** Read before building any later rung; each of these makes
+> some text below stale where it disagrees.
+>
+> - **`Workstation.owner` is `owned_by` in code.** `owner` is a built-in
+>   property on Godot's `Node` and redeclaring it is a compile error. Every
+>   snippet below saying `owner` means `owned_by`; `Place` has no owner field
+>   at all yet.
+> - **The tick order is decide → DO → update as of 6c**, because "is he
+>   asleep" became a fact the do phase writes (arriving at a bed, claiming
+>   it). The body pays for what the tick actually contained. Anything below
+>   reasoning about "update then do" is stale; see `brain.gd`'s header.
+> - **The settled schedule moved at 6c by exactly the commute**: turning in
+>   now happens at bed-arrival in the Inn, so the settled day reads **22:19 /
+>   8.00 h / up 06:19** (cold start 21:17 / 05:55) against the old 22:01 /
+>   06:01. Probe claim 13 pumps eleven hours for the same reason. Numbers
+>   below quoting the old schedule describe the pre-6c world.
+> - **The quota is DAILY.** `Obligation` lazily resets its delivered count at
+>   the day boundary (`delivered_on_day`, the same pattern as the tenancy
+>   stamp), so the quota beat repeats every day with nothing sweeping.
+>   Expiry is employment ending and closes the GATE (off the ballot, FR103);
+>   discharge only zeroes the SCORE (outbid, never barred — Decision 22).
+>   9b's baker and brewer obligations inherit all of this.
+> - **`WorkForHire` extends `WorkTheField` and replaced it on the authored
+>   farmers.** The library still has `WorkTheField` for common land; nothing
+>   authored uses it. `WorkForHire` scopes its candidates to the obligation's
+>   named place, and its step delivers each whole grain into the place's
+>   inventory capped at what is still owed today — **the surplus a man holds
+>   past quota stays his, and that is rung 7's tradable stock.**
+> - **Marle, the farm owner, exists (6b) and is authored AT THE TAVERN
+>   (6d).** An empty place is never a Socialise candidate, so the tavern
+>   needed an occupant to ever be visited — the owner idling there is the
+>   bootstrap. Rung 7's "farm owner walks to the square" starts from the
+>   tavern.
+> - **`Sleep` is candidate-gated on beds** (twenty Workstations under the
+>   Inn, `work_name` "sleeping", unowned — the Lord has no body), and
+>   `Action` grew `counts_as_asleep_for(person)`: the flag says what KIND of
+>   action, the method says whether doing it right now means he is out. A
+>   nap, a faint or a knockout that depends on circumstance overrides the
+>   method, not the flag.
+> - **`Town` has a third pressure counter**, `was_not_permitted_pressure`,
+>   written when permission (not room, not existence) refused a candidate —
+>   Decision 24's rights-problem kind, landed with `is_permitted_to`.
+
 ### Rung 7 — Trade needs two bodies in one place
 
 **Seams:** want (`target − stock`) · `Trade` action · `can_afford(person, price) -> bool`
