@@ -3441,3 +3441,40 @@ and a half of genuine isolation — a slower gap than hunger, as the fiction
 always had it. Hunger's rate is derived from conservation against the loaf;
 social has no loaf, so its rate is derived from the company the town can
 supply.
+
+### The second symptom of the same absence, measured 2026-08-14
+
+Six days of the shipped town turned up a dither that is worth recording
+because it is the SAME missing mechanism from the other side. **Zoogs — the
+man who loses the dawn race — flipped action 1145 times on day 2, against
+Hobb's 224.** The loop:
+
+1. He walks to the fields, because from afar a plot's freeness is unknowable
+   and work stays on his ballot (Decision 15, and the wasted journey is
+   deliberately the point).
+2. He arrives, sees Hobb has it, and work leaves his ballot **on that tick**.
+3. Socialise is now the top bid, so he takes one step toward the tavern.
+4. One step away from the fields he can no longer see the plot — so work is
+   back on his ballot at 73+, beating Socialise, and he turns round.
+5. Go to 2.
+
+**Nothing is wrong with any single rule here.** The knowledge rule is right,
+the gate is right, re-deciding every tick is right. Before rung 6d there was
+simply nothing else on his ballot, so he stood still where he lost — which is
+exactly what probe claim 22 asserts and still passes. Give him ONE competing
+want that moves him and the boundary becomes a limit cycle.
+
+**It is the same hole as the empty tavern: a failure that marks nothing.** He
+tried the plot and could not have it; he tried the tavern and found it empty.
+Neither failure is recorded anywhere, so both wants come back at full strength
+on the very next tick. **Decision 23's failure-marks-the-candidate and
+Decision 24's record-at-the-place-of-failure are one mechanism with two
+symptoms already waiting for it**, and that is a strong argument for building
+it sooner than "whenever it comes up". Refused here, on purpose: it is
+substrate, it belongs to its own gate, and the rung shipped without it rather
+than growing a commitment bonus or a cooldown — both of which Decision 23
+refuses by name.
+
+Not a defect to hide: on screen it reads as a man hovering at the edge of the
+field, and it resolves on its own as the sun lifts work clear. The author's
+call is whether it ships as a texture or earns the mechanism now.
