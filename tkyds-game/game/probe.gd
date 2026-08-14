@@ -1822,13 +1822,23 @@ func _require(is_true: bool, claim: String, detail: String) -> void:
 # means whatever StayUp he starts on; upkeep must move him regardless of what
 # he chose, which is the whole point of it living in Brain rather than in an
 # action.
+#
+# AND IT MUST RISE WHILE HE IS ASLEEP TOO — the second half below, added
+# 2026-08-14, and it was added because the FIRST half could not fail on the
+# thing it was supposed to guard. `_update_body`'s hunger line is deliberately
+# unbranched, and that no-branch is load-bearing: it is the whole reason a man
+# wakes up hungry. Break-testing rung 6d's identical social line by wrapping it
+# in `if is_awake()` reddened NOTHING, because an awake man's reading is the
+# same either way. A claim that cannot fail on its own subject is decoration —
+# so the sleeping half is where this claim actually earns its place.
 func _check_hunger_rises_for_an_idle_man() -> void:
-	var claim := "31 — hunger rises for a man doing nothing at all, by exactly one hour's worth in one hour"
+	var claim := "31 — hunger rises for a man doing nothing at all, awake OR asleep, by exactly one hour's worth in one hour"
 	var world := _add_a_disabled_game_scene()
 	var person := world.get_node_or_null("Population/Zoogs") as Person
 	var population := world.get_node_or_null("Population") as Population
-	if person == null or population == null:
-		_require(false, claim, "a second game scene came up without a Population and a Zoogs in it")
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if person == null or population == null or inn == null:
+		_require(false, claim, "a second game scene came up without a Population, a Zoogs and an Inn")
 		return
 
 	var hungry_before: float = person.stats.get_stat(&"hunger")
@@ -1837,9 +1847,56 @@ func _check_hunger_rises_for_an_idle_man() -> void:
 	var expected: float = person.brain.get_hunger_accumulation()
 
 	_require(absf(moved - expected) < 0.001, claim,
-		"one hour moved hunger by %.4f where one hour's worth is %.4f" % [moved, expected])
+		"awake, one hour moved hunger by %.4f where one hour's worth is %.4f" % [moved, expected])
+
+	_require_the_stat_rises_while_he_sleeps(&"hunger", claim, world, population, inn)
 
 	world.queue_free()
+
+
+# The sleeping half of claims 31 and 49, shared because it is the same question
+# asked of two stats and writing it twice is two chances to ask it differently.
+#
+# A spare is put down at the Inn with a night's worth of tiredness on him, so
+# the decision layer itself chooses Sleep and Rest claims a bed — never poked
+# into a fake sleeping state, because what is under test is the body's upkeep
+# under a REAL sleeping man. The stat is seeded low so an hour cannot reach the
+# ceiling and clamp, which would flatten the reading into a false pass.
+func _require_the_stat_rises_while_he_sleeps(
+	stat_name: StringName, claim: String, world: Node, population: Population, inn: Place
+) -> void:
+	var sleeper := _add_a_person(population, "Sleeper")
+	if sleeper == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+	_stand_at(sleeper, inn)
+	sleeper.stats.set_stat(&"adenosine", 90.0)
+	sleeper.stats.set_stat(stat_name, 10.0)
+
+	# Long enough for the decision layer to pick Sleep and for Rest to claim a
+	# bed he is already standing beside.
+	for tick in 5:
+		population.think_for_everyone(TICK_HOURS)
+	_require(not sleeper.brain.is_awake(), claim,
+		"a man put down at the Inn with adenosine 90 did not fall asleep, so the sleeping half of this claim tested nothing")
+	if sleeper.brain.is_awake():
+		return
+
+	var before: float = sleeper.stats.get_stat(stat_name)
+	for tick in 100:
+		population.think_for_everyone(TICK_HOURS)
+	var moved: float = sleeper.stats.get_stat(stat_name) - before
+	var expected: float = 0.0
+	if stat_name == &"hunger":
+		expected = sleeper.brain.get_hunger_accumulation()
+	else:
+		expected = sleeper.brain.get_social_accumulation()
+
+	_require(not sleeper.brain.is_awake(), claim,
+		"the sleeper woke up inside the measured hour, so the reading covers a man who was not asleep throughout")
+	_require(absf(moved - expected) < 0.001, claim,
+		"ASLEEP, one hour moved %s by %.4f where one hour's worth is %.4f — upkeep must not branch on being awake, and that no-branch is why he wakes hungry and lonely" % [
+			stat_name, moved, expected])
 
 
 # Both halves of "he ate": the stat fell AND the count went down by one, so a
@@ -2877,13 +2934,20 @@ func _check_a_lonely_man_goes_where_company_is_to_be_found() -> void:
 # exactly its own accumulation rate. AMOUNT, not direction, because a rate
 # applied per tick instead of per world hour still moves the number the right
 # way, just by the wrong amount, and only an exact check catches that.
+#
+# THE SLEEPING HALF IS WHERE THIS CLAIM HAS TEETH, and it is here because the
+# waking half was break-tested and caught nothing: wrapping the upkeep line in
+# `if is_awake()` left every claim in the probe green. Nothing about sleeping
+# answers loneliness — only company does — so the line is deliberately
+# unbranched, and this is the only assertion in the file that can tell.
 func _check_social_rises_for_an_idle_man() -> void:
-	var claim := "49 — social rises for a man doing nothing at all, by exactly one hour's worth in one hour"
+	var claim := "49 — social rises for a man doing nothing at all, awake OR asleep, by exactly one hour's worth in one hour"
 	var world := _add_a_disabled_game_scene()
 	var person := world.get_node_or_null("Population/Zoogs") as Person
 	var population := world.get_node_or_null("Population") as Population
-	if person == null or population == null:
-		_require(false, claim, "a second game scene came up without a Population and a Zoogs in it")
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if person == null or population == null or inn == null:
+		_require(false, claim, "a second game scene came up without a Population, a Zoogs and an Inn")
 		return
 
 	var lonely_before: float = person.stats.get_stat(&"social")
@@ -2892,7 +2956,9 @@ func _check_social_rises_for_an_idle_man() -> void:
 	var expected: float = person.brain.get_social_accumulation()
 
 	_require(absf(moved - expected) < 0.001, claim,
-		"one hour moved social by %.4f where one hour's worth is %.4f" % [moved, expected])
+		"awake, one hour moved social by %.4f where one hour's worth is %.4f" % [moved, expected])
+
+	_require_the_stat_rises_while_he_sleeps(&"social", claim, world, population, inn)
 
 	world.queue_free()
 
