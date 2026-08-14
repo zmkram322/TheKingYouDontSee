@@ -91,6 +91,23 @@ extends Node
 @export var hunger := 0.0
 
 
+# --- Social -------------------------------------------------------------------
+# The gap between the company he wants and the company he has had (Decision
+# 19's table names it). Same shape as hunger above it, on purpose: it rises
+# the whole time he is alive — awake or asleep, working or idle, per
+# Brain._update_body's own unbranched line — because being apart from other
+# people costs him the same regardless of what he is otherwise doing. It
+# falls only when he is in company (see actions/socialise_step.gd), the one
+# effect this stat is allowed to have written into it from outside upkeep —
+# the identical exemption hunger already carries for eating.
+#
+# 0–100, where 0 is a man who was just in company and 100 means "as lonely as
+# a person gets" — NOT "friendless forever" or "abandoned". Read it the same
+# way adenosine's and hunger's ceilings already ask you to: a hundred is the
+# worst a felt want ever gets, not a diagnosis about his life.
+@export var social := 0.0
+
+
 # Note what is NOT here: whether he's awake. That's not a fact he carries, it's
 # a fact about what he's currently doing, so it's read off the brain
 # (Brain.is_awake) rather than stored. A stored copy could disagree with what

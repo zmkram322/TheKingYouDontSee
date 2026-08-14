@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=23 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
@@ -39,6 +39,9 @@ albedo_color = Color(0.42, 0.29, 0.22, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bed"]
 albedo_color = Color(0.22, 0.15, 0.12, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tavern"]
+albedo_color = Color(0.45, 0.16, 0.12, 1)
 
 [node name="Game" type="Node3D"]
 
@@ -233,6 +236,17 @@ mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
 work_name = &"sleeping"
 
+[node name="Tavern" type="MeshInstance3D" parent="Town"]
+transform = Transform3D(5, 0, 0, 0, 1, 0, 0, 0, 5, 0, 0.02, 10)
+material_override = SubResource("StandardMaterial3D_tavern")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("8_place")
+place_name = "the tavern"
+is_gathering_place = true
+
+[node name="Inventory" type="Node" parent="Town/Tavern"]
+script = ExtResource("12_inventory")
+
 [node name="Population" type="Node" parent="." node_paths=PackedStringArray("clock", "town")]
 script = ExtResource("6_population")
 clock = NodePath("../Clock")
@@ -327,7 +341,7 @@ person = NodePath("../../Population/Zoogs")
 clock = NodePath("../../Clock")
 
 [node name="TuningBoard" parent="Screen" instance=ExtResource("5_tuning_board")]
-watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake"), NodePath("../../Population/Zoogs/Brain/WorkForHire"), NodePath("../../Population/Zoogs/Obligation"), NodePath("../../Population/Hobb/Stats")])
+watching = Array[NodePath]([NodePath("../../Clock"), NodePath("../../Population/Zoogs"), NodePath("../../Population/Zoogs/Brain"), NodePath("../../Population/Zoogs/Brain/StayUp"), NodePath("../../Population/Zoogs/Brain/StayUp/BeUp"), NodePath("../../Population/Zoogs/Brain/Wake"), NodePath("../../Population/Zoogs/Brain/WorkForHire"), NodePath("../../Population/Zoogs/Brain/Socialise"), NodePath("../../Population/Zoogs/Obligation"), NodePath("../../Population/Hobb/Stats")])
 
 [editable path="Population/Zoogs"]
 [editable path="Population/Hobb"]

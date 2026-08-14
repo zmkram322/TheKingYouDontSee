@@ -3353,3 +3353,91 @@ far output may fall, or an outside rescue (charity, a neighbour, the lord), and
 | Rung 6a | **`get_yield_per_hour` stays empty.** Hunger does not modify production; starving will. | not yet |
 | Rung 6a | Nothing hunger does may touch another action's weight. | not yet |
 | Build plan | `starvation` as a second, slower gap is named as a future need with two jobs — a production lens and a ledger signal. Not scheduled. | not yet |
+
+---
+
+## Decision 28 — Socialise's candidates are venues, not crowds
+
+**Settled 2026-08-14. Author's call, made watching rung 6d land.** Corrects the
+candidate model in rung 6d's own text; recorded by the session and standing for
+the author's review.
+
+### The question
+
+What are `Socialise`'s candidates? The build plan said *"places that currently
+hold other people, via `Town.find_people_at()`"* — you go where people already
+are.
+
+### The hole the author found
+
+**An empty place is never a candidate, so the first person never arrives.** The
+occupied-places model can only redistribute company that already exists; it
+cannot convene any. A tavern nobody has entered stays empty forever, the
+"tavern wins in the evening" Moment never fires, and the only way to make it
+fire is to author somebody standing in it — a hack that was in fact briefly
+built.
+
+### What was settled
+
+> **A place is a Socialise candidate if company can be found there** —
+> `Place.is_gathering_place`, an authored fact about the place: the tavern
+> today, the market square at rung 7. **The venue is a candidate even when
+> empty**, because a lonely man goes where company is TO BE FOUND, and the
+> first man must be able to arrive so the second can find him. **Company —
+> another person actually present — is what feeds the gap once he is there**;
+> alone at the bar he waits, and his social does not fall.
+
+Ordering is unchanged: travel cost first (the herd damper — a far crowd loses
+to a near one, Decision 15), crowd size as tiebreak.
+
+### What this keeps, and what it corrects
+
+Kept from Decision 22: the gate stays a **candidate** question about the world
+— *does a venue exist* — and never reads the size of the gap. Corrected in the
+6d text: candidates-are-people becomes candidates-are-venues. **People are the
+payoff, not the option.**
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Rung 6d | Candidates are gathering places; company gates the DROP, not the candidacy. `Place.is_gathering_place` authored true on the tavern. | applied 2026-08-14, with the rung |
+| Rung 7 | The market square ships `is_gathering_place = true` — "people with nothing to do hang in the square" is now literally this mechanism. | not yet |
+| Build plan, rung-6 warning block | The Marle-at-the-tavern bootstrap note replaced with this decision. | applied 2026-08-14 |
+
+### What shipping it found, same day — two constraints the venue model forces
+
+Measured, not argued: the first build shipped `company_worth = 110` and the
+cold start slid to 05:27 — a fully lonely man was CAPTURED. An empty-venue
+visit changes nothing in the world, so the bid stands forever (Decision 23's
+twitch test, at commute scale), and 110 sits above everything else's reachable
+ceiling — Sleep tops out at the adenosine ceiling of 100 — so once saturated,
+nothing could ever outbid Socialise again.
+
+Two constraints follow, and both shipped:
+
+1. **A want that can stand unresolved for hours must price under the ceilings
+   of what it competes with.** `company_worth = 90`: under work's 103 peak
+   (the working day survives total isolation) and under the adenosine ceiling
+   (sleep always, eventually, wins). Eat gets to price at 130 only because a
+   meal resolves in one tick.
+2. **The empty-venue wait must RESOLVE.** Shipped as a thin-company trickle —
+   being out is weak company (`change_of_scene_per_hour = 18` against real
+   company's 30) — so a man who waits alone is slowly soothed and released.
+   **This is the cheap stand-in for the honest mechanism, which is
+   Decision 23's failure-marks-the-candidate**: a man should be able to give
+   up on a tavern he found empty, and that mark (per candidate, decaying,
+   Decision 24's shape) is unbuilt substrate. When it lands, the trickle can
+   shrink toward zero and the author should revisit both numbers. Flagged as
+   the author's to accept or replace.
+
+And a third constraint, found the same evening: **the accrual rate must close
+against the town's actual supply of company.** At hunger's 4.0/hour a man
+accrued 96 a day and woke saturated every morning — sleep adds a third of the
+scale with nothing draining it — so the standing 90-bid recurred daily.
+Shipped at **2.5/hour**: one tavern evening closes the day's accrual, mornings
+start where work outbids company, and loneliness saturates only after a day
+and a half of genuine isolation — a slower gap than hunger, as the fiction
+always had it. Hunger's rate is derived from conservation against the loaf;
+social has no loaf, so its rate is derived from the company the town can
+supply.

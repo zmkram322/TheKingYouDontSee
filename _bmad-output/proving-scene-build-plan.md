@@ -1666,11 +1666,16 @@ in the town. `owner` itself lands at 6a because 6b's barn needs it.)*
 >   named place, and its step delivers each whole grain into the place's
 >   inventory capped at what is still owed today — **the surplus a man holds
 >   past quota stays his, and that is rung 7's tradable stock.**
-> - **Marle, the farm owner, exists (6b) and is authored AT THE TAVERN
->   (6d).** An empty place is never a Socialise candidate, so the tavern
->   needed an occupant to ever be visited — the owner idling there is the
->   bootstrap. Rung 7's "farm owner walks to the square" starts from the
->   tavern.
+> - **Socialise's candidates are GATHERING PLACES, not occupied places**
+>   (author's call, 2026-08-14): `Place.is_gathering_place`, true on the
+>   tavern, later the square. A lonely man goes where company is TO BE
+>   FOUND — the venue is a candidate even empty, which is what lets the
+>   FIRST man arrive; company (another person present) is what feeds the
+>   gap once he is there. The occupied-places model in this rung's older
+>   text has a bootstrap hole and is dead. **Rung 7's market square should
+>   ship with `is_gathering_place = true`.** Marle, the farm owner (6b),
+>   is authored at the Inn like everyone; he walks to the tavern on his
+>   own when lonely.
 > - **`Sleep` is candidate-gated on beds** (twenty Workstations under the
 >   Inn, `work_name` "sleeping", unowned — the Lord has no body), and
 >   `Action` grew `counts_as_asleep_for(person)`: the flag says what KIND of

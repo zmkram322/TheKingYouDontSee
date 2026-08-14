@@ -193,6 +193,25 @@ func think_and_act(hours: float) -> void:
 @export var base_hunger_per_hour := 4.0
 @export var hunger_ceiling := 100.0
 
+# Same reasoning as hunger's, in the same words: no awake/asleep branch,
+# because nothing about SLEEPING answers what company he's had — only company
+# does. A man alone in a locked room gets no lonelier for staying up, and no
+# less lonely for turning in.
+#
+# 2.5, NOT hunger's 4.0, and the difference is a measurement, not a mood.
+# Hunger's rate is DERIVED — two meals a day is forced by conservation
+# against what a loaf fixes. Loneliness has no loaf: the only drain is time
+# actually spent in company, and the town can supply roughly an evening of
+# it. At 4.0 a man accrued 96 a day, woke SATURATED every morning (sleep
+# adds a third of the scale with nothing draining it), and a standing
+# saturated bid captured whole days — measured: one 33-hour waking stretch
+# and a 16-hour sleep to pay for it. At 2.5 the daily accrual closes on one
+# tavern evening, mornings start where work outbids company, and loneliness
+# saturates only after a full day and a half of genuine isolation — a
+# SLOWER gap than hunger, which is what it always was in the fiction.
+@export var base_social_per_hour := 2.5
+@export var social_ceiling := 100.0
+
 func _update_body(hours: float) -> void:
 	var tired: float = person.stats.get_stat(&"adenosine")
 	if is_awake():
@@ -210,6 +229,15 @@ func _update_body(hours: float) -> void:
 	var hungry: float = person.stats.get_stat(&"hunger")
 	hungry += get_hunger_accumulation() * hours
 	person.stats.set_stat(&"hunger", clampf(hungry, 0.0, hunger_ceiling))
+
+	# ONE LINE, NO BRANCH, SAME REASONING AS HUNGER'S ABOVE. Sleep clears
+	# adenosine because sleep is the thing that answers tiredness; nothing
+	# about sleeping answers loneliness, only company does (see
+	# actions/socialise_step.gd), so this runs identically whether he's awake
+	# or out cold.
+	var lonely: float = person.stats.get_stat(&"social")
+	lonely += get_social_accumulation() * hours
+	person.stats.set_stat(&"social", clampf(lonely, 0.0, social_ceiling))
 
 
 # How fast he's tiring right now, per world hour, after everything that affects it.
@@ -240,6 +268,15 @@ func get_adenosine_accumulation() -> float:
 # about, same as its neighbour.
 func get_hunger_accumulation() -> float:
 	return base_hunger_per_hour
+
+
+# How fast he's growing lonelier right now, per world hour. The same seam
+# shape as its two neighbours above — everything that will ever change how
+# fast someone misses company (a temperament, a grief, a crowd he can't
+# stand) lands in here as one more factor, and no caller anywhere has to
+# change to get it.
+func get_social_accumulation() -> float:
+	return base_social_per_hour
 
 
 # How fast he's recovering, per world hour. The mirror of the above, and the

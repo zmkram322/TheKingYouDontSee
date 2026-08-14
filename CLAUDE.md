@@ -14,7 +14,7 @@ something needs it.
 | `assets/` | Art. `quaternius/` is 3D, `tiny_town`/`tiny_dungeon` are 2D. |
 | `_bmad-output/planning-artifacts/prd.md` | The requirements contract. FR numbers are stable identifiers. |
 | `_bmad-output/proving-scene-build-plan.md` | The current build ladder — **sixteen gates** from one Zoog to a thirteen-person town. Read before adding to `game/`. |
-| `_bmad-output/proving-scene-decisions.md` | **Read with the plan.** **Twenty-seven** questions settled, each with the reasoning. Wins where it and the plan disagree, and the **highest number wins** within it. Three of them look like violations of the rules below until you read why they aren't. **19–27 (2026-08-12) settle how wanting works at all** — every want is a gap, `want = weight × gap^bite`, gates ask the world and never how much he wants it, failure marks the candidate. Read those before writing any new Action. |
+| `_bmad-output/proving-scene-decisions.md` | **Read with the plan.** **Twenty-eight** questions settled, each with the reasoning. Wins where it and the plan disagree, and the **highest number wins** within it. Three of them look like violations of the rules below until you read why they aren't. **19–27 (2026-08-12) settle how wanting works at all** — every want is a gap, `want = weight × gap^bite`, gates ask the world and never how much he wants it, failure marks the candidate. **28 (2026-08-14): Socialise's candidates are venues (`Place.is_gathering_place`), not crowds — people are the payoff, not the option.** Read those before writing any new Action. |
 
 `tkyds-game/` is now **`game/` and `assets/` and nothing else.** `brain/`,
 `world/` and `skin/` were retired 2026-08-05; `board/`, `town/`, `sandbox/`,

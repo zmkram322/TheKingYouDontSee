@@ -167,6 +167,9 @@ func _process(_delta: float) -> bool:
 	_check_twenty_one_sleepers_leave_one_standing()
 	_check_a_sleeper_holds_his_bed_across_midnight()
 	_check_an_abandoned_bed_lapses_at_the_boundary()
+	_check_a_lonely_man_goes_where_company_is_to_be_found()
+	_check_social_rises_for_an_idle_man()
+	_check_the_day_keeps_its_shape()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -2742,6 +2745,213 @@ func _check_an_abandoned_bed_lapses_at_the_boundary() -> void:
 	clock.advance(15.0)
 	_require(bed.is_free_for(another), claim,
 		"an abandoned bed still reads held on day %d, though nothing has touched it since it was claimed" % clock.day())
+
+	world.queue_free()
+
+
+# --- Assertion 48: the bootstrap — a lonely man goes where company belongs -------
+
+# THE CLAIM THAT PROVES THE BOOTSTRAP HOLE IS ACTUALLY CLOSED, AND THAT THE
+# EMPTY VENUE ACTUALLY RESOLVES. An earlier draft of Socialise made "a place
+# currently holding somebody else" the candidate, and that model can never
+# put a first man anywhere: an empty venue is never a candidate, so nobody
+# ever sets off toward it, so it never holds anybody, forever. This claim
+# exercises exactly the case that shape could not survive — the Tavern starts
+# EMPTY, nobody pinned there — and checks all three things the fix has to
+# deliver: the venue draws him before anyone is in it, being there ALONE
+# still moves the gap (at the thinner change_of_scene_per_hour, not zero —
+# zero is the earlier bug this rung measured and stopped on), and once
+# there's actual company the gap closes FASTEST, at company_per_hour.
+#
+# Made mechanical the same way claim 21 already made "walk toward what you
+# want" mechanical for a plot: gap strictly shrinking while in transit,
+# arrival within a generous budget. Then TWO further phases rather than one —
+# alone at the venue, and then with Marle brought in — each asserting the
+# exact per-tick AMOUNT, never merely a direction, the same discipline claim
+# 5 already established for adenosine.
+func _check_a_lonely_man_goes_where_company_is_to_be_found() -> void:
+	var claim := "48 — a lonely man goes where company is to be found, and company feeds the gap fastest"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var marle := world.get_node_or_null("Population/Marle") as Person
+	var tavern := world.get_node_or_null("Town/Tavern") as Place
+	var fields := world.get_node_or_null("Town/Fields") as Place
+	if clock == null or population == null or marle == null or tavern == null or fields == null:
+		_require(false, claim, "the scene came up without a Clock, a Population, a Marle, the Tavern and Fields")
+		return
+	_require(tavern.is_gathering_place, claim,
+		"the Tavern does not read as a gathering place — nothing in the header's bootstrap fix applies to it")
+
+	# Daytime, so StayUp's daylight term is somewhere near its peak (up to
+	# 87.3) rather than out of the way — company_worth dropped to 90 at this
+	# rung specifically so Socialise could no longer outrun Sleep, and that
+	# same drop means a middling gap is no longer enough to beat StayUp at
+	# noon either. Social is set to the CEILING (100) rather than merely
+	# "very lonely", so this claim tests the walk itself rather than
+	# accidentally also testing what hour it is: 90 × 1.0² = 90, clear of
+	# StayUp's 87.3 peak at any time of day.
+	clock.advance(8.0)
+	# Marle stays wherever game.tscn authors him (the Inn) for this first
+	# half — the Tavern must draw a lonely man toward it with NOBODY there
+	# at all, or the bootstrap hole is still open.
+
+	var spare := _add_a_person(population, "Lonesome")
+	if spare == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+	_stand_at(spare, fields)
+	spare.stats.set_stat(&"social", 100.0)
+
+	var arrived := false
+	# Fields to the Tavern is about 9 world-minutes at speed 115 — a generous
+	# budget past that.
+	for tick in 100:
+		if spare.get_current_place() == tavern:
+			arrived = true
+			break
+
+		var gap_before: float = spare.global_position.distance_to(tavern.global_position)
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+		var gap_after: float = spare.global_position.distance_to(tavern.global_position)
+
+		_require(spare.stats.get_stat(&"social") >= 0.0, claim,
+			"social read below zero mid-transit: %.4f" % spare.stats.get_stat(&"social"))
+
+		if spare.get_current_place() != tavern:
+			_require(gap_after < gap_before, claim,
+				"walking toward the empty tavern and the gap to it did not shrink, %.4f → %.4f" % [gap_before, gap_after])
+
+	_require(arrived, claim,
+		"Lonesome never reached the empty Tavern inside 100 ticks — an empty gathering place must still draw him")
+	if not arrived:
+		world.queue_free()
+		return
+
+	var mingle := spare.get_node_or_null("Brain/Socialise/Mingle") as SocialiseStep
+	_require(mingle != null, claim, "Lonesome has no SocialiseStep at Brain/Socialise/Mingle")
+	if mingle == null:
+		world.queue_free()
+		return
+
+	# HALF ONE: ALONE AT THE VENUE. The thinner change_of_scene_per_hour rate,
+	# never company_per_hour and never zero — zero is the earlier bug this
+	# rung measured and stopped on: a wait that pays nothing down is a
+	# standing bid that never resolves. The amount is asserted exactly, the
+	# change-of-scene rate minus the upkeep still running underneath it.
+	var social_before_waiting: float = spare.stats.get_stat(&"social")
+	clock.advance(TICK_HOURS)
+	population.think_for_everyone(TICK_HOURS)
+	var social_after_waiting: float = spare.stats.get_stat(&"social")
+	var expected_alone: float = -(mingle.change_of_scene_per_hour - spare.brain.get_social_accumulation()) * TICK_HOURS
+	_require(absf((social_after_waiting - social_before_waiting) - expected_alone) < 0.001, claim,
+		"one tick alone at the tavern should move social by exactly %.5f (the change-of-scene rate minus the upkeep still running) and moved it by %.5f instead" % [
+			expected_alone, social_after_waiting - social_before_waiting])
+
+	# HALF TWO: MARLE ARRIVES. Now the FAST rate applies — company_per_hour,
+	# not the thinner one above. Company pulls social down, upkeep is still
+	# pulling it up on the very same tick, so the net move is the two rates
+	# against each other.
+	_stand_at(marle, tavern)
+	var social_before: float = spare.stats.get_stat(&"social")
+	clock.advance(TICK_HOURS)
+	population.think_for_everyone(TICK_HOURS)
+	var social_after: float = spare.stats.get_stat(&"social")
+
+	var expected_move: float = -(mingle.company_per_hour - spare.brain.get_social_accumulation()) * TICK_HOURS
+	_require(absf((social_after - social_before) - expected_move) < 0.001, claim,
+		"one tick with Marle now present should move social by exactly %.5f (company minus the upkeep still running) and moved it by %.5f instead" % [
+			expected_move, social_after - social_before])
+
+	_require(social_after >= 0.0, claim,
+		"social read below zero once company arrived: %.4f" % social_after)
+
+	world.queue_free()
+
+
+# --- Assertion 49: social is a want like the other two -----------------------------
+
+# The mirror of claim 31 (hunger) and, before it, claim 5 (adenosine) — same
+# shape, same discipline: on a FRESH world, one hour must move social by
+# exactly its own accumulation rate. AMOUNT, not direction, because a rate
+# applied per tick instead of per world hour still moves the number the right
+# way, just by the wrong amount, and only an exact check catches that.
+func _check_social_rises_for_an_idle_man() -> void:
+	var claim := "49 — social rises for a man doing nothing at all, by exactly one hour's worth in one hour"
+	var world := _add_a_disabled_game_scene()
+	var person := world.get_node_or_null("Population/Zoogs") as Person
+	var population := world.get_node_or_null("Population") as Population
+	if person == null or population == null:
+		_require(false, claim, "a second game scene came up without a Population and a Zoogs in it")
+		return
+
+	var lonely_before: float = person.stats.get_stat(&"social")
+	population.think_for_everyone(1.0)
+	var moved: float = person.stats.get_stat(&"social") - lonely_before
+	var expected: float = person.brain.get_social_accumulation()
+
+	_require(absf(moved - expected) < 0.001, claim,
+		"one hour moved social by %.4f where one hour's worth is %.4f" % [moved, expected])
+
+	world.queue_free()
+
+
+# --- Assertion 50: the day keeps its shape ------------------------------------------
+
+# THE FALSIFIABLE ANTI-HERD CLAIM. Adding a want that can pull a man across
+# town to a crowd is exactly the kind of change that could quietly swallow the
+# day it was added to — a town absorbed into one endless conversation stops
+# claiming the plot, and that failure would not announce itself; the day's
+# other business would simply stop happening while every graph still looked
+# busy. This asks the only two questions that would catch it: did the plot
+# still get claimed, and did anybody still socialise.
+#
+# DAY 0 IS EXCLUDED ON PURPOSE. Everybody starts the run at the same cold
+# midnight with adenosine and social both near zero, so day 0 is a shared
+# transient rather than the settled town — the same reasoning claim 45 already
+# gives for standing its farmers well clear of a fair fight. Days 1 and 2 are
+# where the claim actually has teeth.
+#
+# ONLY THE TAVERN IS A GATHERING PLACE (game.tscn marks nothing else), so any
+# Socialise observed here is, mechanically, a visit to it — chosen the same
+# way every other action is, never scripted to happen. If three pumped days
+# never send anybody there, that is a real finding about the ballot, not a
+# harness bug, and it gets reported rather than tuned away here.
+func _check_the_day_keeps_its_shape() -> void:
+	var claim := "50 — the day keeps its shape: work happens and company happens, every day"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
+	if clock == null or population == null or plot == null:
+		_require(false, claim, "the scene came up without a Clock, a Population and the Plot")
+		return
+
+	var people := population.get_people()
+	var plot_claimed_on_day := {}
+	var socialising_on_day := {}
+
+	var tick_count := int(round(3.0 * HOURS_IN_A_DAY / TICK_HOURS))
+	for tick in tick_count:
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+		var today := clock.day()
+
+		if plot.claimed_on_day == today:
+			plot_claimed_on_day[today] = true
+
+		for person in people:
+			if not person.brain.is_awake():
+				continue
+			if person.brain.current_action is Socialise:
+				socialising_on_day[today] = true
+
+	for day_index in [1, 2]:
+		_require(plot_claimed_on_day.get(day_index, false), claim,
+			"the Plot was never observed claimed on day %d — a town absorbed into one endless conversation stops claiming the plot" % day_index)
+		_require(socialising_on_day.get(day_index, false), claim,
+			"nobody was observed socialising while awake on day %d — a dead social stat never socialises at all" % day_index)
 
 	world.queue_free()
 

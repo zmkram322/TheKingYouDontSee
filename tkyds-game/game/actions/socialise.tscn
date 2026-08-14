@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/actions/socialise.gd" id="1_socialise"]
+[ext_resource type="Script" path="res://game/actions/socialise_step.gd" id="2_mingle"]
+[ext_resource type="Script" path="res://game/actions/go_to_step.gd" id="3_go_to_step"]
+
+[node name="Socialise" type="Node"]
+script = ExtResource("1_socialise")
+label = "socialise"
+company_worth = 90.0
+bite = 2.0
+
+[node name="Mingle" type="Node" parent="."]
+script = ExtResource("2_mingle")
+company_per_hour = 30.0
+change_of_scene_per_hour = 18.0
+
+[node name="GoTo" type="Node" parent="Mingle"]
+script = ExtResource("3_go_to_step")

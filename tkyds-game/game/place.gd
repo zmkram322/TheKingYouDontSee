@@ -54,6 +54,21 @@ extends Node3D
 
 @export var place_name := "Somewhere"
 
+# Is this somewhere company is to be found — the tavern today, one day a
+# market square. This is what makes a place a Socialise CANDIDATE even while
+# it stands EMPTY: occupancy is what feeds the gap once he is there (see
+# actions/socialise_step.gd), never what makes the place worth walking to in
+# the first place. Without this, an empty venue could never become the
+# CANDIDATE it needs to be for the first man to ever arrive at it — nobody
+# would go, so nobody would ever be there, so nobody would ever go. A place
+# is a gathering place because it's the kind of place people go to find each
+# other, not because somebody already happens to be standing on it.
+#
+# One bool rather than a tag system: nothing yet needs more than "is or
+# isn't", and a system to sort places into kinds nothing yet asks for is
+# substrate before need.
+@export var is_gathering_place := false
+
 
 # What is lying about here — the sacks in the barn, the loaves in the tavern's
 # storage. Found as a child rather than wired, the same "structurally where it
