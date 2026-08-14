@@ -43,6 +43,19 @@ extends Node
 # the same answer and none of them are Sleep.
 @export var counts_as_asleep := false
 
+# Is doing THIS, RIGHT NOW, what makes him asleep — as opposed to
+# counts_as_asleep above, which is the AUTHORED FLAG saying what KIND of
+# action this is at all. The split exists because "is he actually out" can
+# depend on more than which action he picked: as of rung 6c, Sleep only
+# counts as asleep once he is truly LYING DOWN in a claimed bed — the walk
+# there happens while he still reads as awake, the same worked-out-not-stored
+# principle Brain.is_awake() itself already follows, just pushed one level
+# deeper. Every other action never varies by circumstance, so the default
+# simply returns the flag and nothing but sleep.gd ever needs to override
+# this.
+func counts_as_asleep_for(_person: Person) -> bool:
+	return counts_as_asleep
+
 # The step that actually does it. Found once from the children rather than
 # dragged in, because an action's step is structurally its child — there is
 # nowhere else it could be.

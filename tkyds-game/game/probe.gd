@@ -164,6 +164,9 @@ func _process(_delta: float) -> bool:
 	_check_discharge_moves_grain_to_barn_and_stops_at_the_cap()
 	_check_owned_plot_refuses_the_unemployed_and_counts_it()
 	_check_quota_met_today_is_owed_again_tomorrow()
+	_check_twenty_one_sleepers_leave_one_standing()
+	_check_a_sleeper_holds_his_bed_across_midnight()
+	_check_an_abandoned_bed_lapses_at_the_boundary()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -757,7 +760,15 @@ func _check_two_farmers_one_plot() -> void:
 
 	var first_claimant_of_day_2: Person = null
 	var zoogs_was_asleep_when_claimed := false
-	var tick_count := int(round(10.0 / TICK_HOURS))
+	# ELEVEN hours, not ten, as of rung 6c — and the extra hour is the commute,
+	# twice. Both men now walk to the Inn to sleep (arriving ~22:08) instead of
+	# dropping where they stand, and Zoogs — recovery 5.0/hour against the 58
+	# authored above — does not surface until ~07:56, then has to walk BACK to
+	# the fields before he can SEE the plot is taken and fall off the ballot.
+	# A ten-hour pump ended at 08:00, while he was still on the road, and the
+	# NAN assertion below read a man who had not yet arrived rather than a
+	# broken knowledge rule.
+	var tick_count := int(round(11.0 / TICK_HOURS))
 	for tick in tick_count:
 		clock.advance(TICK_HOURS)
 		population.think_for_everyone(TICK_HOURS)
@@ -782,7 +793,7 @@ func _check_two_farmers_one_plot() -> void:
 		"after Zoogs' failed claim the plot reads held by %s" % [
 			(plot.claimed_by.person_name if plot.claimed_by != null else "nobody")])
 	_require(zoogs.brain.is_awake(), claim,
-		"Zoogs is still asleep at the end of a ten-hour pump that started at 22:00")
+		"Zoogs is still asleep at the end of an eleven-hour pump that started at 22:00")
 
 	# is_nan, not a low score: the loser was never on the ballot at all, and the
 	# graph draws that as a hole rather than a losing line. A plain low number
@@ -2551,6 +2562,186 @@ func _check_quota_met_today_is_owed_again_tomorrow() -> void:
 	var score := work_action.get_utility_score(zoogs)
 	_require(score > 0.0, claim,
 		"the day after discharge, WorkForHire's score reads %.2f — it should have gone back to wanting rather than staying at the discharged 0.0" % score)
+
+	world.queue_free()
+
+
+# --- Assertion 45: twenty beds, twenty-one sleepers -------------------------------
+
+# The rung's whole point, made mechanical: a bed to fail to find did not
+# exist before this rung, and now it does. NIGHT, so nobody's daylight term
+# is fighting sleep — and the authored trio (Zoogs, Hobb, Marle) start with
+# adenosine ~0 and stay well under Sleep's pull for the whole short pump
+# below, which is what keeps them out of the race and leaves this claim
+# entirely about the 21 spares.
+func _check_twenty_one_sleepers_leave_one_standing() -> void:
+	var claim := "45 — twenty-one sleepers at a twenty-bed Inn leave exactly one man standing"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if clock == null or population == null or inn == null:
+		_require(false, claim, "the scene came up without a Clock, a Population and an Inn")
+		return
+
+	clock.advance(1.0)
+
+	var spares: Array[Person] = []
+	for i in 21:
+		var spare := _add_a_person(population, "Sleeper%d" % i)
+		if spare == null:
+			_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+			return
+		_stand_at(spare, inn)
+		spare.stats.set_stat(&"adenosine", 90.0)
+		spares.append(spare)
+
+	for tick in 5:
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+
+	var asleep_count := 0
+	var awake_spare: Person = null
+	for spare in spares:
+		if spare.brain.is_awake():
+			awake_spare = spare
+		else:
+			asleep_count += 1
+	_require(asleep_count == 20, claim,
+		"twenty beds and twenty-one sleepers should leave exactly 20 asleep and %d are" % asleep_count)
+	_require(awake_spare != null, claim,
+		"twenty beds and twenty-one sleepers should leave exactly one man standing and none is")
+
+	# TWENTY DISTINCT BEDS, not twenty claims piled on the same one. Walked
+	# off the Inn's own children rather than assumed — a check states the
+	# world it wants, the same discipline claim 33 paid for.
+	var beds: Array[Workstation] = []
+	for child in inn.get_children():
+		var station := child as Workstation
+		if station != null and station.work_name == &"sleeping":
+			beds.append(station)
+	_require(beds.size() == 20, claim,
+		"expected 20 beds under the Inn and found %d — the scene is not what this claim thinks it is" % beds.size())
+
+	var holders := {}
+	for bed in beds:
+		if bed.claimed_by != null:
+			holders[bed.claimed_by] = true
+	_require(holders.size() == 20, claim,
+		"20 sleepers should hold 20 DISTINCT beds and only %d distinct holders were found — somebody is sharing" % holders.size())
+
+	if awake_spare != null:
+		var sleep_action := awake_spare.get_node_or_null("Brain/Sleep") as Sleep
+		var score: Variant = null
+		if sleep_action != null:
+			score = awake_spare.brain.get_last_scores().get(sleep_action.name)
+		var off_the_ballot := false
+		if score is float:
+			var score_value: float = score
+			off_the_ballot = is_nan(score_value)
+		_require(sleep_action != null and off_the_ballot, claim,
+			"the standing man's Sleep score reads %s — every bed visibly taken must take Sleep OFF the ballot (NAN), not merely outscore it" % str(score))
+
+	world.queue_free()
+
+
+# --- Assertion 46: renew-on-use across a sleeping man's midnight ------------------
+
+# THE REAL PATH — through Population, never the step driven by hand — because
+# this claim exists to prove the renewal comes from Rest's OWN claim-per-tick,
+# not from anything the harness is doing for it. This is the first claim in
+# the whole probe to carry a claim() across a day boundary where the claimant
+# is ASLEEP and could not have chosen to renew it — every earlier claim()
+# caller works inside a waking man's day. See rest.gd's header.
+func _check_a_sleeper_holds_his_bed_across_midnight() -> void:
+	var claim := "46 — a sleeper holds his bed across a day boundary passing mid-sleep"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if clock == null or population == null or inn == null:
+		_require(false, claim, "the scene came up without a Clock, a Population and an Inn")
+		return
+
+	var spare := _add_a_person(population, "Sleeper")
+	if spare == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+	_stand_at(spare, inn)
+	clock.advance(23.5)
+	spare.stats.set_stat(&"adenosine", 90.0)
+
+	for tick in 100:
+		clock.advance(TICK_HOURS)
+		population.think_for_everyone(TICK_HOURS)
+
+	_require(clock.day() == 1, claim,
+		"100 ticks of %.2f hours from 23:30 should cross midnight and landed on day %d instead" % [TICK_HOURS, clock.day()])
+	_require(not spare.brain.is_awake(), claim,
+		"a man put down at 23:30 with adenosine 90 should still be asleep an hour later")
+
+	var bed: Workstation = null
+	for child in inn.get_children():
+		var station := child as Workstation
+		if station != null and station.claimed_by == spare:
+			bed = station
+			break
+	_require(bed != null, claim,
+		"no bed under the Inn reads claimed by the sleeping spare at all")
+	if bed != null:
+		# THE RE-STAMP IS THE WHOLE MECHANISM: dawn passed under him and
+		# nothing expired because claim() ran again on every tick Rest
+		# advanced — the identical proof claim 14 already gave WorkStep.
+		_require(bed.claimed_on_day == 1, claim,
+			"the bed was claimed across midnight and its stamp reads day %d, not day 1 — renew-on-use did not fire" % bed.claimed_on_day)
+		var stranger := _add_a_person(population, "Stranger")
+		_require(stranger != null and not bed.is_free_for(stranger), claim,
+			"a bed held by a sleeping man read free for somebody else")
+
+	world.queue_free()
+
+
+# --- Assertion 47: an abandoned bed lapses, the same rule on a new station type ---
+
+# Claim 15's rule, on the station type it was actually shaped for: nobody
+# renews, so nothing keeps a bed claim alive past the day it was made on. No
+# think_for_everyone here, and none needed — the claim expires where it lies
+# the moment somebody asks, exactly as claim 15 already proved for a plot.
+func _check_an_abandoned_bed_lapses_at_the_boundary() -> void:
+	var claim := "47 — an abandoned bed lapses at the day boundary"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var inn := world.get_node_or_null("Town/Inn") as Place
+	if clock == null or population == null or inn == null:
+		_require(false, claim, "the scene came up without a Clock, a Population and an Inn")
+		return
+
+	var sleeper := _add_a_person(population, "Sleeper")
+	var another := _add_a_person(population, "Another")
+	if sleeper == null or another == null:
+		_require(false, claim, "could not instance %s" % PERSON_SCENE_PATH)
+		return
+	_stand_at(sleeper, inn)
+	_stand_at(another, inn)
+
+	var bed: Workstation = null
+	for child in inn.get_children():
+		var station := child as Workstation
+		if station != null and station.work_name == &"sleeping":
+			bed = station
+			break
+	if bed == null:
+		_require(false, claim, "no bed at all under the Inn")
+		return
+
+	clock.advance(10.0)
+	_require(bed.claim(sleeper), claim, "Sleeper, standing at the Inn, could not claim a bed at 10:00")
+	_require(not bed.is_free_for(another), claim, "the bed read free for Another the moment Sleeper held it")
+
+	clock.advance(15.0)
+	_require(bed.is_free_for(another), claim,
+		"an abandoned bed still reads held on day %d, though nothing has touched it since it was claimed" % clock.day())
 
 	world.queue_free()
 

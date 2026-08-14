@@ -102,8 +102,12 @@ func get_last_scores() -> Dictionary:
 	return decision_engine.get_last_scores()
 
 
+# Reads counts_as_asleep_for rather than the bare flag, because as of rung
+# 6c "is he asleep" can depend on WHERE he is, not only on WHAT he chose:
+# Sleep only counts as asleep once he is standing at a claimed bed, not
+# while he is still walking to one. See action.gd's header for the split.
 func is_awake() -> bool:
-	return current_action == null or not current_action.counts_as_asleep
+	return current_action == null or not current_action.counts_as_asleep_for(person)
 
 
 # One slice of thinking and doing, measured in world HOURS — never real
@@ -117,9 +121,19 @@ func is_awake() -> bool:
 #   1. Decide. Gates read what he WAS doing — that's what lets Wake be on the
 #      ballot only while he's already asleep, which is half the reason the sleep
 #      cycle doesn't twitch.
-#   2. Update the body, using what he's NOW doing, so the tick he decides to
-#      turn in is the tick adenosine starts falling.
-#   3. Do the work.
+#   2. Do the work. The world changes here — including where he is standing.
+#   3. Update the body, using what he ACTUALLY DID this tick.
+#
+# THE BODY UPDATE MOVED BELOW THE WORK AT RUNG 6c, and the old order was not
+# wrong until then. It used to say "the tick he decides to turn in is the tick
+# adenosine starts falling" — true while lying down happened wherever he stood,
+# because deciding and doing were the same instant. Once Sleep's step gained a
+# walk, "is he asleep" became a fact the DO step writes (arriving, claiming a
+# bed), so an update run before the work reads the tick's beginning while every
+# check after the tick reads its end — and the transition tick pays the wrong
+# rate. Updating last means the body pays for what the tick actually contained:
+# a man who spent it walking to bed tires for the walk, and the tick he lies
+# down is the tick adenosine starts falling.
 #
 # Deliberately re-decides every tick instead of committing. With nothing
 # stored, an interruption costs nothing — the next tick picks again from
@@ -131,12 +145,10 @@ func think_and_act(hours: float) -> void:
 	if person == null:
 		return
 	current_action = decision_engine.choose(person, _known_actions)
+	if current_action != null and current_action.step != null \
+			and current_action.step.is_doable(person):
+		current_action.step.advance(person, hours)
 	_update_body(hours)
-	if current_action == null or current_action.step == null:
-		return
-	if not current_action.step.is_doable(person):
-		return
-	current_action.step.advance(person, hours)
 
 
 # --- The body ------------------------------------------------------------------

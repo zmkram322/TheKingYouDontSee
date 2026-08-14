@@ -1,12 +1,17 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://game/actions/sleep.gd" id="1_sleep"]
 [ext_resource type="Script" path="res://game/actions/rest.gd" id="2_rest"]
+[ext_resource type="Script" path="res://game/actions/go_to_step.gd" id="3_go_to_step"]
 
 [node name="Sleep" type="Node"]
 script = ExtResource("1_sleep")
 label = "sleep"
 counts_as_asleep = true
+work_name = &"sleeping"
 
 [node name="Rest" type="Node" parent="."]
 script = ExtResource("2_rest")
+
+[node name="GoTo" type="Node" parent="Rest"]
+script = ExtResource("3_go_to_step")

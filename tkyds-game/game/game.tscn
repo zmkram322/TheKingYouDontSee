@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://skyjyprv51gs"]
+[gd_scene load_steps=22 format=3 uid="uid://skyjyprv51gs"]
 
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="1_clock"]
 [ext_resource type="Script" uid="uid://chc8o3ak8v58x" path="res://game/daylight.gd" id="2_daylight"]
@@ -36,6 +36,9 @@ albedo_color = Color(0.5, 0.37, 0.2, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_inn"]
 albedo_color = Color(0.42, 0.29, 0.22, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bed"]
+albedo_color = Color(0.22, 0.15, 0.12, 1)
 
 [node name="Game" type="Node3D"]
 
@@ -89,6 +92,146 @@ place_name = "the Lord's Inn"
 
 [node name="Inventory" type="Node" parent="Town/Inn"]
 script = ExtResource("12_inventory")
+
+[node name="Bed1" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.7, 0.005, -0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed2" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.35, 0.005, -0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed3" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, -0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed4" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.35, 0.005, -0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed5" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.7, 0.005, -0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed6" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.7, 0.005, -0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed7" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.35, 0.005, -0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed8" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, -0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed9" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.35, 0.005, -0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed10" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.7, 0.005, -0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed11" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.7, 0.005, 0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed12" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.35, 0.005, 0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed13" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, 0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed14" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.35, 0.005, 0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed15" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.7, 0.005, 0.175)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed16" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.7, 0.005, 0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed17" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, -0.35, 0.005, 0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed18" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, 0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed19" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.35, 0.005, 0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
+
+[node name="Bed20" type="MeshInstance3D" parent="Town/Inn"]
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.7, 0.005, 0.525)
+material_override = SubResource("StandardMaterial3D_bed")
+mesh = SubResource("PlaneMesh_place")
+script = ExtResource("10_workstation")
+work_name = &"sleeping"
 
 [node name="Population" type="Node" parent="." node_paths=PackedStringArray("clock", "town")]
 script = ExtResource("6_population")
