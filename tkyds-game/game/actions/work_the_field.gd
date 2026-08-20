@@ -2,10 +2,10 @@ class_name WorkTheField
 extends Action
 
 # Work a plot in the fields. The first action whose availability depends on
-# somebody ELSE — a plot another man holds, AND CAN SEE IS HELD, is off his
-# ballot entirely, so the loser of a dawn race is never scored, not outscored,
-# and the graph draws his work as a hole rather than a losing line. That "and
-# can see" is rung 4's, and it is what lets a man set off at all: see
+# somebody ELSE — a plot another man holds is off his ballot entirely, so the
+# loser of a dawn race is never scored, not outscored, and the graph draws his
+# work as a hole rather than a losing line. As of Decision 30 that fact is a
+# public claim register, readable from anywhere in town; see
 # _is_a_candidate_for at the bottom.
 #
 # An Action is a family, not a single choice: "work the field" means "work
@@ -79,11 +79,24 @@ func is_available_to(person: Person) -> bool:
 	return true
 
 
-# Which of the two rung-6b-and-later refusals a failed gate actually saw, for
-# every station that could have told the difference. Only a station AT his
-# own place can say anything at all — the knowledge rule below means a
-# distant station is always still "a candidate" as far as this classification
-# goes, so it is silently skipped rather than misreported.
+# Which of the two rung-6b-and-later refusals a failed gate actually saw: a
+# station he has no RIGHT to (a rights problem, more land needed) versus one
+# somebody else already holds (a room problem, more room on land already open
+# to him). Each has its own fix, so each gets its own counter.
+#
+# IT STILL ONLY CLASSIFIES STATIONS AT HIS OWN PLACE, AND THAT IS NOW A
+# NARROWING RATHER THAN A CONSEQUENCE. It used to be forced: under the old
+# positional knowledge rule a distant station was always still "a candidate",
+# so there was nothing to report about one. Decision 30 deleted that rule — a
+# held plot across town is legible now — so this skip is no longer something
+# the world makes true, it is something this function chooses.
+#
+# LEFT AS IT WAS, DELIBERATELY. Widening it would change what the counters
+# COUNT, and every reading taken against them so far assumed the narrow
+# version; that is a scope call about telemetry, not part of repairing the
+# register, and it was refused rather than slipped in. The honest cost of
+# leaving it: distant refusals go uncounted, so these two numbers now
+# under-report. Whoever widens it must re-baseline them in the same commit.
 func _note_why_no_candidate(stations: Array[Workstation], person: Person) -> void:
 	for station in stations:
 		if person.get_current_place() != station.get_place():
@@ -126,28 +139,68 @@ func get_best_candidate(person: Person) -> Workstation:
 	return _find_first_candidate(person.town.find_workstations(person, work_name), person)
 
 
-# FREENESS IS KNOWABLE ONLY WHERE YOU ARE STANDING. Presence was already
-# required to CLAIM a plot; as of rung 4 it is required to KNOW about one.
+# A CLAIM IS A PUBLIC RECORD. FREENESS IS READ FROM THE REGISTER, NOT THE
+# DOORSTEP (Decision 30) — replacing the rule this comment used to argue at
+# length, and it is worth saying plainly that this is the SECOND time a
+# comment in this file outlived the code under it. The first one cost a day.
 #
-#   Not at the plot's place → he knows the plot EXISTS, not whether it is taken.
-#   It stays a candidate, the urge to work stands, and he walks.
-#   At the plot's place    → he can see it. Taken by somebody else and it drops
-#   out, so work leaves his ballot at the moment he ARRIVES.
+#   The register says whether it is worth going. His feet decide whether he
+#   gets it.
 #
-# Rung 3 let this gate ask whether a plot was free from anywhere in the world.
-# With both farmers standing in the same field that was invisible; the moment
-# they are apart it is omniscience, and it kills walking outright — a man at the
-# Inn would know the plot was taken, so work would never reach his ballot, so he
-# would never set off, and nothing could ever interrupt him.
+# station.is_free_for(person) was ALWAYS the plain truth about the station —
+# permission, who holds the claim, and whether that claim is stamped today. It
+# never asked about presence. What changed here is not the station's answer,
+# it is who was allowed to ask it from where: this function used to add a
+# position check ON TOP of that truth, so a plot held by somebody else still
+# counted as "a candidate" for any man not standing in it, and the true answer
+# only landed the moment he arrived.
 #
-# The wasted journey is the POINT. A man who crosses the town and finds the job
-# gone is the collision that later earns a notice board; pre-solving it with
-# omniscience would delete the evidence that the board is worth building.
-# (Decision 15, restoring the default Decision 1 had already described.)
+# THAT WAS THE DITHER, MEASURED: 1145 action changes in a day for the loser of
+# a dawn race, 224 for the winner. He would arrive, get gated out on the spot,
+# take one step toward the tavern — and the FIRST tick of any journey writes
+# his place to null (go_to_step.gd, "departure writes null"). "No place" is
+# not "the plot's place", so the old position check stopped applying and work
+# came back onto his ballot at FULL STRENGTH. Arrival is an overshoot clamp,
+# not a radius, so one tick's walk from a plot he could never have was enough
+# to pin him bouncing between it and the tavern for the rest of the day.
 #
-# Note where this rule does NOT live: Workstation.is_free_for goes on reporting
-# the plain truth about itself. The world is not obliged to lie, and what a man
-# KNOWS of the truth is this action's business, not the plot's.
+# WHY THIS IS NOT THE OMNISCIENCE DECISION 15 REFUSED. That decision's fear was
+# a plot whose state is always visible and can be permanently bad — a man who
+# can read from his bed that the field is taken never sets off, and the town
+# freezes solid the instant two men are apart. None of that applies to a public
+# register, and for three separate reasons:
+#
+#   Claims expire at the day boundary (Workstation.claimed_on_day), so every
+#   station in the world reads free to EVERYBODY at dawn. Nobody is ever locked
+#   out at the start of a day; the bootstrap hole Decision 15 was guarding
+#   against cannot form.
+#
+#   claim() still requires presence (see workstation.gd) — reading the
+#   register only tells a man whether the trip is worth making, never whether
+#   the plot is already his. Two men can both read a plot free at dawn, both
+#   set off, and only the one who ARRIVES first actually holds it. The race
+#   survives; you still cannot reserve a plot from your bed.
+#
+#   Decision 15 refused a PERCEPTUAL fact — is a man physically standing in
+#   that furrow right now, which you would genuinely have to see to know.
+#   Whose field it is TODAY is a LEGAL fact instead, a tenancy — village
+#   knowledge, the same kind socialise.gd already grants for who is roughly in
+#   the tavern from across town. This was never the sort of fact a man had to
+#   walk over and check with his own eyes.
+#
+# THE WASTED JOURNEY IS NOT DELETED, IT IS SPENT. Decision 15 protected it as
+# the collision that would one day earn a notice board. Reading the public
+# register IS that notice board, and it cost nothing to build, because the
+# field it reads already existed and already expired correctly. What is left
+# to discover by walking into it blind is the race itself: two men who both
+# read a plot free and both set off, finding out at the fence, never at the
+# doorstep, which of them was faster. That is where the collision was always
+# the interesting one.
+#
+# Note where this rule does NOT live, and never has: Workstation.is_free_for
+# goes on reporting the plain truth about itself. The world is not obliged to
+# lie, and what a man is ALLOWED TO ASK of that truth is this action's
+# business, not the plot's.
 func _find_first_candidate(stations: Array[Workstation], person: Person) -> Workstation:
 	for station in stations:
 		if _is_a_candidate_for(station, person):
@@ -156,6 +209,4 @@ func _find_first_candidate(stations: Array[Workstation], person: Person) -> Work
 
 
 func _is_a_candidate_for(station: Workstation, person: Person) -> bool:
-	if person.get_current_place() != station.get_place():
-		return true
 	return station.is_free_for(person)

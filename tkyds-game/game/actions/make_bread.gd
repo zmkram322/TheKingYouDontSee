@@ -48,21 +48,40 @@ func is_available_to(person: Person) -> bool:
 #
 #   BELOW Eat's 130. When bread and grain are both in the bag, eating has to
 #   win — you bake because you cannot eat, never the other way round. A lower
-#   weight at the same hunger and the same exponent guarantees Eat outscores
+#   weight at the same gap and the same exponent guarantees Eat outscores
 #   this everywhere the two are ever both open.
 #
 #   ABOVE work's 103 peak, for the identical reason Eat's weight clears it: a
-#   starving man holding grain has to be able to stop working to bake, or the
-#   loop this rung exists to close would have a gap in it exactly where
-#   Zoogs needs it — the man with grain and no bread, mid-morning, still has
-#   to be able to interrupt himself.
+#   short-lardered man holding grain has to be able to stop working to bake,
+#   or the loop this rung exists to close would have a gap in it exactly
+#   where Zoogs needs it — the man with grain and no bread, mid-morning,
+#   still has to be able to interrupt himself.
 #
 # 115 and 3 are illustrative, same as every number on Eat — the author's
 # tuning board, not a specification.
 @export var baking_worth := 115.0
 @export var bite := 3.0
 
+# DECISION 31 — THE LARDER GAP DRIVES THIS, NOT HUNGER. Before this rung's
+# repair, baking scored on the hunger stat directly, the same body-read shape
+# Eat has always used. Decision 31 moves the want that drives baking (and
+# stops it driving work — see work_for_hire.gd) onto the man's own bread
+# STOCK instead: how many loaves short of a standing target his sack is, want
+# = target − stock exactly like Decision 1's general shape, read through the
+# same weight × gap^bite curve as everything else. Unauthored until now; 6
+# is roughly three days at ~1.9 loaves/day (see obligation.gd's sizing
+# comment) — a buffer, not a subsistence floor.
+@export var larder_target := 6
+
 
 func get_utility_score(person: Person) -> float:
-	var hungry: float = person.stats.get_stat(&"hunger")
-	return baking_worth * pow(hungry / 100.0, bite)
+	var inventory := person.get_inventory()
+	if inventory == null:
+		return 0.0
+	var stock := inventory.get_count(Eat.BREAD_NAME)
+	# Clamped rather than left to run negative: a larder ABOVE target is not
+	# a want the wrong way round, it is no want at all, and pow() on a
+	# negative base with a non-integer-looking exponent would be a landmine
+	# waiting for the day bite stops being a whole number.
+	var gap := clampf(float(larder_target - stock) / float(larder_target), 0.0, 1.0)
+	return baking_worth * pow(gap, bite)

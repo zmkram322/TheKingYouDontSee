@@ -3,7 +3,10 @@ extends ActionStep
 
 # The working itself, and — as of rung 4 — getting there first. As of rung 5 it
 # is also the first thing in this game that MAKES something: grain, per world
-# hour, into the working man's own inventory.
+# hour. As of rung 6b's repair (Decision 29) where that grain LANDS branches
+# on who owns the plot — the worker's whole inventory on unowned land, a
+# split between the owning Place's barn and the worker's own SHARE on owned
+# land — see _pay_out below.
 #
 # Like every step it holds no progress — nothing on this node, and nothing on
 # the man. Which plot he is working is re-derived every tick from the same
@@ -38,11 +41,16 @@ var walk: GoToStep
 const YIELD_NAME := &"grain"
 
 # What a man brings in from a plot in one world HOUR — like every rate in game/,
-# and emphatically not per tick. An authored 1.0 means one grain an hour, so at
-# the hundredth-of-an-hour tick the game runs he makes a hundredth of a grain a
-# tick and the plot holds the remainder until it comes to something. See
-# Workstation.output_part_made for why the fraction lives there and not here.
-@export var base_grain_per_hour := 1.0
+# and emphatically not per tick. An authored 2.5 means two and a half grain an
+# hour — the yield Decision 29's sizing needed to make a wage viable at all:
+# at the old 1.0/hour, share_of_crop (Obligation, 0.35) would have needed to
+# rise past 0.5 just to break even against measured hunger, which hands the
+# owner less than half his own crop and is a fiction question as much as a
+# tuning one, so the yield moved instead. At the hundredth-of-an-hour tick the
+# game runs he makes a hundredth of that a tick and the plot holds the
+# remainder until it comes to something. See Workstation.output_part_made for
+# why the fraction lives there and not here.
+@export var base_grain_per_hour := 2.5
 
 
 func _ready() -> void:
@@ -97,15 +105,90 @@ func advance(person: Person, hours: float) -> bool:
 		# without bound, so the work simply does not happen.
 		return false
 	station.output_part_made += get_yield_per_hour(person) * hours
-	# Whole grain comes off the plot and goes in his sack; the fraction stays in
-	# the furrow for whoever works it next. Floor-and-subtract rather than a
-	# loop, so one enormous tick pays out in a single step instead of spinning
-	# through it a grain at a time.
+	# Whole grain comes off the plot; the fraction stays in the furrow for
+	# whoever works it next. Floor-and-subtract rather than a loop, so one
+	# enormous tick pays out in a single step instead of spinning through it a
+	# grain at a time.
 	var made := int(floorf(station.output_part_made))
 	if made > 0:
 		station.output_part_made -= float(made)
-		inventory.add(YIELD_NAME, made)
+		_pay_out(person, inventory, station, made)
 	return false
+
+
+# WHERE THE YIELD LANDS, BY OWNERSHIP (Decision 29). Unowned land is the
+# king's, i.e. nobody's, and a man keeps the whole of what he raises on it —
+# which is what keeps plain WorkTheField meaningful instead of dead library
+# code now that WorkForHire exists. Owned land's crop is the owner's from the
+# moment it leaves the ground: the worker is not handed it later, it was
+# never his in full — he keeps only his authored SHARE
+# (Obligation.share_of_crop), paid the instant it is made.
+#
+# BOTH SIDES LAND VIA add(), NEVER hand_over(). The work CREATES the grain —
+# there is no "before" inventory to take it from — so the world total rises
+# here exactly as it does today and the conservation probe keeps its meaning.
+# Writing this as a transfer would be wrong on both counts: hand_over would
+# make a creation look like a move, and there is nothing to take() from.
+#
+# IS_INSTANCE_VALID FIRST: owned_by is a stored Person reference (see
+# workstation.gd), and a freed owner would otherwise error on the very next
+# property read — the same one-liner Workstation.is_permitted_to already
+# uses, matched here rather than re-derived differently.
+func _pay_out(person: Person, inventory: Inventory, station: Workstation, made: int) -> void:
+	if not is_instance_valid(station.owned_by):
+		station.owned_by = null
+	if station.owned_by == null:
+		inventory.add(YIELD_NAME, made)
+		return
+	var employer := get_parent() as WorkForHire
+	var obligation := employer.get_standing_obligation(person) if employer != null else null
+	if obligation == null:
+		# Owned land worked with no obligation to pay against — unreachable
+		# in the shipped game (Workstation.is_permitted_to already refused
+		# station.claim() to anyone here who is neither the owner nor an
+		# obligation-holder, so DO never reaches this line for them), but the
+		# owner himself COULD one day work his own land through the plain
+		# library action rather than WorkForHire, and that man has no
+		# obligation to read a share off. Kept as a quiet fallback to the
+		# owner's own store, consistent with "owned land's crop is the
+		# owner's" even when the owner is the one holding the hoe, rather
+		# than an assumption the game would rather crash on.
+		var place_fallback := station.get_place()
+		var barn_fallback := place_fallback.get_inventory() if place_fallback != null else null
+		if barn_fallback != null:
+			barn_fallback.add(YIELD_NAME, made)
+		return
+	# THE SPLIT. Asked, never worked out here: how much of this is his is the
+	# AGREEMENT's question, so it is answered behind Obligation's one door and
+	# this file does not know — and must not learn — that a share is a
+	# fraction, that fractions need carrying, or that anything gets rounded at
+	# all. Swap share-of-crop for a payday, a piece rate or a lord's cut off
+	# the top and every line below goes on working unread.
+	#
+	# WHAT THIS FILE DOES STILL GUARANTEE is the conservation, because that is
+	# a fact about the FURROW rather than about the wage: whole grain came off
+	# the plot, and whole grain is placed. owner_share is whatever the door
+	# did not hand back, so the two always sum to exactly `made` however the
+	# wage is later rewritten. That is the property the probe's total leans
+	# on, and it survives any change made on the other side of the door.
+	var worker_share := obligation.take_worker_share(made)
+	var owner_share := made - worker_share
+	if owner_share > 0:
+		var place := station.get_place()
+		var barn := place.get_inventory() if place != null else null
+		if barn == null:
+			# No barn to receive the owner's part — said out loud rather than
+			# silently dropping grain, the same corollary CLAUDE.md names for a
+			# missing node_paths wire: a broken link must not be indistinguishable
+			# from nothing happening yet.
+			push_warning("Workstation \"%s\" is owned but its place has no Inventory to receive the crop" % station.name)
+		else:
+			barn.add(YIELD_NAME, owner_share)
+	if worker_share > 0:
+		# add(), not hand_over(): the work CREATED this grain, so the world
+		# total rises here exactly as it does on unowned land. Writing the
+		# wage as a transfer would make the conservation claim lie.
+		inventory.add(YIELD_NAME, worker_share)
 
 
 # What he brings in per hour, right now. THE SEAM, and it stands empty on

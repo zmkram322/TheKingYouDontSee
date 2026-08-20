@@ -12,8 +12,9 @@ extends ActionStep
 # stuck in — the next tick simply asks again from wherever he now stands.
 #
 # RENEW-ON-USE IS THE WHOLE POINT OF THIS RUNG. Every earlier claim() caller
-# — WorkStep, WorkForHireStep — works entirely inside one man's WAKING day, so
-# none of them has ever actually carried a claim across a day boundary while
+# — WorkStep, shared by both WorkTheField and WorkForHire — works entirely
+# inside one man's WAKING day, so none of them has ever actually carried a
+# claim across a day boundary while
 # the claimant is ASLEEP and cannot act on anything else. A man works past
 # midnight because he is choosing to, and could stop; a sleeper cannot
 # "choose" to renew a claim, so the renewal has to arrive as a SIDE EFFECT of

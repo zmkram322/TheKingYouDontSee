@@ -26,10 +26,16 @@ extends Action
 # THE CANDIDATE MACHINERY BELOW IS THE SAME SHAPE work_the_field.gd CARRIES —
 # gate asks "are there candidates", score asks "how much do I want it", step
 # asks "which one am I claiming", and all three agree because all three call
-# get_best_candidate. Same knowledge rule too, in spirit and in code: away
-# from a bed's place he knows beds EXIST, not whether any is free, so the
-# urge to sleep still sends him walking; once he can see for himself, a bed
-# already somebody else's drops off his ballot the instant he arrives.
+# get_best_candidate. As of Decision 30 the knowledge rule is the same too, in
+# spirit and in code: a bed's claim is a PUBLIC RECORD, readable from wherever
+# he happens to be standing — see work_the_field.gd's copy of
+# _is_a_candidate_for for the full argument. Beds add a wrinkle plots don't:
+# bed claims all expire at DUSK rather than dawn, so every sleeper sets off for
+# the Inn at once and the claims land WHILE men are converging, not before
+# anybody has taken a step. Reading the register still saves nothing the plot
+# case saves — there is no quiet night spent knowing better — but it is what
+# stops the twenty-first sleeper from pacing the doorway once he learns, on
+# the road or at the door, that every bed is somebody else's.
 #
 # DUPLICATED RATHER THAN SHARED, ON PURPOSE. Two consumers of one shape is
 # tolerable; the THIRD — 9b's baker, queuing for a millstone the same way —
@@ -128,6 +134,4 @@ func _find_first_candidate(stations: Array[Workstation], person: Person) -> Work
 
 
 func _is_a_candidate_for(station: Workstation, person: Person) -> bool:
-	if person.get_current_place() != station.get_place():
-		return true
 	return station.is_free_for(person)

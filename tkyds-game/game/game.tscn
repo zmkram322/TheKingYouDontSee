@@ -5,14 +5,14 @@
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
 [ext_resource type="PackedScene" path="res://game/ui/stat_graph.tscn" id="4_stat_graph"]
 [ext_resource type="PackedScene" path="res://game/ui/tuning_board.tscn" id="5_tuning_board"]
-[ext_resource type="Script" path="res://game/population.gd" id="6_population"]
+[ext_resource type="Script" uid="uid://by8amt8ktsehu" path="res://game/population.gd" id="6_population"]
 [ext_resource type="Script" uid="uid://c0r2y56224pe2" path="res://game/town.gd" id="7_town"]
 [ext_resource type="Script" uid="uid://c3yankxrk447k" path="res://game/place.gd" id="8_place"]
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_person_readout"]
 [ext_resource type="Script" uid="uid://vyb3v2wjgr7e" path="res://game/workstation.gd" id="10_workstation"]
 [ext_resource type="PackedScene" path="res://game/actions/work_for_hire.tscn" id="11_work_for_hire"]
-[ext_resource type="Script" path="res://game/inventory.gd" id="12_inventory"]
-[ext_resource type="Script" path="res://game/obligation.gd" id="13_obligation"]
+[ext_resource type="Script" uid="uid://4xapbervxfk4" path="res://game/inventory.gd" id="12_inventory"]
+[ext_resource type="Script" uid="uid://cxrpm7ud6qqjs" path="res://game/obligation.gd" id="13_obligation"]
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_color = Color(0.55, 0.68, 0.78, 1)
@@ -111,7 +111,7 @@ script = ExtResource("10_workstation")
 work_name = &"sleeping"
 
 [node name="Bed3" type="MeshInstance3D" parent="Town/Inn"]
-transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, -0.525)
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0, 0.005, -0.525)
 material_override = SubResource("StandardMaterial3D_bed")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
@@ -146,7 +146,7 @@ script = ExtResource("10_workstation")
 work_name = &"sleeping"
 
 [node name="Bed8" type="MeshInstance3D" parent="Town/Inn"]
-transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, -0.175)
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0, 0.005, -0.175)
 material_override = SubResource("StandardMaterial3D_bed")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
@@ -181,7 +181,7 @@ script = ExtResource("10_workstation")
 work_name = &"sleeping"
 
 [node name="Bed13" type="MeshInstance3D" parent="Town/Inn"]
-transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, 0.175)
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0, 0.005, 0.175)
 material_override = SubResource("StandardMaterial3D_bed")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
@@ -216,7 +216,7 @@ script = ExtResource("10_workstation")
 work_name = &"sleeping"
 
 [node name="Bed18" type="MeshInstance3D" parent="Town/Inn"]
-transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0.0, 0.005, 0.525)
+transform = Transform3D(0.07, 0, 0, 0, 1, 0, 0, 0, 0.07, 0, 0.005, 0.525)
 material_override = SubResource("StandardMaterial3D_bed")
 mesh = SubResource("PlaneMesh_place")
 script = ExtResource("10_workstation")
@@ -261,11 +261,12 @@ current_place = NodePath("../../Town/Inn")
 [node name="WorkForHire" parent="Population/Zoogs/Brain" index="3" instance=ExtResource("11_work_for_hire")]
 
 [node name="Inventory" parent="Population/Zoogs" index="5"]
-items = {&"bread": 14}
+items = {
+&"bread": 14
+}
 
 [node name="Obligation" type="Node" parent="Population/Zoogs"]
 script = ExtResource("13_obligation")
-owed_count = 12
 place_name = "the grain fields"
 
 [node name="Hobb" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
@@ -280,11 +281,12 @@ current_place = NodePath("../../Town/Inn")
 strength = 1.15
 
 [node name="Inventory" parent="Population/Hobb" index="5"]
-items = {&"bread": 14}
+items = {
+&"bread": 14
+}
 
 [node name="Obligation" type="Node" parent="Population/Hobb"]
 script = ExtResource("13_obligation")
-owed_count = 12
 place_name = "the grain fields"
 
 [node name="Marle" parent="Population" node_paths=PackedStringArray("current_place") instance=ExtResource("3_person")]
@@ -294,7 +296,9 @@ tint = Color(0.62, 0.55, 0.28, 1)
 current_place = NodePath("../../Town/Inn")
 
 [node name="Inventory" parent="Population/Marle" index="5"]
-items = {&"bread": 14}
+items = {
+&"bread": 14
+}
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.788, 0.616, 0, -0.616, 0.788, -2, 17, 22)
