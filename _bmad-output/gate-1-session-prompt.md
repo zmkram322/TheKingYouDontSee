@@ -1,9 +1,57 @@
 # Gate 1 — A body you steer, and a verb list that changes under your feet
 
 **Written 2026-08-19, for a fresh session.** First gate of the boss ladder
-(`boss-scene-build-plan.md`). **Gate 0 — the rung-6 repair — should land first**;
-if it has not, say so and stop, because the town this gate is watched in is still
-dithering.
+(`boss-scene-build-plan.md`).
+
+> ## ✅ GATE 0 LANDED 2026-08-20 — build this one
+>
+> The town has stopped dithering. `07a1400`, `ef04050`, `e756795`, `1575b3a`,
+> `d11fe8c` on `poc-v2`; probe **55/55 green, 14823 checks**. Read
+> **`gate-0-findings-2026-08-20.md`** before starting — Part 0 first, it records
+> an instruction this repo gave and the last session missed.
+>
+> **The anchor to measure against.** Not the numbers in any older file; they are
+> superseded and must not be re-quoted.
+>
+> ```
+> cold start: turned in 21:14, up 05:52
+> settled:    turns in 22:10, sleeps 8.00 h, up 06:10
+> strong man (1.15): up 04:47
+> ```
+>
+> **Four things about the town you will be standing in**, so none of them reads
+> as a bug you introduced:
+>
+> 1. **The loop closes.** Hobb bakes from day 7 and holds a two-loaf cycle. He
+>    ends twelve days on 82 grain and gaining — a surplus with nowhere to go.
+> 2. **Zoogs does nothing, all day, every day.** He loses every dawn race and
+>    has no second plot. Decision 30 made rung 5's inequality visible instead of
+>    disguising it as pacing. **This is correct. Do not give him an errand.**
+> 3. **Zoogs and Marle starve from day 9**, pinned at the hunger ceiling around
+>    the clock. Decisions 29 and 30 both say outright they do not fix this.
+>    **Do not give either man an action.** It will not affect a 48-hour probe.
+> 4. **A residual dither remains, ~356 changes/day, and it is NOT the fields** —
+>    Marle mirrors it exactly with no obligation at all. It is the
+>    `Socialise`/`StayUp` oscillation awaiting failure-marks-the-candidate
+>    (Decisions 23/24). **Out of scope. Do not chase it.**
+>
+> **Three carried-forward calls that are the author's, not a builder's.** Raise
+> them, do not decide them:
+>
+> - Whether Gate 0's three authored numbers (`share_of_crop 0.35`,
+>   `base_grain_per_hour 2.5`, `larder_target 6`) **stand or revert** — the
+>   ladder reserves them for Gate 8 and they were authored early by mistake.
+> - **`bite` on a stock gap** (Decision 34's closing section). `larder_target`
+>   currently governs nothing.
+> - **`physics/common/physics_interpolation`** is off, so `workbench/`'s camera
+>   jitter fix is not live. It is GLOBAL, and this town's people are moved by
+>   direct position writes every `_process` tick — `Population` and `Town` want
+>   opting out before it goes near `game.tscn`. **Relevant to this gate**, which
+>   is the first to put a steered body in that scene.
+>
+> **Engine is now Godot 4.7.2-stable-mono** — verified behaviour-identical to
+> 4.4. Run lines are in `CLAUDE.md`; `probe.gd`'s own header still prints the old
+> 4.4 ones and has not been corrected.
 
 ## What this gate installs
 

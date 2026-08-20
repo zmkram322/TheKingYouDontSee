@@ -21,7 +21,7 @@ tracks their resolution.
 
 ## Index
 
-*Added 2026-08-19. Thirty-three sections is past the point where "highest number
+*Added 2026-08-19, extended 2026-08-20. Thirty-four sections is past the point where "highest number
 wins" can be applied by reading the file. **Scan up from the bottom** — a later
 ruling narrows an earlier one more often than it contradicts it.*
 
@@ -60,6 +60,7 @@ ruling narrows an earlier one more often than it contradicts it.*
 | 31 | A gap drives the verb that closes it in one go | |
 | 32 | The empty-venue trickle is a placeholder, not a mistake | |
 | 33 | **The player is the boss, and the ladder is re-cut from his seat.** A command is a *bid*. The verb menu is `get_available()` drawn. No code names a verb. | |
+| 34 | **A gap is measured in what can actually change hands.** `is_discharged()` is derived, never stamped. | |
 
 **If you read only three: 19–27** (how wanting works — before writing any
 Action), **30** (how freeness is known — before writing any gate that asks where
@@ -4319,3 +4320,151 @@ seconds of watching catches that; three days of numbers did not.
 | Gate 0 = `rung-6-repair-session-prompt.md` | Unchanged and still first. **Hold its share-sizing half** — that quantity is a wage, and the boss ladder's Gate 8 authors it. Land Decision 30's deletion; defer Decisions 29/31's arithmetic. | **applied** |
 | Spent rung prompts (3, 4, 5, 6a) | **Deleted 2026-08-19** — those rungs shipped and their reasoning lives in the code and in this ledger. `rung-6a-session-prompt.md` was additionally *wrong*: it predated Decisions 25–27 and described a rung that shipped differently. In git history if ever wanted. | **applied** |
 | `gate-1-session-prompt.md` | Created. The first gate handed off for a build session, incl. Decision 17 as its hardest problem and the `probe.gd` population-count hazard. | **applied** |
+
+---
+
+## Decision 34 — A gap is measured in what can actually change hands
+
+**Settled 2026-08-20. Author's call**, made while building Gate 0. **Closes the
+question Decisions 29 and 31 left between them** — whether `is_discharged()`
+survives a wage at all — and rules on a shape that will recur everywhere.
+
+### The question
+
+Decision 29 says, in its "what does NOT change" table: *"Expiry vs discharge as
+two facts — untouched, both still needed."* Decision 31 then makes
+`WorkForHire.get_utility_score` flat, which **deleted `is_discharged()`'s only
+reader** — the branch that forced the score to 0.0 at quota. Highest number wins,
+but 31 never argues the concept away; it only removes what read it. So this was a
+genuine gap rather than a contradiction precedence could settle.
+
+Underneath it sat a better question. The quota version read:
+
+```gdscript
+if delivered_on_day != person.clock.day():
+	return false
+return delivered_count >= owed_count
+```
+
+**That is a switch somebody flipped.** `note_delivery()` wrote the marks;
+`is_discharged()` read them back. And that shape is precisely what produced
+Decision 29's finding — *"meeting the quota and stopping work are the same
+event"* — with no window on either side in which a man ever held a grain.
+
+### What was settled
+
+> **Discharge survives, and it is DERIVED from the gap rather than stamped by an
+> event. And the gap is measured in WHAT CAN ACTUALLY CHANGE HANDS — not in
+> exact equality, and not in fractions nobody could ever hand over.**
+
+```gdscript
+func get_earned_today() -> float:
+	return float(received_today) + share_part_owed
+
+func is_discharged() -> bool:
+	return get_earned_today() - float(received_today) < 1.0
+```
+
+Nothing stamps, nothing sweeps at midnight, and the answer is worked out fresh at
+read time — the same rule as *"am I at the inn?"* is answered by where he is
+standing.
+
+### Three versions were written. The two rejected ones are the point.
+
+**1. `received >= received` — a tautology.** It cannot answer no. **A vacuous
+assertion wearing a function's clothes**, and it is exactly the failure this
+project has spent eight caught probe claims learning to hunt: *a check with no
+state in which it could have gone the other way proves nothing, and the next
+reader is entitled to believe it did.* It would have made every future claim
+about discharge pass for free.
+
+**2. `received >= received + carry` — honest-looking, and a trap.** It reads
+false whenever any fraction is outstanding. **But a fraction of a grain cannot be
+paid.** Nobody hands a man 0.35 of a grain, so a payday action gated on this
+would bid, win, change nothing, and bid again — forever. **That is the standing
+bid that never resolves**, the same failure Decision 32 had to shrink
+`change_of_scene_per_hour` to work around, arriving by a completely different
+road.
+
+**3. Measured in whole grain — a seam.** Below one whole unit there is nothing
+anybody *could* give him and his account is as square as arithmetic allows; at
+one or more, something is genuinely collectable and an action has something to
+do about it.
+
+### Why version 3 is not merely version 1 with extra steps
+
+Because it is true **for a reason**, and the reason is checkable.
+`take_worker_share()` pays out every whole grain the instant it accrues, so the
+carry it leaves behind is always in `[0, 1)`. Under share-of-crop the function
+therefore reads true — but break that invariant and it reads false, which is what
+makes it worth asserting. **Verified by breaking it**, not by reasoning about it.
+
+**The general rule, which is the part worth keeping:**
+
+> **A gap that cannot be closed by any act is not a gap, it is a leak.** Before
+> writing one, ask what act closes it and in what units that act moves. If the
+> answer is "nothing can move less than one of these", the gap is measured in
+> whole ones.
+
+### The wage goes through one door
+
+Settled in the same conversation, on the author's instruction that these
+mechanics stay loosely coupled and easy to revisit.
+
+`Obligation.take_worker_share(made) -> int` is the only way the wage is paid.
+**Nothing outside `obligation.gd` touches `share_part_owed` or `received_today`.**
+`WorkStep` hands over the whole grain that came off the plot and gets back
+whatever is the worker's; it does not know that a share is a fraction, that
+fractions need carrying, or that anything is rounded at all.
+
+Same wall as `Stats.get_stat` and `Inventory.get_count`, for the same reason: **a
+payday, a piece rate, a guild minimum or a lord's cut off the top is a change to
+that one function body with no caller anywhere moving.** An earlier draft had
+`WorkStep` do the arithmetic itself, reaching in and mutating two of the
+`Obligation`'s fields from outside. It worked, and it was still wrong — it spread
+the wage across two files and made swapping it a two-file edit forever after.
+
+**What deliberately stayed on the `WorkStep` side: the conservation.**
+`owner_share = made − worker_share` is a fact about the *furrow*, not about the
+wage — whole grain came off the plot, whole grain is placed — so it holds however
+the wage is later rewritten. That is the property the probe's total leans on.
+
+### What this does not settle
+
+- **Payday as an event.** Still deferred, still its own gate. This is the ledger
+  it will read, and it is now a ledger that can actually open.
+- **Whether `share_part_owed` should be day-stamped.** It is not, deliberately: a
+  rounding residue is not "today's" anything, and zeroing it at the boundary
+  would quietly rob him of it every night. The cost, named in the code rather
+  than hidden: `get_earned_today()` can carry up to one grain of yesterday. It is
+  bounded by one grain. A payday needing the two scopes to agree should stamp the
+  carry there, not teach its callers to subtract it.
+- **The three numbers Gate 0 authored** (`share_of_crop`, `base_grain_per_hour`,
+  `larder_target`). See `gate-0-findings-2026-08-20.md` Part 0 — the boss ladder
+  reserves those for Gate 8 and they were authored early by mistake.
+
+### The open question this measurement raised, recorded so it gets a number
+
+**`bite` was tuned for a saturating gap and Decision 31 moved it onto a stock
+gap.** `MakeBread` scores `weight × gap^3` where the gap is now *bread short of a
+larder target* — and cubing a gap you want **maintained** guarantees it is never
+maintained. Measured over twelve days: Hobb's bread parks at **2** and never
+approaches the authored target of **6**, because baking is inert until his pack is
+empty and then spikes. The target scales a curve that is flat everywhere it
+matters.
+
+> **Unruled: what curve is right for a gap you want held at a level, as against a
+> gap that climbs to its ceiling on its own?**
+
+**Do not answer it by retuning 3 to 1.5.** That is a number standing in for a
+mechanism — the shape this ledger has refused three times. It will take a number
+of its own when it is settled.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| Decision 29, *Left open* | *"Payday as an event"* row: the ledger it will read now exists and can open. Discharge survives, re-bodied. | **applied** |
+| Decision 31 | Untouched. Work's score is still flat and still does not read the larder. | n/a |
+| `gate-1-session-prompt.md` | Banner: Gate 0 landed; the anchor numbers it should be watched against; the three carried-forward open items. | **applied** |
+| Seam ledger → *Installed* | **Payment** amended: paid through one door, `Obligation.take_worker_share()`. | **applied** |

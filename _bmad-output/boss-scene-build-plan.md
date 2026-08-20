@@ -123,6 +123,21 @@ that fixes it**, so nothing is built against a guess.
 
 ### Gate 0 — Stop the pacing
 
+> **✅ LANDED 2026-08-20.** `07a1400`, `ef04050`, `e756795`, `1575b3a`, `d11fe8c`
+> on `poc-v2`. Probe 50/50 → **55/55**, 14823 checks. Findings:
+> **`gate-0-findings-2026-08-20.md`**. The Moment was watched: the loser of the
+> dawn race now reads the register and never sets off.
+>
+> **The hold below was not honoured, and it should have been.** The session
+> worked from `rung-6-repair-session-prompt.md`, whose Step 0 makes the sizing a
+> required author call, and did not open this file. So `share_of_crop = 0.35`,
+> `base_grain_per_hour = 2.5` and `larder_target = 6` are authored and shipped.
+> **Gate 8 still owns those numbers** — treat them as measured placeholders. The
+> wage MECHANISM was required either way (Decision 29), and the arithmetic bought
+> the twelve-day measurement that proved the loop closes, so nothing is wasted;
+> but whether the three numbers stand or revert is an open call, recorded in the
+> findings file, Part 0.
+
 **Seam:** none new. A deletion.
 
 Already written and settled — build `rung-6-repair-session-prompt.md` against
