@@ -1,10 +1,33 @@
 # Proving Scene — Build Plan
 
+> # ⚠ THIS IS NOT THE FORWARD LADDER.
+>
+> **Superseded 2026-08-19 by `boss-scene-build-plan.md` (Decision 33).** The seat
+> changed: the player is now a body in the town who commands people, and every
+> remaining gate is cut from his seat.
+>
+> **Nothing here is wrong and nothing here is deleted.** This file is:
+>
+> - **the record of the shipped substrate** — rungs 0–6 built `game/` and every
+>   seam they installed stands untouched. Read it for *why* the code is shaped
+>   the way it is. It is still the best explanation of the tick model, the
+>   candidate/gate/score split, and *Don't script the simulation*, which remains
+>   binding on every gate of the new ladder.
+> - **the source of the re-seated economy rungs** — rungs 7–9 (trade, the wagon,
+>   the chain, the unsold scythes) become **Gate 10+** of the boss ladder, with
+>   their ending inverted: the farmer does not know the verb *"buy a scythe."*
+>   **The player does.**
+>
+> **Do not build forward from this file.** Build from `boss-scene-build-plan.md`,
+> with `proving-scene-decisions.md` as the authority over both.
+
 **Status:** written 2026-08-08. **Revised 2026-08-09** against nine settled
 decisions, and again **2026-08-11** against all fifteen — see
-`proving-scene-decisions.md`. **Rungs 0-4 are SHIPPED** on `poc-v2` (rung 4,
-walking, on 2026-08-11 as `35f717f`); rung 5 is next and nothing below it is
-built.
+`proving-scene-decisions.md`. **Rungs 0–6 are SHIPPED** on `poc-v2` (rung 4,
+walking, 2026-08-11 `35f717f`; rung 5 2026-08-11 `07a147c`; rung 6a–6d
+2026-08-14 through `8bb96a4`). **Rung 6 shipped with a known defect** — see
+`rung-6-findings-2026-08-14.md` and its correction banner — repaired by
+`rung-6-repair-session-prompt.md`, which is **Gate 0 of the new ladder.**
 **Target:** the east-side town, built rung by rung, ending on a merchant with a
 stack of unsold scythes.
 **Orchestrated by:** Fable, one rung at a time.  **Fable plans then delegate to cheaper models.**
@@ -383,14 +406,16 @@ What this arc installs, and what it deliberately refuses.
 | Travel cost | `Person.get_travel_cost_to(place) -> float` — **returns HOURS** (Decision 14); straight-line ÷ speed today, roads/rivers/a world of towns later. Orders an action's own candidates and never enters a cross-action score (Decision 15) | 2 |
 | Means of travel | `Person.get_travel_speed() -> float` — takes no destination; a horse, a cart, a bad leg install here | 4 |
 | Who is where | `Town.find_people_at(place) -> Array[Person]` — the reverse index of the named place | 2 |
-| Labour clearing | `Workstation.claim(person) -> bool` — a **day-long tenancy**, renewed by use | 3 |
+| Labour clearing | `Workstation.claim(person) -> bool` — a **day-long tenancy**, renewed by use. Requires presence: you cannot reserve from your bed | 3 |
+| Public claim register | `Workstation.claimed_by` / `claimed_on_day`, **readable from anywhere in town** (Decision 30) — the notice board, arrived early and for free. Safe only because claims expire at the day boundary, so every station reads free to everybody at dawn | 3 / 30 |
 | Candidate pull | `Town.find_workstations(person, work_name) -> Array[Workstation]`, **sorted by travel cost** | 3 |
 | Idleness diagnosis | two counters on `Town` | 3 |
 | Carried goods | `Inventory.get_count(item_name) -> int` — mounted under Person, Place AND Workstation; `get_inventory()` is the accessor on all three | 5 |
 | Goods movement | `Inventory.hand_over(item_name, count, to_inventory) -> bool` — the one waist all goods pass through; take-then-add, both halves or neither | 5 |
 | Yield | `WorkStep.get_yield_per_hour(person) -> float` — a tool, a richer plot, a wound install here. Empty today, and **strength is deliberately not in it** | 5 |
 | Who benefits | `Workstation.owner` / `Place.owner` — may be nobody, may be somebody with no body | 6a |
-| Assigned intent | `Obligation` node under a Person | 6b |
+| Assigned intent | `Obligation` node under a Person — a **capability**, not a want (Decision 29): it grants access and sets the pay | 6b |
+| Payment | `Obligation.get_earned_today()` + `received_today` — the earned-minus-received **gap**, not a strategy object. Share-of-crop settles it continuously (gap ~0); a wage, a piece rate or a collected payday leave it open and it drives an action | 6b |
 | Permission | `Workstation.is_permitted_to(person) -> bool` — **employment grants access to land** | 6b |
 | Want | `target − stock`, computed in GATE, stored nowhere | 7 |
 | Exchange | `Trade` action + `can_afford(person, price) -> bool` | 7 |
@@ -404,12 +429,12 @@ What this arc installs, and what it deliberately refuses.
 | Version stamp on `set_stat` | A cache for a cache that doesn't exist. Cut unanimously. Adding it later touches one file. |
 | Stagger / budget / LOD / replay | Four solutions to a fifty-person problem. The `Population` loop is the seam; the scheduler is water. FR73 installs here later without a call-site change. |
 | A hauling profession | The point of rung 8 is that hiring finds *zero* candidates. |
-| Prices, wages, affordability | FR60 says output is leverage, never wealth. Money is plumbing here, not a system. |
+| Prices, wages, affordability | FR60 says output is leverage, never wealth. Money is plumbing here, not a system. **Amended by Decision 29: a SHARE OF A CROP is not a price**, so 6b's wage is not covered by this row — it needs no coin, no worth-per-item and no affordability. Two notes for whoever reopens this: FR60 on reading is about the **player's win conditions** (wealth without power does not advance the arc) and says nothing about coin existing inside the sim; and if coin ever lands, the elegant form is **a coin target on every person** — coin then appears in every man's deficit list, which is what dissolves the double-coincidence-of-wants without building a market. **Pricing exchange in utility ("utils") is refused outright** — a utility score is a private ranking device, and using it as a price makes utility interpersonally comparable, gives a different rate for every pair and every tick, and fleeces the desperate man by construction. A one-way door. |
 | Spoilage | Turns storage into a decision. Real, but not needed to reach scythes. |
 | Item-modifies-a-rate | The scythe's productivity effect waits for a buyer. Rung 8 builds only *item gates an action*. |
 | A decision log | O(actors × elapsed time) — the only unbounded complexity class in the design. Reputation is one number written at discharge. |
 | Demand recording / quota revision | Refused for this arc, **seams named and left empty** (Decision 1). Quotas are authored numbers and act as a floor. `reconsider_quota_levels()` exists, is uncalled, and hangs off `owner` — because a quota level is where authority touches the economy. Prices, haggling, clearing and the order book above stay refused outright. |
-| A notice board of who wants what | Deferred to its own rung *after* `Trade` works face to face — a seam earns itself by a collision you witnessed (Decision 1). When built it is a **query**, never a posted list: posting needs sweeping, and sweeping is incompatible with stagger for the same reason it was cut from rung 1 (Decision 2). |
+| A notice board of who wants what | Deferred to its own rung *after* `Trade` works face to face — a seam earns itself by a collision you witnessed (Decision 1). When built it is a **query**, never a posted list: posting needs sweeping, and sweeping is incompatible with stagger for the same reason it was cut from rung 1 (Decision 2). **Half of it landed at Decision 30 and costs nothing**: a claim register is a query, it needs no sweeping (lazy day expiry does the work), and it already answers *who has which station*. What remains deferred is discovery of **people and goods**, which has no register — and that is exactly where the collisions still are. |
 | Multi-party market clearing | Trade is **bilateral** — two people, one place, one tick. N-party matching is the labour-clearing algorithm already deferred twice, arriving through a third door (Decision 6). |
 
 ---
@@ -1061,6 +1086,31 @@ install. **A horse changes the first, a road changes the second.** `walk_speed`
 is calibrated from the FICTION (a five-to-fifteen-minute walk to the fields),
 never from a realistic metres-per-second, or every journey in the game is free.
 
+> ⚠️ **SUPERSEDED 2026-08-17 — this shipped, and it produced the boundary
+> dither.** The paragraph below describes what rung 4 built. **A claim is now a
+> public record**, readable from anywhere in town, and the positional condition
+> is deleted from the candidate query in **both** `work_the_field.gd` and
+> `sleep.gd`. Kept here because the *reasoning* below is still right about what
+> it was defending, and because knowing what shipped is how the dither is
+> understood.
+>
+> **Why it had to go.** Departure writes `current_place = null`, so one tick of
+> walking away from a held plot put work back on the ballot at full strength —
+> a two-tick cycle that pinned a man within one tick's walk of a plot he could
+> never have, all day. Measured: 1145 action changes on day two. The same loop
+> existed in `sleep.gd` for the twenty-first sleeper, which is rung 6c's whole
+> content.
+>
+> **Why the register is safe, when this said it was not.** Claims expire at the
+> day boundary, so **at dawn every plot reads free to everybody** — the
+> bootstrap lockout this feared cannot form. And `claim()` still requires
+> presence, so the race is preserved: both men read *unclaimed*, both set off,
+> the faster one takes it. What was refused was a *perceptual* fact (is a man
+> in that furrow); a tenancy is a *legal* one, and village knowledge.
+>
+> **The wasted journey is spent, not lost** — reading the register **is** the
+> notice board it was evidence for, arriving early and for free. See Decision 30.
+
 **FREENESS IS KNOWABLE ONLY WHERE YOU ARE STANDING** (Decision 15) — one
 condition on `WorkTheField`'s candidate query, and the thing that lets a man set
 off at all. Away from a plot he knows it EXISTS, not whether it is taken, so it
@@ -1077,16 +1127,19 @@ journey is the point**; it is the collision that later earns the notice board.
    as the fields.
 2. **In transit, `get_current_place()` is `null`** — not his origin, not his
    destination.
-3. A man walks toward a plot he cannot see the state of, and **work leaves his
-   ballot ON ARRIVAL.** Two exact assertions: while away from the fields with
-   the plot held by somebody else, `is_available_to` is **true** and his
-   distance is decreasing; on the tick he arrives it is **false** and
-   `get_last_scores()` records `NAN`. *(This replaced "outbid en route, distance
-   stops decreasing" — under Decision 15 he cannot see the plot until he reaches
-   it, so he is never outbid mid-stride.)*
-4. **A man does not walk to a plot he is standing next to and can see is
-   taken** — the same rule from the other side, so the gate is not simply always
-   true when away.
+3. ~~A man walks toward a plot he cannot see the state of, and **work leaves his
+   ballot ON ARRIVAL.**~~ **RETIRED 2026-08-17 (Decision 30)** — it asserts the
+   positional rule that caused the dither. **Replaced by two claims:** a man
+   **anywhere in town** reads a plot held by somebody else, `is_available_to` is
+   **false**, and **he never sets off** — his distance to the fields does not
+   decrease; and **at the day boundary the same plot reads free to him from the
+   same spot**, with nothing having moved, so expiry is what re-opens the race.
+4. **A man does not walk to a plot he can see is taken** — now the *same*
+   assertion as 3 rather than its other side, so keep only one of them and say
+   which. **New in its place:** a man one tick's walk off the fields, with the
+   plot held, does **not** flip back — assert `is_available_to` is false on the
+   arrival tick, the departure tick, and the tick after. That is the dither,
+   asserted directly, and it must break red against the pre-30 code.
 5. **A nearer station is chosen over an identical farther one.** A
    **candidate-ordering** assertion, not a score assertion. Build the second
    station in a probe-constructed world; do not add one to `game.tscn`, or rung
@@ -1107,6 +1160,15 @@ Hobb claims at 04:41 and Zoogs wakes at 06:01 to find it taken where he stands.
 plot until he arrives, so he walks the whole way and the drop happens on
 arrival. **The commute is mostly a day-0 event**, and that is honest — do not
 "fix" either here.
+
+> ⚠️ **AMENDED 2026-08-17 (Decision 30).** Under the public register the loser
+> IS now dropped mid-stride, and the Moment changes shape: both men set off at
+> dawn because every claim expired overnight, the faster man claims on arrival,
+> and **the loser learns on the road and turns aside** — a shorter walk, and a
+> collision that still happened. What he does with the rest of the day is the
+> open question, and it is the pressure that earns rung 7. The day-1-onward
+> version is unchanged: he wakes near the fields and reads it taken where he
+> stands.
 
 **Pull the camera back here.** From 6d onward the Moment is a man crossing from
 the fields to the tavern to the Inn, and a Moment you cannot see is not a gate.
@@ -1296,8 +1358,9 @@ deletes. `Drink` and beer are now rung 7.
 > **⚠ REVISED 2026-08-12 against Decisions 19–27. All four of this rung's open
 > calls are now settled and the text below is the settled version.** `social` and
 > the tavern are **gone from this rung** (Decision 25) and bread is authored
-> differently than the old text said (Decision 26). If you are reading
-> `_bmad-output/rung-6a-session-prompt.md`, note that it predates all of this.
+> differently than the old text said (Decision 26). *(`rung-6a-session-prompt.md`
+> predated all of this and was **retired 2026-08-19** for exactly that reason —
+> it is in git history if you want to read what it got wrong.)*
 
 **Seam:** a second drive competing with adenosine
 
@@ -1470,34 +1533,73 @@ item, bread quality, or buying anything.
 
 ---
 
-#### Rung 6b — The quota
+#### Rung 6b — The wage
 
-**Seam:** `Obligation` as stored intent, reaching the ballot as a peer action
+> **⚠ REVISED 2026-08-15 BY DECISION 29, AFTER SHIPPING.** This rung shipped as
+> *the quota* — a debt in grain the farmer discharges. Six days of measurement
+> showed **no man ever holds a grain**, so `MakeBread` can never fire and the
+> town starves around day seven with the ladder's first closed loop unreachable.
+> The cause is not tuning (see the warning block above). **The crop was never
+> the worker's to owe.** The text below is the settled replacement; what was
+> built and must now come out is marked.
+
+**Seam:** `Obligation` as stored intent, granting a capability and setting a wage
 
 - **Files:** `game/obligation.gd`, `game/actions/work_for_hire.{gd,tscn}`;
   the farm owner as a `Person` who issues them.
 - Per FR100/FR101/FR102/FR103 and the interpretation note above.
 
-```gdscript
-# Obligation — a Node under the Person who owes it.
-@export var owed_item := &"grain"
-@export var owed_count := 0
-@export var place_name := &""       # where it can be discharged — FR100 target
-@export var expires_on_day := -1    # FR103: nothing accumulates without bound
+> **The obligation stops being a want and becomes a CAPABILITY.** It grants
+> access to the land and sets what he is paid. **The wanting moves onto the
+> man's own larder** — he works because his own stores are short.
 
-func is_discharged() -> bool
-func get_weight_at_scoring_time() -> float   # FR102 seam. Authored constant today.
+That last clause is the point of the revision. Work's score shipped as
+`73 + 30 × sun`, which is the same hand-placed constant it has been since rung 4
+with a binary switch bolted on — exactly what Decision 19 called out as *a
+placeholder standing in for a gap that has not been built.* A wage is what
+finally dissolves it into the thing it was standing in for.
+
+```gdscript
+# Obligation — a Node under the Person employed under it.
+@export var place_name := &""       # where he is employed — FR100 target
+@export var expires_on_day := -1    # FR103: nothing accumulates without bound
+@export var share_of_crop := 0.25   # what today's labour earns him
+
+# The payment seam. A GAP, not a strategy object — share-of-crop settles
+# continuously so this sits at ~0 and nothing ever bids to collect; a daily
+# wage, a piece rate, or a payday he must walk to and ask for all leave it
+# open, and then the gap drives an action. It lives on Obligation because THAT
+# is the object that varies — one man may sharecrop while another is on a wage,
+# in the same town, and a function on WorkStep could only serve both by
+# branching on who the employer is.
+func get_earned_today() -> float
+var received_today := 0             # lazy day-stamp, like the tenancy
 ```
 
-When the quota is met the obligation stops contributing weight, work's utility
-collapses, and something else wins.
+**Where the yield lands, by ownership.** One branch in `WorkStep`:
 
-**Discharge goes to a Place, not to a person** (Decision 3). The obligation
-already names a `place_name` as its FR100 target, and rung 5 already put an
-`Inventory` under `Place`. **The farmer drops the sacks in the barn**, and
-`owner` from 6a is what makes the barn the farm owner's. That is better fiction
-*and* it means this rung ships no person-to-person transfer for rung 7 to
-duplicate. The farm owner later sells *from the barn*.
+- **plot has no owner** → the grain goes in the worker's sack. Unowned land is
+  the king's, i.e. nobody's, and a man keeps what he raises on it — which is
+  what keeps plain `WorkTheField` meaningful instead of dead library code.
+- **plot has an owner** → it goes to the owning Place's inventory. His land, his
+  crop, from the moment it leaves the ground. He is not handed it later.
+
+Two details that are easy to get wrong: **`add()`, never `hand_over()`** — the
+work *creates* the grain, so the world total rises here exactly as it does today
+and the conservation claim keeps its meaning; this is not a transfer and must
+not be written as one. And **`is_instance_valid` first** — `owned_by` is a
+stored `Person` reference.
+
+**`game/actions/work_for_hire_step.gd` is DELETED, not amended.** The whole file
+exists to do the capped per-tick handover, and under this there is nothing to
+hand over. Three repairs proposed while working this out cancel themselves along
+with it: a `Deliver` action, the sack-versus-pile question, and any fix to the
+`min(carrying, owed)` arithmetic.
+
+**The crop still lands in the barn** (Decision 3's routing survives; only the
+debt framing does not). `owned_by` from 6a is what makes the barn the farm
+owner's, and he later sells *from the barn*. This rung still ships no
+person-to-person transfer for rung 7 to duplicate.
 
 **`Workstation.is_permitted_to(person)` lands here**, now that there is
 something for it to read:
@@ -1526,22 +1628,44 @@ is the labour-clearing strategy already deferred (RANDOM / FIFO / CHARISMA_PICK 
 PRODUCTIVITY_RANK, deferred 2026-05-16), arriving through a side door. It would
 also be *"a manager that walks people and tells them what to do"* wearing a hat.
 
-**Probe:** a farmer with an unmet quota chooses work over rest at equal
-tiredness; the same farmer at quota does not; an expired obligation leaves the
-candidate set (FR103) rather than remaining owed; discharge moves grain into the
-barn's inventory and conserves the total; a farmer with no obligation finds the
-owned plot is not a candidate.
+**Probe:** ~~a farmer whose larder is short chooses work over rest at equal
+tiredness; the same farmer with a full larder does not~~ — **RETIRED by Decision
+31: work does NOT score on the larder gap.** Replace with: **a farmer's work
+score is unchanged by what is in his sack**, and **a farmer whose larder is short
+chooses `MakeBread` over `StayUp`, and with a full larder does not** — the gap
+moved to the verb that closes it in one act. Then: an expired obligation
+leaves the candidate set (FR103) rather than remaining employed; **the crop
+lands in the owner's store and the worker keeps his share**; a farmer with no
+obligation finds the owned plot is not a candidate; **a man working UNOWNED land
+keeps all of it.** *(The old "discharge moves grain into the barn and conserves
+the total" is retired: a conservation claim over `add` is still meaningful, a
+transfer claim is not, because there is no longer a transfer.)*
 
-**Moment:** **work's utility falls off the graph.** He hits quota mid-afternoon
-and the `WorkForHire` curve collapses while something else climbs to take it —
-one legible crossing on the instrument you already built. This is probably the
-single best gate in the plan, and it was previously buried under six other
-debuts.
+**Moment — RESTATED TWICE, and the original is dead.** It was *"work's utility
+falls off the graph as his larder fills."* **As shipped that was unreachable**
+(the tavern took the ninety minutes a day that met Hobb's quota, so work never
+discharged and never collapsed). **Decision 31 then removed the mechanism
+outright** — work no longer scores on the larder at all, so nothing about his
+stores can make its curve fall.
+
+**The replacement, and it is the same instrument:** **the crossing where a man
+stops working and starts baking.** `WorkForHire` stays flat through the day; his
+larder empties as he eats; `MakeBread` climbs until it crosses. One legible
+crossing on the graph you already built, driven by his own stores — and now by a
+verb that actually closes the gap in one act. **A prediction to check, not a
+target to engineer.**
 
 **Watch this at a SHORTENED day (Decision 13.)** This Moment happens ONCE A DAY, and rung 3 proved the shortened day is the instrument for exactly that shape — drag `day_length_seconds` down and the beat repeats often enough to see it hold. At the shipped 60 s a once-a-day crossing is over before you have focused on it, and "I did not see it happen" reads as a broken seam. *(Rung 4 is the one rung that wants the OPPOSITE — a LONG day — because a ten-minute commute at 60 s takes 0.4 real seconds. Match the instrument to whether you are watching one slow event or a repeating beat.)*
 
-**Do not build:** wages, contracts as a type, renegotiation, a quitting action,
-reputation, or a social graph. One obligation, one number, one expiry.
+**Do not build:** ~~wages,~~ contracts as a type, renegotiation, a quitting
+action, reputation, or a social graph. One obligation, one number, one expiry.
+
+*(The wages strike-through is Decision 29. A **share of a crop is not a price** —
+no coin, no worth-per-item, no affordability, and the Refused ledger's "prices,
+wages, affordability" row still stands for everything else it covers. **Payday
+as an event** — wages accruing as a claim he must find his employer to collect —
+is the richer shape and is deliberately NOT this rung; it is exchange, and it
+wants its own gate. The seam above is what it will read.)*
 
 ---
 
@@ -1565,6 +1689,21 @@ standing; **a sleeper still holds his bed after a day boundary passes
 mid-sleep**; an abandoned bed does not survive one.
 
 **Moment:** one man left standing in the doorway while twenty sleep.
+
+> ⚠️ **AS SHIPPED, HE PACED THE DOORWAY — Decision 30.** `sleep.gd` hand-copied
+> `work_the_field.gd`'s positional freeness check, so it hand-copied the dither
+> with it: the twenty-first sleeper arrives, every bed reads taken, sleep leaves
+> his ballot; one step away the beds read free again, and his adenosine is
+> pinned at the ceiling so sleep buries everything else, and he turns round. All
+> night. **The public claim register is what makes this rung's Moment watchable
+> at all** — he reads the Inn full from where he stands and has to do something
+> else with his night, which is the man this gate was built to produce.
+>
+> **The race survives here for a different reason than at the fields.** Bed
+> claims are all expired by dusk, so twenty-one men set off at once and the
+> claims land *while they converge* — the twenty-first still learns on the road
+> or at the door. Plot claims resolve at dawn and hold all day, which is why the
+> register saves a pointless walk there and changes almost nothing here.
 
 ---
 
@@ -1595,6 +1734,17 @@ mid-sleep**; an abandoned bed does not survive one.
   used to read "travel cost is a score term (rung 4)", which would put a commute
   into the comparison between socialising and everything else and let geography
   veto a want. If it herds anyway, that is a curve to tune, never a rule to add.
+
+**The empty-venue trickle — Decision 32.** `SocialiseStep` has two rates:
+`company_per_hour = 30` with somebody there, and `change_of_scene_per_hour`
+alone. **The second is 6.0** (shipped at 18, which was 56% as good as company net
+of upkeep and bent *company is the payoff*). **It is a placeholder with a named
+deletion date:** delete it the day failure-marks-the-candidate lands, at which
+point an empty venue drops off *that man's* list for a while and he goes to bed.
+**It cannot be fixed the way the plot dither was** — the tavern's occupancy is
+already public; the design deliberately refuses to gate on it, or the first man
+never sets off (Decision 28's bootstrap hole). Marking preserves the bootstrap
+because the mark only forms *after* a visit.
 
 **Probe:** a man with nothing else on his ballot walks to the place holding the
 most people, cost-weighted; **after N simulated days no single place ever held
@@ -1663,9 +1813,31 @@ in the town. `owner` itself lands at 6a because 6b's barn needs it.)*
 > - **`WorkForHire` extends `WorkTheField` and replaced it on the authored
 >   farmers.** The library still has `WorkTheField` for common land; nothing
 >   authored uses it. `WorkForHire` scopes its candidates to the obligation's
->   named place, and its step delivers each whole grain into the place's
->   inventory capped at what is still owed today — **the surplus a man holds
->   past quota stays his, and that is rung 7's tradable stock.**
+>   named place.
+> - **⚠ ITS DELIVERY LEG IS WRONG AND IS BEING DELETED — Decision 29
+>   (2026-08-15).** This block previously claimed *"the surplus a man holds past
+>   quota stays his, and that is rung 7's tradable stock."* **That state is
+>   unreachable at any tuning.** Grain comes off one whole unit at a time and
+>   `WorkForHireStep` delivers in the same tick, so `min(carrying, remaining)` is
+>   always `min(1, ≥1)`; and the tick the quota is met, `get_utility_score`
+>   returns 0.0 on the next DECIDE. **Meeting quota and stopping work are the
+>   same event**, so no man ever holds a grain, `MakeBread` can never fire, and
+>   the town starves around day seven. Decision 29's answer is not to fix the
+>   arithmetic: **the crop belongs to the landowner, and a worker is paid rather
+>   than indebted.** See Rung 6b below.
+> - **⚠ "ZOOGS IS NO LONGER SHUT OUT" IS FALSE — Decision 30 (2026-08-17).**
+>   The six-day measurement credits the losing farmer with 19 worked hours and
+>   reads rung 5's inequality as fixed. **He produced zero grain.** There is no
+>   `release()` and a claim is a day-long tenancy, so a plot does **not** free
+>   when its holder walks to the tavern — he holds it to midnight. The stronger
+>   man wins every dawn, so the loser could not touch that plot at any hour on
+>   any measured day. The 19 hours are the **boundary dither**, and the pump
+>   counted the *name* of his current action; half of every dither cycle is
+>   genuinely named work, because it is the work step walking him back to the
+>   plot. Hobb's 63.7 hours against 63 grain is one-for-one and leaves nothing
+>   for anyone else to have made. **Any future measurement of work must count
+>   ticks that reached the yield, never ticks whose action was named work**, and
+>   the existing numbers must not be re-quoted.
 > - **Socialise's candidates are GATHERING PLACES, not occupied places**
 >   (author's call, 2026-08-14): `Place.is_gathering_place`, true on the
 >   tavern, later the square. A lonely man goes where company is TO BE

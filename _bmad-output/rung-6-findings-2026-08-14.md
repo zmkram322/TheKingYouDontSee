@@ -15,6 +15,38 @@ Read Part 1 first. The rest is context for it.
 
 ---
 
+> ## ⚠ Corrections, 2026-08-17 — read before quoting anything below
+>
+> Two statements in this file are **false**, and both are in the appendix's
+> reading of the six days. They are left in place because the rest of the
+> measurement is sound and because the errors are instructive.
+>
+> **1. *"Zoogs is no longer shut out — he works 19 hours because Hobb stops for
+> the tavern and the plot frees."*** The plot does **not** free when Hobb goes
+> drinking. There is no `release()`, deliberately, and a claim is a **day-long
+> tenancy** — he holds it to midnight. Hobb is stronger, rises at 04:47 and
+> walks faster, so he wins every dawn race, so Zoogs could not touch that plot
+> at any hour on any measured day. **Zoogs produced zero grain.** His nineteen
+> hours are the dither, and the pump counted the *name* of his current action;
+> half of every dither cycle is genuinely named work, because it is the work
+> step walking him back. Hobb's 63.7 hours against 63 grain is one-for-one and
+> leaves nothing for anyone else to have made. **Rung 5's inequality was never
+> fixed — it was reformatted from a man standing still into a man pacing.**
+>
+> **2. Any "worked hours" number in this file.** They measure action name, not
+> labour. Do not re-quote them; a future counter must count ticks that reached
+> the yield.
+>
+> **Findings 1 and 2 are both settled.** Finding 1 → **Decision 29**: the crop
+> belongs to the land and a worker is paid, not indebted. Finding 2 → **Decision
+> 30**: a claim is a public record, read from anywhere in town, and the
+> positional freeness check is deleted from `work_the_field.gd` **and**
+> `sleep.gd` — which carried the identical dither for the twenty-first sleeper.
+> Item 3 of Part 5, the standing-want pricing rule, is **still unruled** and will
+> take a number later than 30.
+
+---
+
 ## Part 1 — Three findings that want a decision
 
 ### 1. Nobody can ever bake, and the town starves around day eight

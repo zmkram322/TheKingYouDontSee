@@ -19,6 +19,54 @@ tracks their resolution.
 
 ---
 
+## Index
+
+*Added 2026-08-19. Thirty-three sections is past the point where "highest number
+wins" can be applied by reading the file. **Scan up from the bottom** — a later
+ruling narrows an earlier one more often than it contradicts it.*
+
+| # | Settles | Narrowed by |
+|---|---|---|
+| 1 | Where "want" comes from — `find_candidates()`, never a named partner | 19, 20 |
+| 2 | How a workstation claim expires — day-long tenancy, read lazily | 30 |
+| 3 | How rung 6 gets cut — five gates, not one | 25, 26 |
+| 4 | `move_and_slide` is not used; `GoToStep` integrates position by hand | |
+| 5 | World time is denominated in **hours**, everywhere below `Clock` | |
+| 6 | What a handoff is — sync, async, and the shape of a trade | 29 |
+| 7 | Identity check vs travel cost — which question a gate may ask | 15 |
+| 8 | Rung 9 splits into 9a–9d | |
+| 9 | Rung 0's harness, corrected against the engine | |
+| 10 | How a Person reaches the world — pulled off `Population`, never wired | |
+| 11 | The sleep cycle is anchored to the sun | |
+| 12 | How two people differ — authored stats, not classes | |
+| 13 | The rung-3 Moment reads at a **shortened** day | |
+| 14 | Travel cost is subtracted, and denominated in hours | 15 |
+| 15 | What distance may decide, and what a man can know from afar | 30 |
+| 16 | What physics is for | |
+| 17 | **How an embodied player gets a place** — load-bearing for the boss ladder | 33 |
+| 18 | The sim owns duration; the animation illustrates it | |
+| 19 | **Every want is a gap** | 20–27 |
+| 20 | **The want formula** — `want = weight × gap^bite`; the sun lands on weight | 31 |
+| 21 | The baseline is a personality, not a floor | |
+| 22 | What may touch a want, and where — gates ask the world, never how much he wants it | |
+| 23 | Failure marks the candidate; success marks the world | 32 |
+| 24 | Unmet need is recorded where it failed | 32 |
+| 25 | Rung 6a lands hunger only | |
+| 26 | Where bread comes from, and the rung that closes the loop | |
+| 27 | Hunger is two gaps, and only the slow one is a lens | |
+| 28 | **Socialise's candidates are venues, not crowds** | 32 |
+| 29 | The crop belongs to the land. A worker is **paid**, not indebted. | 31, 33 |
+| 30 | **A claim is public.** Freeness is read from the register, not the doorstep. | |
+| 31 | A gap drives the verb that closes it in one go | |
+| 32 | The empty-venue trickle is a placeholder, not a mistake | |
+| 33 | **The player is the boss, and the ladder is re-cut from his seat.** A command is a *bid*. The verb menu is `get_available()` drawn. No code names a verb. | |
+
+**If you read only three: 19–27** (how wanting works — before writing any
+Action), **30** (how freeness is known — before writing any gate that asks where
+a man is standing), and **33** (whose seat the game is played from).
+
+---
+
 ## The frame everything below is expressed in
 
 The tick has three phases, and the whole design is easier to reason about when
@@ -466,6 +514,14 @@ is a query (loop the people and ask), not a posted list.
 > hunger only.** Everything else here — the seven-debut argument, the 6b/6c/6d
 > split, beer moving to rung 7, a man eating his own bread at 6a — is unchanged
 > and still governs.
+
+> **⚠ ALSO REFRAMED BY DECISION 29 (2026-08-15).** This section's 6b row, and
+> its plan-edit row, say *"discharge into the owning Place's inventory"* — and a
+> builder reading that today would build the thing 29 deletes. **The routing
+> survives: the crop still lands in the barn.** What does not survive is the
+> framing around it — the farmer is not discharging a debt, because the crop
+> was never his. He is paid a share of what he raises on his employer's land.
+> `WorkForHireStep` and its per-tick capped handover are deleted, not amended.
 
 **Settled 2026-08-09. Author's call. Do not reopen.**
 
@@ -2099,6 +2155,22 @@ predicted tableau has proved nothing about its seams.
 
 ### Ruling 1 — Freeness is knowable only where you are standing
 
+> ⚠️ **NARROWED BY DECISION 30 (2026-08-17). Read that one; the mechanism below
+> is retired, the purpose is not.** This ruling shipped and produced the
+> **boundary dither**: departure writes `current_place = null`, so one tick of
+> walking away from a held plot put work back on the ballot at full strength, and
+> a man pinned himself one step from a plot he could never have — 1145 action
+> changes in a day. `sleep.gd` hand-copied the check and the dither with it.
+>
+> **A claim is now a public record**, readable from anywhere in town. What this
+> ruling was defending survives by other means: the bootstrap lockout it feared
+> cannot form because **claims expire at the day boundary**, so every station
+> reads free to everybody at dawn; and the race survives because **`claim()`
+> still requires presence.** What it refused was a *perceptual* fact (is a man
+> standing in that furrow); a tenancy is a *legal* one.
+>
+> **Ruling 2 below is untouched** and remains in full force.
+
 Rung 3 built `WorkTheField`'s gate to ask whether a plot is **free** from
 anywhere in the world. With everybody standing in the same field that was
 invisible; the moment distance exists it is **omniscience**, and it is what
@@ -3478,3 +3550,772 @@ refuses by name.
 Not a defect to hide: on screen it reads as a man hovering at the edge of the
 field, and it resolves on its own as the sun lifts work clear. The author's
 call is whether it ships as a texture or earns the mechanism now.
+
+---
+
+## Decision 29 — The crop belongs to the land. A worker is paid, not indebted.
+
+**Settled 2026-08-15. Author's call**, made reading the six-day findings from
+rung 6. Changes the **contents** of rung 6b's `Obligation`, not its shape.
+
+> **Number note.** The rung-6 findings file proposes a standing-want pricing
+> rule and suggests it "should probably be Decision 29". That rule is **still
+> unruled** and will take a later number when it is settled. This section took
+> 29 because it was decided first.
+
+### The question
+
+Rung 6b ships work as an obligation to **deliver grain**: a man owes twelve a
+day, and `WorkForHireStep` hands over `min(carrying, still owed today)` on
+every tick it works. Six days of the shipped scene, measured:
+
+```
+                Zoogs    Hobb     Marle
+worked           19.0 h   63.7 h    0.0 h
+ends: grain          0        0        0
+bakes                0        0        0
+barn                63 grain over six days   (24/day owed between two men)
+```
+
+**No man ever holds a grain**, so `MakeBread`'s three-grain gate never opens,
+so the loop rung 6a2 exists to close — work → grain → bread → eat → work —
+cannot fire in the shipped scene at all. At two meals a day the fourteen
+authored loaves run out around day seven and the town starves with nothing to
+do about it.
+
+### Why this cannot be fixed by tuning, which is what made it a design question
+
+The findings file diagnoses it as *"the quota is never met, so the delivery cap
+never closes"* — which implies lowering `owed_count` would restore the surplus.
+**It would not**, and this is worth recording because it is the obvious fix and
+it is dead:
+
+- grain comes off the plot **one whole unit at a time** (`work_step.gd`), and
+  the delivery leg runs in the **same tick**, so `min(carrying, remaining)` is
+  always `min(1, ≥1)` and takes all of it;
+- the tick the twelfth grain is delivered, `is_discharged()` flips and
+  `WorkForHire.get_utility_score` returns **0.0** on the very next DECIDE.
+
+**Meeting the quota and stopping work are the same event.** There is no window
+on either side of it in which a man accumulates anything. At `owed_count = 3`
+Hobb finishes at 09:00 holding exactly zero. `work_for_hire_step.gd`'s own
+comment — *"the surplus a man holds past quota is rung 7's trade stock"* —
+describes a state the code cannot reach at any tuning.
+
+### The deeper thing underneath it
+
+Chasing the surplus turned up the actual error: **the grain was never the
+worker's to owe.** Hobb works Marle's land under Marle's employment. The crop
+is Marle's from the moment it leaves the ground. Modelling it as a debt Hobb
+discharges gives the farmhand ownership he never had, and then has to invent a
+mechanism to take it back off him one grain at a time.
+
+### What was settled
+
+> **The crop belongs to whoever owns the land. A worker is paid, not indebted.**
+>
+> An `Obligation` stops being a want and becomes a **capability**: it grants
+> access to the land and sets what he is paid. **The wanting moves onto the
+> man's own larder** — he works because his own stores are short, which is a
+> gap with a real source that shrinks as he works.
+
+That last clause is the point. Work's score today is
+`73 + 30 × sun` — the same hand-placed constant it has been since rung 4, with
+a binary switch bolted on, which Decision 19 already called out as *a
+placeholder standing in for a gap that has not been built.* Under a wage the
+placeholder finally dissolves into the thing it was standing in for.
+
+### The three code consequences
+
+**1. Where the yield lands, by ownership.** One branch in `WorkStep`:
+
+```gdscript
+# Unowned land is the king's, i.e. nobody's, and a man keeps what he raises on
+# it — which is what keeps plain WorkTheField meaningful instead of dead
+# library code. Owned land's crop is the owner's from the moment it leaves the
+# ground: he is not handed it later, it was never the worker's.
+#
+# add(), not hand_over(). The work CREATES the grain, so the world total rises
+# here exactly as it does today and the conservation probe keeps its meaning —
+# this is not a transfer and must not be written as one.
+#
+# is_instance_valid FIRST: owned_by is a stored Person reference, and a freed
+# owner would otherwise error on the next property read.
+```
+
+**2. `game/actions/work_for_hire_step.gd` deletes entirely.** The whole file
+exists to do the capped per-tick handover, and under this there is nothing to
+hand over. **Three things proposed while working this out cancel themselves**
+along with it — a `Deliver` action, the sack-versus-pile question, and any
+repair to the `min(carrying, owed)` arithmetic. That is the sign the reframe is
+right rather than merely different.
+
+**3. `Obligation` changes contents, not shape.** Same node, same parent, same
+expiry, same permission role. `owed_item` / `owed_count` become a wage.
+
+### The payment seam — a gap, not a strategy object
+
+Share-of-crop and a collected payday differ in **when** payment settles, not in
+how much, and that means **different call sites** — a share is settled from
+`WorkStep` as grain comes off; a payday is settled from an action with a walk
+in it. A pluggable strategy object would paper over exactly that difference and
+the mismatch would surface the day payday needed the walk.
+
+So the seam is the one question both shapes agree on, and it is the shape
+everything else in this project already is:
+
+```gdscript
+# obligation.gd
+#
+# What today's labour has earned him, and what he has actually had. The
+# difference is a GAP like any other, and it is what both payment shapes agree
+# on — they differ only in WHEN it is settled.
+#
+# Share of crop settles continuously, so the gap sits at ~0 and nothing ever
+# bids to collect. A daily wage, a piece rate, or a payday he must walk to and
+# ask for all leave it open, and then the gap drives an action.
+func get_earned_today() -> float
+var received_today := 0
+```
+
+**It goes on `Obligation` because that is the object that varies.** Marle
+sharecrops while a Lord's estate pays a wage, in the same town, at the same
+time — so a bare function on `WorkStep` could only serve both by branching on
+who the employer is, and *a number is authoring; a branch on who you are is a
+script.* Travel speed sits on `Person` for the identical reason.
+
+**Three things this buys:** shipping share-of-crop today installs payday's
+ledger for free (it is simply always zero); payday later is a **new Action**
+(gate: am I owed anything — score: the gap — step: not at him, walk; at him, be
+paid) and **no existing file changes**; and it arrives with the failure mode
+worth having — Marle cannot be found, or will not pay, and the gap just stays
+open.
+
+**`received_today` is stored state and survives the same defence already
+accepted for `delivered_count`:** more than one man can be paid out of the same
+barn, so the barn's total says nothing about which part was *this* man's pay.
+It genuinely cannot be recomputed from a snapshot. Same lazy day-stamp as the
+tenancy, so nothing sweeps it at midnight.
+
+**A `PaymentStrategy` resource with a registry is refused** — not wrong in
+principle, but it would be a pattern with exactly one implementation, and
+`brain.gd` already states the rule: *systems built before they're needed get
+thrown away.* The day a second employer needs a different **shape** rather than
+different numbers, the function above is already at the right seam to grow into
+one.
+
+### What this does NOT change — most of the prior thinking stands
+
+Recorded explicitly, because the session that produced this decision initially
+over-read it as a course correction and it is not one:
+
+| Still stands | Note |
+|---|---|
+| **Discharge into a Place** (Decision 3) | The grain still lands in the barn. Only the *reason* changes — not "he pays down a debt" but "the crop belongs to the landowner." The routing was right. |
+| **`Obligation` as stored intent, a Node under the Person** | Untouched. Employment cannot be worked out by looking at the world. |
+| **Expiry vs discharge as two facts** | Untouched, both still needed. |
+| **`is_permitted_to` — employment grants access to land** | Untouched, and *better* under a wage: you work his field because he hired you, and the crop is his. |
+| **Bilateral exchange, two present bodies** (Decision 6) | Untouched, and it is what payday uses when it arrives. |
+| **Want = target − stock** (Decision 1) | Untouched, and it gets its first real use as the worker's own larder target. |
+| **The 6a–6d cut, the tenancy, the knowledge rule, exertion** | Untouched. |
+
+### What was deliberately NOT taken, and why
+
+The session that produced this ranged much wider. Recorded so it is not
+re-litigated from scratch, and not acted on:
+
+| Considered | Verdict |
+|---|---|
+| **Coin, worth-per-item, a profit motive** | **Not now.** Wages in grain need no coin, no prices and no exchange, so the *"prices, wages, affordability"* entry in the Refused ledger **stays refused** and the ladder ordering does not move. Noted for the record: that ledger entry justifies itself with FR60, which on reading is about the **player's win conditions** (wealth without power does not advance the arc) and says nothing about coin existing inside the sim. If coin is ever wanted, that re-reading is the door, not a reversal. |
+| **Pulling `Trade` forward ahead of obligations** | **Not taken** — see the next section, which is the reason it deserves a real hearing next time rather than a reflex. |
+| **Everyone holds a coin target, making coin universally accepted** | Named as the elegant answer to the double-coincidence-of-wants **if** coin ever lands. Not built. |
+| **Pricing exchange in utility ("utils")** | **Refused.** A utility score is a *private ranking device*; using it as a price makes utility interpersonally comparable, puts a private number into the world as a public quantity, gives a different rate for every pair and every tick, and fleeces the desperate man by construction. A one-way door. Authored worth per item is the cheaper answer if worth is ever needed. |
+| **Scoring an action for every gap it closes** | **Right idea, not yet.** No action in the shipped game closes two gaps — eating is hunger, socialising is loneliness, work is a binary promise. The first genuinely multi-purpose act (eating *at the tavern*, working *in company*) does not exist. **Three traps named for when it lands:** positive terms only, never a negative term for a gap the action *opens* (that is cost re-entering the cross-action sum, banned by Decision 15); ceilings **stack**, so the sum needs its own ceiling rule; and a mediocre multi-gap action will otherwise dominate a good single-gap one. |
+| **Scoring an action for gaps it closes *later*** ("work scores for hunger because work becomes bread") | **Refused** — that is the lookahead Decision 20 closed. A **standing target is that chain already compiled**: he does not reason forward, he feels short *now*. |
+| **A brain that decides how long to work** | **Refused as stated** — a decided duration is a plan on the person, breaks free interruption, makes *why is he doing that* unanswerable from the screen, and is Decision 23's refused commitment bonus with a clock in it. **The line: the job may know how long it takes; the man may not decide how long he will do it.** Work-in-progress living on a station (`output_part_made` today, the Recipe at 9a) is the legal form. |
+| **Exertion feeding hunger** | **Not a decision — a two-line omission.** `exertion` is already built on `ActionStep` and already multiplies `get_adenosine_accumulation()`; `get_hunger_accumulation()` does **not** read it, and **nothing in the project ever sets `exertion` above its 1.0 default.** So working and drinking currently cost the body exactly the same. Fix whenever wanted: a number on `WorkStep`, and a multiply in the hunger accumulator. |
+
+### The prediction that was already on the record
+
+Worth writing down, because it changes how the next reorder proposal should be
+weighed. **Cloud Dragonborn called this on 2026-08-09**, in the roundtable that
+produced Decision 3:
+
+> rung 6 moves goods three times before the goods-moving seam exists… So rung 6
+> ships a transfer path **rung 7's first act is to delete**, and deleting a
+> shipped path is the exact failure the plan exists to prevent.
+
+His proposed order was *inventory → an action that consumes an item → a want →
+**trade** → an obligation that creates a second kind of want*, on the grounds
+that **obligations are the most expensive want in the game**. He was overruled
+on the reasoning that Place-discharge fixed it without moving anything.
+
+**The mitigation solved the stated symptom and missed the actual problem.**
+Routing discharge to a Place did successfully avoid shipping a person-to-person
+transfer. But the path that has to come out is not person-to-person — it is the
+per-tick delivery leg, and it exists because there was no ownership-and-payment
+model to hang employment on. The barn was never the hard part; having nothing
+to pay a man with was.
+
+This decision fixes it **without** reordering, because a share of a crop is not
+a price. But if a third occasion arises where a rung has to invent a fake
+economy because the real one is two gates away, the reorder should be granted
+rather than mitigated again.
+
+### Left open
+
+- **Payday as an event.** The richer shape, and the one that forces
+  co-presence. Wants its own gate; the ledger above is what it will read.
+- **Whether the work gap stays binary.** **CLOSED BY DECISION 31 (2026-08-18):
+  binary for the day's labour, proportional for the larder — because work closes
+  the larder one grain an hour and would otherwise fight itself all day.**
+  Original text follows. Decision 22's *a promise is kept or it
+  is not* was reasoned about a grain debt. Under a wage the binary thing is
+  arguably the day's labour, and the proportional thing is the larder. **Not
+  settled** — decide it when the larder target is authored.
+- **A pile in the field.** Yield landing on the *plot's* own inventory rather
+  than the place's would give Marle a collect-and-haul day and put visible,
+  stealable grain in the world. Deferred: it needs Marle to have a hauling
+  action, and the minimum does not.
+- **What Marle does all day.** He still has no work action and no path to a
+  grain of his own, so he starves on top of a full barn around day seven like
+  everybody else. This decision does not fix that; selling from the barn is
+  rung 7's.
+
+### Plan edits this implies
+
+**APPLIED 2026-08-15**, every row, same day it was settled.
+
+| Where | Edit | Applied |
+|---|---|---|
+| Build plan, Rung 6b | Retitled *The wage*. Work is a wage relationship, not a grain debt; `Obligation` grants a capability and carries `share_of_crop`, not `owed_item`/`owed_count`. Revision banner added. | **applied** |
+| Build plan, Rung 6b | The yield lands by ownership — unowned land to the worker's sack, owned land to the owning Place's inventory, via `add` not `hand_over`, `is_instance_valid` first. `WorkForHireStep` is deleted, not amended. | **applied** |
+| Build plan, Rung 6b | The earned-vs-received seam on `Obligation`, with share-of-crop as the shipped body and the reason it is not a strategy object. | **applied** |
+| Build plan, Rung 6b probe | *"discharge moves grain into the barn and conserves the total"* retired; replaced by *the crop lands in the owner's store and the worker keeps his share*, plus a new claim that a man on **unowned** land keeps all of it. | **applied** |
+| Build plan, Rung 6b Moment | Restated against the larder gap, and marked as a **prediction to check** rather than a target — it was unreachable as shipped (the tavern took the margin that met the quota). | **applied** |
+| Build plan, Rung 6b *Do not build* | *"wages"* struck through, with the share-is-not-a-price note and payday deferred to its own gate. | **applied** |
+| Build plan, rung-6 warning block | The *"surplus past quota stays his — rung 7's tradable stock"* claim marked **false and unreachable at any tuning**, with the two-line mechanism. | **applied** |
+| Decision 3 | Banner: its 6b discharge row is reframed — routing survives, the debt framing does not. | **applied** |
+| Seam ledger → *Installed* | **Payment** added; *Assigned intent* amended to say `Obligation` is a capability, not a want. | **applied** |
+| Seam ledger → *Refused* | *"Prices, wages, affordability"* stays, amended: a share of a crop is not a price; the FR60 re-reading and the coin-target-on-everyone form recorded as the door if coin is ever wanted; **utils-as-price refused outright.** | **applied** |
+| Rung 6a2 (`MakeBread`) | Unblocked — a worker who keeps his share can finally hold three grain. No text change needed. | n/a |
+
+---
+
+## Decision 30 — A claim is public. Freeness is read from the register, not from the doorstep.
+
+**Settled 2026-08-17. Author's call, and the mechanism is the author's proposal.
+Narrows Decision 15's Ruling 1** — which stands in its reasoning and in its
+purpose, and is wrong about one thing it did not know at the time.
+
+### How this came up
+
+Rung 6 shipped and was measured over six days. **Zoogs changed what he was doing
+1145 times on day two. Hobb changed 224.** The loop, traced against the code
+rather than inferred:
+
+1. He walks to the fields. A plot's freeness is unknowable from afar
+   (Decision 15), so work stays on his ballot and the journey has a cause.
+2. He arrives. Hobb has the plot. Work leaves his ballot on that tick — not
+   outbid, **gated out**, which is the hole in the graph rung 4 was built to
+   draw.
+3. `Socialise` is now his top bid, so he takes one step toward the tavern.
+4. **The first tick of any journey writes his place to null** (`go_to_step.gd`,
+   *departure writes null*, and it is correct — a man on the road is at no
+   place, which is what stops the town standing him with everyone else who is
+   also walking). "No place" is not "the plot's place", so the freeness check
+   never runs, and **work returns at full strength.** It buries `Socialise` and
+   he turns round.
+5. Arrival is an overshoot clamp, not a radius, so one tick's walk from the
+   field means he is back on it next tick. Go to 2.
+
+**It is not a wobble. It is a two-tick cycle that pins him within one tick's
+walk of a plot he cannot have.** He does not drift toward the tavern and get
+pulled back — he never gets a second step. It breaks only at dusk, when work's
+daylight term falls far enough that loneliness can win from the road.
+
+**Every rule in that loop is individually correct, and each one would be
+re-derived if deleted.** There is no bad decision in it to reverse. That is what
+makes it worth a decision rather than a fix.
+
+### Two things the findings file got wrong, corrected here
+
+**There is no `release()`, deliberately, and a claim is a day-long tenancy.**
+Walk away from a plot and it stays yours until the next day boundary
+(`workstation.gd`: *"abandoning a plot IS simply not renewing it — walk away and
+the claim lapses at the next day boundary on its own"*).
+
+So the appendix's *"Zoogs works 19 hours because Hobb stops for the tavern and
+the plot frees"* **is false. The plot does not free when Hobb goes drinking.**
+He holds it to midnight, and Zoogs standing in that field at 20:30 is still
+refused.
+
+Which forces the second correction. Hobb is stronger, sleeps less, rises at
+04:47 and walks faster, so **he wins every dawn race**, so on every measured day
+Zoogs could not touch that plot at any hour. **Zoogs produced zero grain over six
+days.** His nineteen "worked" hours are the pump counting the *name* of his
+current action, and half of every dither cycle is genuinely named work — it is
+the work step, walking him to the plot. The action was real; the labour was not.
+
+The arithmetic agrees independently: Hobb's 63.7 hours against 63 grain in the
+barn is one-for-one with the remainder left in the furrow, and leaves nothing
+for anyone else to have produced.
+
+**So rung 5's inequality was never fixed. It was reformatted from a man standing
+still into a man pacing**, and the instrument reported the pacing as work. Any
+future counter must measure furrow time, not action name.
+
+### Why it cannot be fixed by tuning, and what was refused
+
+A penalty on work means work still bids and merely bids lower — and now there is
+a **margin** to tune: large enough that `Socialise` wins at the fence, small
+enough that work still wins everywhere else. That number would be retuned
+forever, and it is the banned shape (building the observation instead of the
+cause).
+
+| Considered | Verdict |
+|---|---|
+| **A commitment bonus** — a bump for continuing what he chose last tick | **Refused, already, by name** (Decision 23). It is a stored decision, and it is what free interruption is currently paying for. |
+| **A cooldown** — a timer barring re-choice | **Refused, already, by name** (Decision 23). Same objection, with a clock in it. |
+| **A soft radius** — knowledge fading with distance rather than at the doorstep | **Refused.** A radius model was built and reverted 2026-08-08; `go_to_step.gd` names it and explains that it flickers at its own edge, overlaps where places sit close, and makes arrival frame-rate dependent. This is the obvious first idea and it is a dead end. |
+| **Marking the candidate** — the man stores what he saw, decaying (Decisions 23 + 24) | **Not needed here, and not spent here.** It would work, but it invents a per-person knowledge store with a decay rate to tune and a write-in-the-decide-phase problem to resolve — to hold a fact **the world already holds publicly.** Left intact for the failures that have no public record: an empty tavern, and rung 7's refused trade partner. |
+
+### The ruling
+
+> **A claim is a public record. `claimed_by` and `claimed_on_day` are readable
+> from anywhere in town, and a station held by somebody else is not a candidate
+> no matter where the asking man is standing.**
+>
+> **The register says whether it is worth going. His feet decide whether he gets
+> it.**
+
+`Workstation.is_free_for` still does not change — it has always reported the
+plain truth about itself, and that was always right.
+
+### Why this is not the omniscience Decision 15 refused
+
+Three reasons, and the first is the load-bearing one.
+
+**1. Claims expire at dawn, so nobody is ever locked out at the start.**
+Decision 15's objection — *"a plot he can see the state of from his bed stops
+him ever setting off"* — assumes a state that is always visible and can be
+permanently bad. It is not. `is_free_for` says a claim stamped before today is
+not a claim, so **at dawn every plot in the world reads free to everybody.** The
+bootstrap hole cannot form. The daily expiry, shipped for an unrelated reason,
+is what makes the register safe to read.
+
+**2. `claim()` still requires presence, so this creates no reservation.** Two men
+both read *unclaimed* at dawn, both set off, and the faster one takes it on
+arrival. **The race is preserved by construction.** You still cannot reserve a
+plot from your bed.
+
+**3. Decision 15 refused a perceptual fact; this is a legal one.** *Is a man
+physically standing in that furrow right now* is something you would have to see.
+*Whose field is it today* is a tenancy — village knowledge, the same kind
+`socialise.gd` already grants for who is in the tavern, whose header says
+*"everybody knows the tavern is a tavern, and roughly who's in it, even from
+across town"* and explicitly invites this revisit.
+
+**And the door is already ajar.** `Sleep.get_best_candidate` reads
+`station.claimed_by == person` directly, from anywhere in town, with no
+positional check — added to fix a real bug where a sleeping man's best candidate
+drifted to a different bed and the one he was lying in read as abandoned. **A man
+already reads his own claim from across town.** This makes an existing
+inconsistency consistent rather than opening something new.
+
+### What it costs, honestly
+
+**The wasted journey shrinks to the race.** Decision 15 protected it as *"the
+collision that later earns a notice board"* — evidence that a discovery index is
+worth building. **Reading the register IS that notice board**, and it costs
+nothing, because the field already exists and already expires correctly. The
+design pressure is **spent, not lost**. Recorded plainly so nobody later reads
+this as the evidence having been discarded.
+
+What survives is the race itself, which is where the collision was always
+interesting: at dawn for plots, at dusk for beds.
+
+**It exposes rung 5's inequality nakedly, and that is the point.** Today Zoogs
+paces the fence and the counter calls it work. Afterwards he reads the register
+at dawn, sees Hobb has it, and spends the whole day visibly with nothing to do.
+That is not a new problem — it is the existing problem with the camouflage taken
+off. **The strongest argument for this ruling is that it makes the ladder's real
+unsolved problem legible instead of disguised as productivity.**
+
+### Beds, checked rather than assumed
+
+The same positional short-circuit is hand-copied into `sleep.gd`, and it carries
+the same dither — **in the exact scenario rung 6c was built to show.** The
+twenty-first sleeper walks to the Inn, finds every bed taken, sleep leaves his
+ballot; one step away the beds read free again, and his adenosine is pinned at
+the ceiling so sleep buries everything, and he turns round. The file says *"that
+man is this rung's content"*, and what he actually does is pace the doorway all
+night.
+
+**So this fixes the dither in both places it exists, not one.**
+
+The contention survives there too, and for a different reason than plots: bed
+claims are all expired by dusk, so everyone sets off for the Inn at once and the
+claims land **while men are converging.** The twenty-first learns on the road or
+at the door, exactly as he does today. Plot claims resolve at dawn and hold all
+day, which is why reading them from afar saves a whole pointless day of walking;
+bed claims resolve live, so reading them from afar changes almost nothing.
+
+### What changes in the code
+
+Delete the positional short-circuit from the candidate check — **in both copies,
+by hand.** `sleep.gd`'s header says the duplication is deliberate and that 9b's
+baker queuing for a millstone is the third consumer that earns pulling the shape
+into a common home; that judgement is unchanged, and this is not the occasion.
+
+```gdscript
+# work_the_field.gd and sleep.gd, both:
+func _is_a_candidate_for(station: Workstation, person: Person) -> bool:
+	return station.is_free_for(person)
+```
+
+The comment block above `_is_a_candidate_for` in `work_the_field.gd` argues the
+deleted rule at length and must be **replaced**, not trimmed — it is the second
+comment in this file's history to argue a superseded position after the code
+moved under it, and the first one cost a day.
+
+### What does NOT change
+
+| | |
+|---|---|
+| `Workstation.is_free_for` | Untouched. It always reported the plain truth; only who may ask has changed. |
+| `claim()` requiring presence | Untouched, and it is what keeps the race real. |
+| No `release()` | Untouched. What would earn one is an action that scores giving a station up early; nothing scores that yet. |
+| Travel cost | Untouched. Still orders candidates, still never enters a cross-action score (Decision 15's Ruling 2, which this does not touch at all). |
+| Decision 23 / 24 (failure marks the candidate) | **Still wanted, still unbuilt.** Two symptoms remain with no public record to read — the empty tavern, and rung 7's refused trade partner. This ruling removes the one symptom that had a register and closes nothing else. |
+| The telemetry-from-gate exemption | Untouched, and notably **not widened** — nothing here is written from a gate. |
+
+### Left open
+
+- **What Zoogs does with an empty day.** This ruling gives him back the hours the
+  dither was eating and does not say what fills them. Under Decision 29 he has a
+  larder to want for and no way to fill it, so the honest answer is probably
+  *nothing yet*, and that is the pressure that earns rung 7.
+- **Whether the loser should ever get the plot.** With a day-long tenancy and no
+  release, losing the dawn race costs the whole day. That may be correct and
+  brutal, or it may want a second plot; it is a scene-authoring question, not a
+  substrate one.
+- **A furrow-hours counter.** Any measurement of work from here must count ticks
+  that reached the yield, not ticks whose action was named work. The existing
+  numbers cannot be trusted and should not be re-quoted.
+- **Whether `Socialise` should read venue occupancy the same way.** It already
+  does, for company as a tiebreak. Nothing to change; noted so the asymmetry is
+  not mistaken for an oversight later.
+
+### Plan edits this implies
+
+**APPLIED 2026-08-17**, every row, same day it was settled.
+
+| Where | Edit | Applied |
+|---|---|---|
+| Decision 15, Ruling 1 | Banner: narrowed by this decision. Its purpose (no bootstrap lockout, the wasted journey has a cause) is preserved by dawn expiry + presence-to-claim; its *mechanism* (positional knowledge) is retired. | **applied** |
+| Build plan, Rung 4 | The freeness-is-local block carries a supersession banner — what shipped, the two-tick mechanism that made it dither, why the register is safe where this said it was not, and that the wasted journey is spent rather than lost. Original text kept beneath it. | **applied** |
+| Build plan, Rung 4 probe | Claim 3 (*work leaves his ballot on arrival*) struck; replaced by *he reads a held plot from anywhere and never sets off* + *the day boundary re-opens it with nothing having moved*. Claim 4 replaced by the dither asserted directly across the arrival, departure and following ticks — it must break red against the pre-30 code. | **applied** |
+| Build plan, Rung 4 Moment | Amended: the loser IS now dropped mid-stride, learns on the road and turns aside. Day-1-onward unchanged. | **applied** |
+| Build plan, Rung 6c | Banner: the twenty-first sleeper paced the doorway all night on the hand-copied check; the register is what makes this rung's Moment watchable. Plus why the bed race survives for a different reason than the plot race. | **applied** |
+| Build plan, rung-6 warning block | *"Zoogs is no longer shut out"* marked **false**, with the no-`release()` mechanism and the rule that work must be measured in ticks that reached the yield. | **applied** |
+| Findings file (`rung-6-findings-2026-08-14.md`) | Correction banner at the top: both false appendix statements, and where findings 1 and 2 were settled. | **applied** |
+| Seam ledger → *Installed* | **Public claim register** added; *Labour clearing* amended to say `claim()` requires presence. | **applied** |
+| Seam ledger → *Refused* | *Notice board* row amended: half of it landed here for free and needs no sweeping; what stays deferred is discovery of **people and goods**, which has no register — and that is where the collisions still are. | **applied** |
+
+---
+
+## Decision 31 — A gap drives the verb that closes it in one go
+
+**Settled 2026-08-18. Author's call. Closes the item Decision 29 left open**
+(*"whether the work gap stays binary"*).
+
+### The problem this heads off
+
+Decision 29 moved the wanting onto a man's own larder. Read literally, that makes
+`WorkForHire`'s score **the larder gap** — and then every grain he earns lowers
+his desire to earn the next one. Work is the first action in the game whose own
+output slowly closes the gap that drives it.
+
+Worked at a plausible authoring — larder target 20, weight 73, bite 2:
+
+| Grain in sack | Work at noon | Loses to a lonely man's `Socialise` (max 90)? |
+|---|---|---|
+| 0 | 103 | no |
+| 5 | 71 | only when nearly saturated |
+| 10 | **48** | **yes, from 73% lonely** |
+
+He walks to the tavern, company drains the loneliness, work wins again, he walks
+back. **Travel cost is barred from cross-action scores (Decision 15), so nothing
+damps the commute** — and the world genuinely changes on every flip, so the
+"did the world change?" test blesses it. The afternoon is spent walking.
+
+### The ruling
+
+> **A gap drives the action that closes it in ONE act. An action whose output
+> closes its own driver slowly and continuously must not be scored on that gap.**
+
+`Eat` closes hunger in a tick. `MakeBread` closes it in one act. **Work closes
+the larder one grain an hour across a whole day, so it fights itself the entire
+time.** That is a mismatch between the want and the verb, not a tuning problem,
+and no coefficient fixes it.
+
+**So work scores on the day's labour, which is binary** — he is employed and
+there is a day's work — keeping the flat shape `pull + daylight_pull * sun` that
+already tunes correctly against `StayUp` and bedtime. **The larder gap drives
+eating, baking, and (rung 7) buying.** Decision 29's substance survives: the
+wanting still lives on his own larder, one step removed from the shovel.
+
+### What was rejected
+
+| | Why not |
+|---|---|
+| **Tune around it** — a bigger target or a lower bite so work never falls far enough to lose | Fragile by construction: it must be re-tuned every time a new want lands, and it is the banned shape (a number standing in for a mechanism). |
+| **A switching cost on `current_action`** | `interrupt_threshold`, refused by Decision 23 and again here. |
+| **`output_part_made` as the band** | **It is not a switching cost at all.** The part-turned furrow stays in the plot for whoever comes next, so walking away costs a solo worker **nothing**. Recorded because it was proposed in session and is wrong. |
+
+### Left open
+
+- **What the larder target is.** Unauthored. It decides how hungry a man has to
+  get before baking beats drinking, and nothing else now.
+- **Whether a paid man ever stops working early.** Under a binary day's labour he
+  does not. If that reads wrong, the honest lever is the daylight term, not the
+  gap.
+
+### Plan edits this implies
+
+**APPLIED 2026-08-18.**
+
+| Where | Edit | Applied |
+|---|---|---|
+| Decision 29, *Left open* | Banner: *"whether the work gap stays binary"* is closed by Decision 31 — binary for labour, proportional for the larder. | **applied** |
+| Build plan, Rung 6b | Record that `WorkForHire.get_utility_score` keeps its flat shape; the larder gap drives `Eat`/`MakeBread`/`Trade`, never work. | **applied** |
+
+---
+
+## Decision 32 — The empty-venue trickle is a placeholder, not a mistake
+
+**Settled 2026-08-18. Author's call. Answers the one item rung 6's findings
+asked to have vetoed.**
+
+### The question
+
+`SocialiseStep.change_of_scene_per_hour = 18` — sitting alone at a gathering
+place soothes loneliness, against real company's 30. Loneliness rises at 2.5, so
+**net of upkeep, being alone is 56% as good as being with somebody**, which bends
+*company is the payoff, the venue is only the option*. The file's own comment
+calls it *"thinner than real company"*; 56% is not thin.
+
+It exists because an empty-venue visit **changes nothing in the world**, so the
+bid never resolves — measured with it at zero, a man stood in an empty tavern
+outbidding both `StayUp` and sleep, and the cold-start bedtime slid to 05:27.
+
+### The ruling
+
+> **Not vetoed. Shrunk now, deleted with the mechanism.**
+>
+> `change_of_scene_per_hour` drops to **6.0**, and it is **deleted outright** the
+> day failure-marks-the-candidate lands (Decisions 23 + 24) — at which point a
+> man who finds a venue empty drops *that venue* for a while and goes to bed,
+> with nothing claiming that sitting alone helped.
+
+**A bare veto was refused**: it restores a measured failure. `company_worth = 90`
+bounds that failure (sleep's ceiling of 100 can always eventually reclaim him)
+but does not prevent it — at 2.5 adenosine per hour he needs most of a day and a
+half to climb past 90, so he would stand in the empty room most of the night.
+**The 90 bounds the damage; the trickle is what resolves it.**
+
+### Why the register trick does not transfer
+
+Decision 30 solved the plot dither by making a hidden fact public. **The tavern's
+occupancy is already public** — `find_people_at` reads from anywhere and
+`Socialise` already uses it as a tiebreak. It is **deliberately not gated on**,
+because an empty venue must stay a candidate or the first man never sets off
+(Decision 28's bootstrap hole).
+
+> **The plot problem was information withheld. The tavern problem is information
+> the design refuses to act on, for a good reason.**
+
+Marking preserves the bootstrap where gating cannot: the mark only forms **after**
+a visit, so the first visit always happens.
+
+### The design question inside the real fix, named and left open
+
+**What counts as failure here.** The plot *refused* him — a gate said no. The
+tavern *accepted* him and did not pay. Decisions 23 and 24 were reasoned about
+refusal; this is a rule about **outcome**. It needs saying out loud before it is
+built, because it will apply to a great many things later.
+
+### Also done
+
+`socialise_step.gd`'s comment justified `company_per_hour` against
+*"`base_social_per_hour` (4.0)"* — the real value is **2.5**; 4.0 is *hunger's*
+rate, copied from the neighbouring line. **Corrected in code 2026-08-18** (the
+only code change made this session). Harmless to behaviour, but the whole job of
+that comment is to justify one number against another.
+
+### Plan edits this implies
+
+**APPLIED 2026-08-18.**
+
+| Where | Edit | Applied |
+|---|---|---|
+| Build plan, Rung 6d | `change_of_scene_per_hour` is **6.0**, marked a placeholder with a named deletion date (when failure-marks-the-candidate lands), and the bootstrap reason the register cannot fix it. | **applied** |
+
+---
+
+## Decision 33 — The player is the boss, and the ladder is re-cut from his seat
+
+**Settled 2026-08-19. Author's call. This is the largest re-framing since the
+rebuild began, and it changes NO shipped code.**
+
+### The question
+
+Rungs 0–6 built a town that runs without anybody in it. The ladder's remaining
+rungs (7–9) continued that: trade, a wagon, a chain of trades, and an ending
+where a scythe sits unsold because *"buy a scythe" is not a verb any farmer
+knows.*
+
+The author, returning to first principles after six days of substrate work:
+
+> *"The thing that's fun is being the boss. When you're the boss you tell people
+> what to do. **And if they don't work for you, they don't have to listen.**"*
+>
+> *"So it simply starts with walking around looking, greeting people, give them a
+> gift, ask them to follow you. But there'd be an unclaimed field, then you can
+> tell them to work the field, then you can tell them to bring you the grain,
+> stop working, give them coin, enjoy themselves at the tavern. That's the way to
+> do the proving scene we've been working on."*
+
+The question this settles: **does the proving scene keep watching an autonomous
+farmer, or does it put the player in the town and let him command?**
+
+### The ruling
+
+> **The player is a body in the town, and every remaining gate is cut from his
+> seat.** `boss-scene-build-plan.md` is the forward ladder;
+> `proving-scene-build-plan.md` is retained as the record of the shipped
+> substrate and as the source of the re-seated economy rungs.
+>
+> **No shipped code is invalidated.** The reframe changes the seat, not the
+> substrate.
+
+**The second sentence of the author's framing is the load-bearing one.** A
+command that always lands is a button. A command that can be refused is a
+relationship that had to be built, and the building is the game.
+
+### Why this costs almost nothing to install
+
+Three things were already true, and none were built for this.
+
+1. **`Obligation` is already the command object.** Stored intent, hung as a Node
+   under a person, authored by hand in `game.tscn`. **The player installing one
+   at runtime is the identical operation performed by a different hand.**
+
+2. **The weight seam was cut and named for this**, in `obligation.gd`'s own
+   words: *"When channels exist to set this dynamically — **a lord's writ**, a
+   guild rate, a season's bargain — the BODY of the function below changes and no
+   caller anywhere moves."*
+
+3. **Refusal is already the mechanism.** `WorkForHire` scores 73 + daylight and
+   competes against sleep, hunger and loneliness on one ballot. **A command is
+   not an override; it is a bid.** Nobody has to build refusal. Somebody has to
+   author the bid.
+
+### Two sub-rulings, both binding
+
+**A. The player's verb menu is `get_available()` drawn instead of scored.**
+
+`DecisionEngine` already keeps its halves apart — *"`get_available` never scores,
+`get_highest_scoring` never gates"* — justified at the time as debuggability. It
+is also, unmodified, the contextual verb list. The player build is: run the first
+half, draw it, let input pick where the second half would have.
+
+> **No menu code names a verb.** A verb appears because an `Action`'s own
+> `is_available_to` said yes about the player's body. Authoring a player verb is
+> dropping an Action scene under his Brain — the same sentence as teaching an
+> NPC something, because it is the same operation. `if verb == "beckon"`
+> anywhere in `game/` is a failed build, on the same footing as code naming a
+> playstyle.
+
+**B. A refusal speaks, and the excuse is authored on the drive that WON — never
+on the command.**
+
+> *"When you ask the person that's too tired they can say they are too tired."*
+
+One exported string per Action, read off the winning candidate. Sleep carries
+*"I'm dead on my feet"*; Eat carries *"let me eat first"*; Socialise carries
+*"I'm for the tavern."*
+
+Three consequences, and the third is why this is a ruling rather than a nicety:
+
+- **Refusals cannot lie.** The line names whatever actually outbid you, because
+  that is the only place it is stored.
+- **A new drive arrives with its own excuse**, and every command ever written
+  inherits it — the same inheritance `_update_body` already gives upkeep.
+- **The utility model becomes diegetic.** The decision graph turns into a
+  sentence, which is the PRD's no-floating-bars pillar arriving as a string
+  rather than as an animation budget.
+
+**The cost, stated plainly: a bespoke refusal for one specific order is now
+impossible.** That is accepted. A refusal with no reason is a rejection; a
+refusal with a reason is an instruction — feed him, let him sleep, come back at
+dawn — and **the excuse is what converts a no into the next move.**
+
+### What was rejected
+
+**Reading and greeting deferred until standing has stakes.** The first draft of
+this ladder put greeting at gate 5, reasoning that a greeting which buys nothing
+is the *"meter with extra steps"* the pub slice was written to guard against.
+**Overturned by the author**: greeting *at a distance* is a body turning toward
+you across a square. Its satisfaction is motion, not a number, so it does not
+need stakes to earn its place early. Greeting is gate 2, and beckon — not the
+writ — is the first command.
+
+**"Work the field" as the first command.** Displaced by **beckon**, which is
+smaller (one obligation: be where I am) and whose compliance is more legible (a
+man crossing a square to you, versus a man walking off to a plot).
+
+### Left open
+
+- **Whether standing is one number or several.** The PRD's reach vector is
+  `{coercive, economic, authority, loyalty, informational}`. Ruled: **one number
+  until a gate cannot be built without a second.**
+- **Whether a man can refuse silently, or lie about why.** Deception stays a
+  later system; like/dislike plus candor is enough interior state for this whole
+  ladder.
+- **Whether the player's own drives ever constrain him.** He has them by
+  construction — he is a `Person` and `_update_body` runs for everybody. Nothing
+  forces him to answer any of it yet.
+- **Whether the player carries standing of his own** in the town's eyes, or is
+  only a source of commands.
+
+### A consequence to watch rather than patch
+
+**After the writ lands, the unemployed town gets hungry.** Nobody works unless
+the player says so, the fourteen authored loaves run out, and everyone climbs
+toward pinned hunger. **This is pressure, and it is the reason to be the boss.**
+It is not the day-eight bug from rung 6's findings. Starving proper is not built
+(Decision 27), so it cannot kill anybody. Watch it deliberately.
+
+### One process rule, added because rung 6 paid for it
+
+**A gate is not closed until a paragraph of what you SAW is written above the
+probe output.** Not instead of it — above it.
+
+Rung 5's Moment was never watched. Rung 6 shipped four gates and produced a
+headless six-day pump instead of a chair, and what got through was **a man pacing
+a field for six days while a counter reported nineteen hours of work.** Ten
+seconds of watching catches that; three days of numbers did not.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| `boss-scene-build-plan.md` | Created. Eleven gates, Gate 1 cut in full. | **applied** |
+| `CLAUDE.md` | Pointer table names the boss plan as the forward ladder; decision count corrected. | **applied** |
+| `proving-scene-build-plan.md` | Header banner pointing forward; rungs 7–9 marked re-seated, not deleted. | **applied** |
+| `proving-scene-decisions.md` | Index added at the top — 33 decisions is past the point where "highest number wins" can be applied by reading. | **applied** |
+| Gate 0 = `rung-6-repair-session-prompt.md` | Unchanged and still first. **Hold its share-sizing half** — that quantity is a wage, and the boss ladder's Gate 8 authors it. Land Decision 30's deletion; defer Decisions 29/31's arithmetic. | **applied** |
+| Spent rung prompts (3, 4, 5, 6a) | **Deleted 2026-08-19** — those rungs shipped and their reasoning lives in the code and in this ledger. `rung-6a-session-prompt.md` was additionally *wrong*: it predated Decisions 25–27 and described a rung that shipped differently. In git history if ever wanted. | **applied** |
+| `gate-1-session-prompt.md` | Created. The first gate handed off for a build session, incl. Decision 17 as its hardest problem and the `probe.gd` population-count hazard. | **applied** |
