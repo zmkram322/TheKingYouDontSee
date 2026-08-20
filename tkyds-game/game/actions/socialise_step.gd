@@ -59,7 +59,19 @@ var walk: GoToStep
 # same as company and should never be tuned to feel like it. See the header
 # above for why this exists at all: without it, an empty venue is a
 # standing bid that never resolves.
-@export var change_of_scene_per_hour := 18.0
+#
+# A PLACEHOLDER WITH A NAMED DELETION DATE, NOT A TUNED NUMBER (Decision 32).
+# It was 18.0, which is 56% of real company's 30 net of the 2.5 tide — far
+# too close to the thing it is only supposed to hint at. 6.0 is small enough
+# that company is plainly the payoff and the venue is plainly only the
+# option, and still large enough to resolve the standing bid.
+#
+# IT GOES TO ZERO THE DAY FAILURE-MARKS-THE-CANDIDATE LANDS (Decisions 23 and
+# 24), AND NOT ONE DAY BEFORE. At zero, with no way to give up on a venue, a
+# man who finds the tavern empty stands in it most of the night — that is
+# measured, not predicted. Marking is what lets him drop THAT venue and go to
+# bed, and only then is there nothing left for this number to do.
+@export var change_of_scene_per_hour := 6.0
 
 
 func _ready() -> void:
