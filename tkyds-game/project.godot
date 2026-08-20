@@ -14,6 +14,25 @@ config/name="The King You Don't See — POC v2"
 run/main_scene="res://game/game.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
 
+[display]
+
+; Maximized, deliberately, rather than a size typed in: it fills whatever work
+; area the monitor has and needs no number to be right on a second machine.
+;
+; The two DEFAULTS this leans on, and neither should be "fixed" without reading
+; this. display/window/stretch/mode is absent, i.e. disabled — so the UI keeps
+; its NATIVE PIXEL SIZE as the window grows, and every panel (all of them corner-
+; anchored at a fixed size) takes up proportionally less of the screen instead
+; of scaling with it. And Camera3D.keep_aspect is KEEP_HEIGHT, so a bigger
+; window draws the same view over more pixels rather than cropping it — the town
+; gets bigger, the readouts over their heads get bigger, the graphs do not.
+;
+; Set stretch/mode to canvas_items and you undo the whole point: the interface
+; would scale back up with the window and dominate it again at any size.
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/mode=2
+
 [dotnet]
 
 project/assembly_name="The King You Don-t See — POC v2"

@@ -49,7 +49,7 @@ extends ActionStep
 var walk: GoToStep
 
 # How fast the gap closes while he's actually IN company, per world hour.
-# Set well above upkeep's base_social_per_hour (4.0) so company visibly wins
+# Set well above upkeep's base_social_per_hour (2.5) so company visibly wins
 # ground against the tide, rather than merely slowing it.
 @export var company_per_hour := 30.0
 
