@@ -15,3 +15,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Godot editor addons (local tooling: godot_ai, godot_mcp) — not project source
+tkyds-game/addons/
