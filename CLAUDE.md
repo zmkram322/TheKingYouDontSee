@@ -1,6 +1,6 @@
 # The King You Don't See — working notes
 
-Godot 4.4 project in `tkyds-game/`. Solo dev. Built atom by atom: smallest
+Godot **4.7.2-stable-mono** project in `tkyds-game/`. Solo dev. Built atom by atom: smallest
 playable thing first, layer on top of it, resist building substrate before
 something needs it.
 
@@ -138,13 +138,37 @@ ported yet; port them from git history when something needs them.
 
 ## Verifying
 
-There is no test suite for `game/` — headless suites were retired along with
-the folders they covered. To check something works, pump it directly:
+**The engine moved to 4.7.2 on 2026-08-20.** Verified that day: the project
+parses clean and `game/probe.gd` returns **50/50 green with identical numbers
+under 4.4 and 4.7.2** — same 14747 checks, same bedtimes to the minute. The
+bump changed no behaviour. Two things are still stale and are the author's call
+to bump rather than a builder's: `project.godot` still declares
+`config/features=PackedStringArray("4.4", ...)`, and `game/probe.gd`'s own
+header still prints the 4.4 run lines.
+
+There is no test suite for `game/`, and there is no framework — no GUT, no
+GdUnit, no fixtures, no runner. What there is instead is **`game/probe.gd`, a
+standing `SceneTree` that loads the real `game.tscn`, pumps the real people by
+hand, and says PASS or FAIL out loud.** It is the thing to add to, and it is
+why "it runs without errors" is not accepted here as evidence — a silent null
+guard once shipped a dead day/night cycle through two commits and nothing
+complained.
+
+**Run it with TWO commands, always, in this order.** `--script` does not build
+the global class cache, so without the import pass in front of it `class_name
+Person` fails to resolve and the probe dies for a reason that has nothing to do
+with whatever you changed:
 
 ```bash
-"/z/Godot/Godot_v4.4-stable_mono_win64/Godot_v4.4-stable_mono_win64_console.exe" \
-  --headless --path . --editor --quit          # parse + import check
+GODOT="/z/Godot/Godot_v4.7.2-stable_mono_win64/Godot_v4.7.2-stable_mono_win64_console.exe"
+"$GODOT" --headless --path . --editor --quit          # parse + import check
+"$GODOT" --headless --path . --script game/probe.gd   # the claims
 ```
 
-Then a throwaway `SceneTree` script calling `person._process(fixed_delta)` in a
-loop, printing what you care about. Delete it after.
+`ObjectDB instances were leaked at exit` and `resources still in use at exit`
+are normal editor-quit noise; ignore both.
+
+**A new claim is not finished until you have watched it fail.** Break the code
+deliberately, see it go red, put it back. Eight vacuous assertions have been
+caught here that way. The trap that keeps recurring: *a claim about a rule with
+no branch must be asserted in the state the missing branch would have changed.*
