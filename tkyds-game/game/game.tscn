@@ -332,6 +332,10 @@ items = {
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
 current_place = NodePath("../../Town/Square")
 
+[node name="Brain" parent="Population/Player" index="2"]
+enters_within = 3.0
+leaves_beyond = 4.5
+
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.788, 0.616, 0, -0.616, 0.788, -2, 17, 22)
 fov = 55.0
@@ -380,7 +384,6 @@ clock = NodePath("../../Clock")
 anchors_preset = 0
 anchor_top = 0.0
 anchor_bottom = 0.0
-offset_left = 12.0
 offset_top = 12.0
 offset_right = 240.0
 offset_bottom = 300.0
