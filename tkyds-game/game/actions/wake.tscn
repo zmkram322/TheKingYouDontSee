@@ -10,3 +10,4 @@ pull = 10.0
 
 [node name="WakeUp" type="Node" parent="."]
 script = ExtResource("2_wake_up")
+clip = &"stand_up"

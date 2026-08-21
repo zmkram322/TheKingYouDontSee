@@ -340,6 +340,16 @@ func get_adenosine_recovery() -> float:
 # How strenuous what he's doing right now is. 1.0 when he isn't doing anything
 # in particular, which is also the default on every step — so an unconsidered
 # action costs a normal amount rather than nothing.
+# What his body should look like, or empty if whatever he is doing has nothing
+# to say about it. The same five lines as get_exertion below and deliberately
+# so: both ask the STEP, because both are facts about the work being done
+# rather than about the reason for doing it.
+func get_clip() -> StringName:
+	if current_action == null or current_action.step == null:
+		return &""
+	return current_action.step.get_clip_for(person)
+
+
 func get_exertion() -> float:
 	if current_action == null or current_action.step == null:
 		return 1.0

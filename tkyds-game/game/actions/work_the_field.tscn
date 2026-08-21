@@ -13,6 +13,7 @@ daylight_pull = 30.0
 
 [node name="Work" type="Node" parent="."]
 script = ExtResource("2_work_step")
+clip = &"work_field"
 
 [node name="GoTo" type="Node" parent="Work"]
 script = ExtResource("3_go_to_step")

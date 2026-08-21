@@ -12,3 +12,4 @@ bite = 3.0
 [node name="Eating" type="Node" parent="."]
 script = ExtResource("2_eating")
 hunger_a_loaf_fixes = 50.0
+clip = &"drink"

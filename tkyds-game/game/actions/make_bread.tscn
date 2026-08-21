@@ -12,3 +12,4 @@ bite = 3.0
 [node name="Baking" type="Node" parent="."]
 script = ExtResource("2_baking")
 grain_per_loaf = 3
+clip = &"work_field"

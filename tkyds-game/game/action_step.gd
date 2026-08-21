@@ -33,6 +33,30 @@ extends Node
 # make the work free, which is the failure you'd never go looking for.
 @export var exertion := 1.0
 
+# What his body looks like doing this. A CLIP NAME, AUTHORED HERE, NEVER A
+# MAPPING IN CODE — a dictionary in game/ from action to animation would be
+# code naming verbs, which Decision 33 forbids for exactly the reason it
+# forbids a verb list naming one.
+#
+# It sits on the step rather than the action for the same reason exertion
+# does: in a walk-there-then-dig sequence only the step knows which half is
+# happening. It does NOT have to describe its own travel — a man who is
+# covering ground gets walking legs from his measured displacement, so this
+# is only ever what he looks like once he has arrived.
+#
+# Empty means "nothing to say", and he rests. That is the honest default: an
+# action nobody has drawn yet should look like a man standing there, not like
+# a man doing something else.
+@export var clip := &""
+
+
+# What he looks like doing this RIGHT NOW, as opposed to the authored clip
+# above. The split is counts_as_asleep / counts_as_asleep_for exactly: the
+# export says what kind of work this is, and this says what it looks like
+# given the circumstances. Nothing needs to override it today.
+func get_clip_for(_person: Person) -> StringName:
+	return clip
+
 
 # Is this already done, as far as the world is concerned? Default true, so a
 # step that does nothing doesn't hold anyone up.

@@ -14,6 +14,7 @@ bite = 2.0
 script = ExtResource("2_mingle")
 company_per_hour = 30.0
 change_of_scene_per_hour = 18.0
+clip = &"greet"
 
 [node name="GoTo" type="Node" parent="Mingle"]
 script = ExtResource("3_go_to_step")

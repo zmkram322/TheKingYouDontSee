@@ -12,6 +12,7 @@ work_name = &"sleeping"
 
 [node name="Rest" type="Node" parent="."]
 script = ExtResource("2_rest")
+clip = &"sleep"
 
 [node name="GoTo" type="Node" parent="Rest"]
 script = ExtResource("3_go_to_step")

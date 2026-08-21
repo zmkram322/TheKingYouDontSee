@@ -22,9 +22,23 @@ extends CharacterBody3D
 @export var person_name := "Someone"
 
 # Enough to tell people apart at a glance once there's more than one. Applied
-# to the capsule in _ready rather than authored into person.tscn's material,
+# over the rig's meshes in _ready rather than authored into a material asset,
 # so every instance can differ without needing a material file apiece.
 @export var tint := Color(0.78, 0.74, 0.68)
+
+# What his body does when nothing else is driving it. A clip name rather than a
+# verb: the animation he is PLAYING is not the action he is DOING, and nothing
+# here maps one to the other. Exported so a person who should idle differently
+# is authored, not coded.
+@export var resting_clip := &"idle"
+
+# What his body does when it is covering ground, and how much of his own travel
+# speed counts as covering it. Both are clip names and a fraction, never verbs:
+# nothing here asks WHY he is walking, and a fraction rather than a number of
+# units means the threshold still means the same thing for a strong man who
+# covers more ground in an hour, or for whatever a horse turns him into later.
+@export var walking_clip := &"walk"
+@export var walking_above := 0.1
 
 # Where he IS — a discrete fact he carries, not a distance to anything. Authored
 # per instance at birth, and after that ONE thing writes it. Null is a real
@@ -115,11 +129,32 @@ var clock: Clock
 # rediscovered.
 @onready var inventory: Inventory = $Inventory
 
-@onready var _shape: MeshInstance3D = $Shape
+# His body, and the one thing that plays it. Body is an instance of y_bot.tscn,
+# which carries its own 180-degree turn — Mixamo rigs face +Z and Godot forward
+# is -Z — so nothing in game/ has to know that.
+#
+# IT SITS AT INDEX 0, WHERE THE CAPSULE SAT, AND IT MUST STAY THERE. The rig
+# REPLACED that node rather than being added beside it, which is what kept
+# Stats at 3 and Inventory at 5 — see the Inventory comment above for what
+# renumbering them costs.
+@onready var _body: Node3D = $Body
+@onready var _animation: AnimationPlayer = $Body/AnimationPlayer
+
+# How fast he was moving over his last slice of world time, in units per world
+# HOUR, and which way he was pointed doing it. A MEASUREMENT taken where
+# movement happens and read where the eye is — not a memory of a decision, and
+# not progress through anything that would have to be restored.
+#
+# It survives between ticks on purpose. A man Population thinks for every
+# fourth frame is still walking on the three frames nobody asked him anything,
+# and his legs should not stutter to prove it.
+var _speed := 0.0
+var _heading := 0.0
 
 
 func _ready() -> void:
 	_apply_tint()
+	_start_the_body()
 	# Says so out loud rather than standing there quietly not living. Nothing
 	# here drives itself any more — a person dropped into a scene without a
 	# Population above him never thinks, never tires and never sleeps, and
@@ -159,7 +194,9 @@ func _ready() -> void:
 # pumping a day in a fraction of a second advances him by exactly the path the
 # game uses, rather than by a second route that can quietly diverge from it.
 func think_and_act(hours: float) -> void:
+	var was_at := global_position
 	brain.think_and_act(hours)
+	_measure_how_he_moved(global_position - was_at, hours)
 
 
 # Where he is standing, or null if he is between places. Asked in GATE, where
@@ -310,13 +347,93 @@ func get_sun_height() -> float:
 # above his head would freeze between thoughts.
 func _process(_delta: float) -> void:
 	readout.text = get_name_plate_text()
+	_show_the_body()
 
 
+# Over every mesh the rig has, found rather than named. Y Bot wears two
+# (a surface and its joints) and a rig swapped in later will wear some other
+# number; none of them get spelled out here.
 func _apply_tint() -> void:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = tint
 	material.roughness = 1.0
-	_shape.material_override = material
+	if _body == null:
+		return
+	for node in _body.find_children("*", "MeshInstance3D", true, false):
+		(node as MeshInstance3D).material_override = material
+
+
+# Something has to be playing or he stands in his bind pose, arms out, which
+# reads as a broken import rather than as a man doing nothing. Both clips are
+# checked HERE, once, rather than on every tick that plays one — a missing clip
+# is a wiring fault that should be said once and loudly, not a thousand times a
+# second into a log nobody can read.
+func _start_the_body() -> void:
+	if _animation == null:
+		push_warning("%s has no AnimationPlayer under his Body — he will stand in his bind pose" % person_name)
+		return
+	for clip_name in [resting_clip, walking_clip]:
+		if not _animation.has_animation(clip_name):
+			push_warning("%s has no \"%s\" clip — his body cannot show it" % [person_name, clip_name])
+	_play(resting_clip)
+
+
+# Taken across the brain's tick, because that is where global_position moves —
+# by hand in both PlayerBrain and GoToStep, never by move_and_slide, so there
+# is no velocity to read. IN WORLD HOURS like every rate in game/, so what his
+# legs do cannot change when day_length_seconds is dragged.
+#
+# Nothing is decided here. This only measures; _show_the_body below is what
+# does something about it.
+func _measure_how_he_moved(displacement: Vector3, hours: float) -> void:
+	if hours <= 0.0:
+		return
+	var travelled := Vector3(displacement.x, 0.0, displacement.z)
+	_speed = travelled.length() / hours
+	if _speed > 0.0:
+		_heading = atan2(travelled.x, travelled.z)
+
+
+# What his body is doing, asked once per frame the eye sees — the same split
+# the readout answers to, and for the same reason: presentation should redraw
+# as often as it is LOOKED AT, not as often as the world is stepped. Fold this
+# back into think_and_act and the day Population thinks for him every fourth
+# frame, his legs stutter between thoughts.
+#
+# THIS FUNCTION IS THE SEAM for not animating a body nobody is looking at. It
+# is the one place, once per person per frame, where the question gets asked,
+# so a visibility test installs HERE — `_animation.active = false` and every
+# clip in the game goes quiet behind it. Deliberately NOT built: there are
+# three people in this town, and culling three people is substrate before
+# anything needs it.
+#
+# TWO LAYERS, AND MOVING WINS. Travel is answered by measured displacement, so
+# no step has to describe its own walk — which is what lets Sleep play a walk
+# on the way to the bed and a sleep once he is in it, with nothing in
+# sleep.tscn saying either word. Everything else is whatever his step declares,
+# and a step that declares nothing leaves him resting.
+func _show_the_body() -> void:
+	if _animation == null or _body == null:
+		return
+	if _speed >= get_travel_speed() * walking_above:
+		# Turn the BODY, never the man. global_position is what every gate and
+		# every distance in this game reads; his own rotation means nothing at
+		# all, and it should keep meaning nothing.
+		_body.rotation.y = _heading
+		_play(walking_clip)
+		return
+	var doing: StringName = brain.get_clip() if brain != null else &""
+	_play(resting_clip if doing.is_empty() else doing)
+
+
+# play() on a clip already playing is a no-op, so asking every tick costs
+# nothing and nothing has to remember what his body was doing. The guard is
+# for a clip that does not exist — already warned about in _start_the_body,
+# and silent here so one wiring fault is not also a flood.
+func _play(clip_name: StringName) -> void:
+	if _animation == null or not _animation.has_animation(clip_name):
+		return
+	_animation.play(clip_name)
 
 
 # What floats over his head — who he is, what he is doing, and what he is

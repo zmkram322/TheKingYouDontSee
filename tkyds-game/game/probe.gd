@@ -183,6 +183,7 @@ func _process(_delta: float) -> bool:
 	_check_the_fork_changed_one_body_not_the_engine()
 	_check_the_players_place_is_a_band_and_does_not_flicker_on_a_boundary()
 	_check_the_player_covers_the_same_ground_per_world_hour_at_any_day_length()
+	_check_a_mans_body_shows_the_work_his_step_declares()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -3992,3 +3993,70 @@ func _report() -> void:
 		print("%d of %d claims failed." % [_first_failure.size(), _claims.size()])
 	print("")
 
+
+
+# Two layers and which one wins. Written WITHOUT NAMING A VERB — it asks the
+# repertoire for whatever action declares a clip rather than reaching for one
+# by name, so adding, renaming or removing an action never touches this claim,
+# and the claim cannot quietly start testing a verb somebody deleted.
+#
+# _show_the_body is called by hand here for the same reason think_and_act is
+# everywhere else in this file: the scene is PROCESS_MODE_DISABLED, so nothing
+# runs on its own, and a situation is being authored rather than a man moved.
+func _check_a_mans_body_shows_the_work_his_step_declares() -> void:
+	var claim := "67 — a man's body shows the work his step declares, and walking legs whenever he covers ground"
+
+	var world := _add_a_disabled_game_scene()
+	var person := world.get_node_or_null("Population/Zoogs") as Person
+	if person == null:
+		_require(false, claim, "a world came up without Zoogs")
+		world.queue_free()
+		return
+	var player := person.get_node_or_null("Body/AnimationPlayer") as AnimationPlayer
+	if player == null:
+		_require(false, claim, "Zoogs has no AnimationPlayer under his Body")
+		world.queue_free()
+		return
+
+	var declared: Action = null
+	for action in person.brain.get_known_actions():
+		if action.step != null and not action.step.get_clip_for(person).is_empty():
+			declared = action
+			break
+	if declared == null:
+		_require(false, claim, "no action anybody knows declares a clip — there is nothing for a body to show")
+		world.queue_free()
+		return
+	var work_clip: StringName = declared.step.get_clip_for(person)
+
+	# STANDING STILL, DOING THAT WORK — his body shows the step, not a default.
+	person.brain.current_action = declared
+	person._measure_how_he_moved(Vector3.ZERO, 1.0)
+	person._show_the_body()
+	_require(StringName(player.current_animation) == work_clip, claim,
+		"standing still doing \"%s\" should play its declared clip \"%s\", and played \"%s\"" % [
+			declared.name, work_clip, player.current_animation])
+
+	# ...and that is genuinely a different answer from resting. Without this the
+	# check above would pass just as well for a body that ignores the step
+	# entirely and always rests — the vacuous-assertion trap CLAUDE.md names.
+	_require(work_clip != person.resting_clip, claim,
+		"the action found declares \"%s\", which is his resting clip — this claim would hold for a body that ignored every step" % work_clip)
+
+	# COVERING GROUND, DOING THE SAME WORK — the legs win over the step, which
+	# is what lets a walk to the bed need no line in sleep.tscn.
+	person._measure_how_he_moved(Vector3(person.get_travel_speed(), 0.0, 0.0), 1.0)
+	person._show_the_body()
+	_require(StringName(player.current_animation) == person.walking_clip, claim,
+		"a man covering ground while doing \"%s\" should show walking legs (\"%s\"), and showed \"%s\"" % [
+			declared.name, person.walking_clip, player.current_animation])
+
+	# STANDING STILL, HAVING CHOSEN NOTHING — rest, not whatever he did last.
+	person.brain.current_action = null
+	person._measure_how_he_moved(Vector3.ZERO, 1.0)
+	person._show_the_body()
+	_require(StringName(player.current_animation) == person.resting_clip, claim,
+		"a man doing nothing should rest in \"%s\", and showed \"%s\"" % [
+			person.resting_clip, player.current_animation])
+
+	world.queue_free()

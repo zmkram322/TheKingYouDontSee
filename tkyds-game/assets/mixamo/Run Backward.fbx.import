@@ -3,13 +3,13 @@
 importer="animation_library"
 importer_version=1
 type="AnimationLibrary"
-uid="uid://mom60fjdiu82"
-path="res://.godot/imported/Drinking.fbx-5992b6678196739aeef4881eb8396a93.res"
+uid="uid://lqxumws6sh5p"
+path="res://.godot/imported/Run Backward.fbx-80ba6eb89c534a4c0d3491debeae3e20.res"
 
 [deps]
 
-source_file="res://assets/mixamo/Drinking.fbx"
-dest_files=["res://.godot/imported/Drinking.fbx-5992b6678196739aeef4881eb8396a93.res"]
+source_file="res://assets/mixamo/Run Backward.fbx"
+dest_files=["res://.godot/imported/Run Backward.fbx-80ba6eb89c534a4c0d3491debeae3e20.res"]
 
 [params]
 
