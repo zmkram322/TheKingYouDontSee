@@ -21,6 +21,17 @@ var decision_engine := DecisionEngine.new()
 # from scratch over current facts, so this is a readout, not a memory.
 var current_action: Action
 
+# What was open to him on the last pass — every action that cleared its gate,
+# in the order DecisionEngine handed them back, before any of them was scored.
+#
+# A readout, same shape and same justification as _last_scores below it:
+# nothing reads it back into a decision, it is worked out fresh every
+# think_and_act rather than kept across one, and deleting it changes no
+# decision he ever makes. It exists so anything watching him — a verb menu
+# under a player's hand, a panel drawing what he DIDN'T pick — can ask what
+# was on the table without re-deriving it.
+var _open_actions: Array[Action] = []
+
 var _known_actions: Array[Action] = []
 
 
@@ -76,6 +87,13 @@ func reload_known_actions() -> void:
 	for child in get_children():
 		if child is Action:
 			_known_actions.append(child)
+	# forget() queue_frees the action it removes. Left standing, this list
+	# would hand a freed node to whatever is drawing it — the same
+	# is_instance_valid trap CLAUDE.md warns about, avoided here by simply not
+	# keeping the stale entry around. It is rebuilt honestly on the very next
+	# think_and_act; this only closes the gap between "he forgot it" and
+	# "he next thinks".
+	_open_actions.clear()
 
 
 # His whole repertoire — everything he knows how to do, gated or not. Read-only
@@ -88,6 +106,11 @@ func reload_known_actions() -> void:
 # to draw the actions he DIDN'T pick.
 func get_known_actions() -> Array[Action]:
 	return _known_actions
+
+
+# What was open to him on the last pass — see _open_actions above.
+func get_open_actions() -> Array[Action]:
+	return _open_actions
 
 
 # Is he awake? Read off what he's doing rather than kept as a stat, so the two
@@ -144,11 +167,27 @@ func is_awake() -> bool:
 func think_and_act(hours: float) -> void:
 	if person == null:
 		return
-	current_action = decision_engine.choose(person, _known_actions)
+	_open_actions = decision_engine.open_the_ballot(person, _known_actions)
+	current_action = pick_from_the_ballot(_open_actions)
 	if current_action != null and current_action.step != null \
 			and current_action.step.is_doable(person):
 		current_action.step.advance(person, hours)
 	_update_body(hours)
+
+
+# How THIS brain picks a winner from the open list. The gate half above is
+# shared and never overridden — everybody's ballot is opened the same way,
+# by the same DecisionEngine, subject to the same gates. This is the seam
+# Gate 1 forks: the default body picks by score, exactly as choose() always
+# did; PlayerBrain overrides it to hand back whatever a hand chose instead.
+#
+# Null is a REAL ANSWER, not a missing one — it means "standing there", and
+# think_and_act already treats a null current_action correctly (it simply
+# does no step this tick, then still runs the body). An empty ballot scores
+# to null the same way; a player who hasn't chosen anything is the same
+# case wearing a different reason.
+func pick_from_the_ballot(open_actions: Array[Action]) -> Action:
+	return decision_engine.get_highest_scoring(person, open_actions)
 
 
 # --- The body ------------------------------------------------------------------

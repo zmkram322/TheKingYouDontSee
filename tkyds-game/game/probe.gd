@@ -175,6 +175,14 @@ func _process(_delta: float) -> bool:
 	_check_a_lonely_man_goes_where_company_is_to_be_found()
 	_check_social_rises_for_an_idle_man()
 	_check_the_day_keeps_its_shape()
+	_check_a_steered_body_with_no_verb_chosen_still_tires_hungers_and_grows_lonely()
+	_check_the_verb_list_on_screen_is_exactly_the_open_ballot()
+	_check_a_gate_that_says_no_never_reaches_the_players_ballot()
+	_check_choosing_a_verb_runs_its_step_and_choosing_nothing_runs_nothing()
+	_check_a_verb_dropped_from_under_him_is_dropped_not_held()
+	_check_the_fork_changed_one_body_not_the_engine()
+	_check_the_players_place_is_a_band_and_does_not_flicker_on_a_boundary()
+	_check_the_player_covers_the_same_ground_per_world_hour_at_any_day_length()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -378,12 +386,13 @@ func _check_the_town_survives_losing_somebody() -> void:
 	population.move_child(bystander, 0)
 
 	population.think_for_everyone(1.0)
-	# 4 = the three authored people (Zoogs, Hobb, Marle) plus Doomed. This
-	# number reads the authored population, so adding a person to game.tscn
-	# moves it — rung 3 took it from 2 to 3 when Hobb was authored in, and
-	# rung 6b took it from 3 to 4 when Marle, the farm owner, was.
-	_require(population.get_people().size() == 4, claim,
-		"expected 4 people under Population and found %d — the marker node was counted as one" % [
+	# 5 = the four authored people (Zoogs, Hobb, Marle, the Player) plus
+	# Doomed. This number reads the authored population, so adding a person
+	# to game.tscn moves it — rung 3 took it from 2 to 3 when Hobb was
+	# authored in, rung 6b took it from 3 to 4 when Marle, the farm owner,
+	# was, and Gate 1 took it from 4 to 5 when the Player was.
+	_require(population.get_people().size() == 5, claim,
+		"expected 5 people under Population and found %d — the marker node was counted as one" % [
 			population.get_people().size()])
 
 	# Freed outright rather than queue_free()d: queued deletion doesn't land
@@ -398,8 +407,8 @@ func _check_the_town_survives_losing_somebody() -> void:
 
 	_require(absf(moved - expected) < 0.001, claim,
 		"after a death the survivor moved %.4f where one tick's worth is %.4f" % [moved, expected])
-	_require(population.get_people().size() == 3, claim,
-		"expected 3 people left and found %d" % population.get_people().size())
+	_require(population.get_people().size() == 4, claim,
+		"expected 4 people left and found %d" % population.get_people().size())
 
 	world.queue_free()
 
@@ -1037,8 +1046,14 @@ func _check_no_stations_and_every_station_taken_are_different_counters() -> void
 			no_candidates_before, town.no_candidates_existed_pressure,
 			every_taken_before, town.every_candidate_was_taken_pressure])
 
-	# Zero stations now — "there was no field", not "every field was taken".
-	plot.free()
+	# Zero stations now — "there was no field", not "every field was
+	# taken". Gate 1 authored a second `field work` station (the unowned
+	# CommonPlot at Town/CommonField), so freeing only Town/Fields/Plot no
+	# longer empties the town — this frees every station the town currently
+	# reports for this work, which keeps the claim's meaning exactly and
+	# survives the next plot somebody authors.
+	for station in town.find_workstations(zoogs, work.work_name):
+		station.free()
 
 	var no_candidates_before_empty: float = town.no_candidates_existed_pressure
 	var every_taken_before_empty: float = town.every_candidate_was_taken_pressure
@@ -1464,9 +1479,18 @@ func _check_the_nearer_station_wins_and_moving_a_place_changes_it() -> void:
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var inn := world.get_node_or_null("Town/Inn") as Place
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
-	if town == null or zoogs == null or fields == null or inn == null or plot == null:
-		_require(false, near_claim, "the scene came up without a Town, a Zoogs, Fields, an Inn and the Plot")
+	var common_plot := world.get_node_or_null("Town/CommonField/CommonPlot") as Workstation
+	if town == null or zoogs == null or fields == null or inn == null or plot == null or common_plot == null:
+		_require(false, near_claim, "the scene came up without a Town, a Zoogs, Fields, an Inn, the Plot and the CommonPlot")
 		return
+
+	# THIS CLAIM IS ABOUT TWO STATIONS, so the world has to hold exactly the
+	# two it is comparing. Gate 1 authored a third `field work` station (the
+	# unowned CommonPlot at Town/CommonField) — narrowing it away here is
+	# deliberate, not an assumption that the town happens to hold only one
+	# plot beside the hand-built NearPlot below; a later rung authoring a
+	# fourth would need the same treatment, not a rewrite of this claim.
+	common_plot.free()
 
 	# A BARE WorkTheField, built by hand rather than pulled off Zoogs' Brain —
 	# as of rung 6b both farmers know WorkForHire, not WorkTheField, and
@@ -2614,9 +2638,18 @@ func _check_owned_plot_refuses_the_unemployed_and_counts_it() -> void:
 	var marle := world.get_node_or_null("Population/Marle") as Person
 	var fields := world.get_node_or_null("Town/Fields") as Place
 	var plot := world.get_node_or_null("Town/Fields/Plot") as Workstation
-	if town == null or population == null or zoogs == null or marle == null or fields == null or plot == null:
-		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, a Marle, the Fields and the Plot")
+	var common_plot := world.get_node_or_null("Town/CommonField/CommonPlot") as Workstation
+	if town == null or population == null or zoogs == null or marle == null or fields == null or plot == null or common_plot == null:
+		_require(false, claim, "the scene came up without a Town, a Population, a Zoogs, a Marle, the Fields, the Plot and the CommonPlot")
 		return
+
+	# THIS CLAIM IS ABOUT THE OWNED PLOT REFUSING AN UNEMPLOYED MAN. Gate 1
+	# authored a second, UNOWNED `field work` station (CommonPlot at
+	# Town/CommonField) — freeing it here is deliberate, the same narrowing
+	# claims 23/24 now use, so a spare who has no claim on the owned plot
+	# does not go on to find a legitimate one on common land instead, for a
+	# reason that has nothing to do with what this claim is about.
+	common_plot.free()
 
 	var spare := _add_a_person(population, "Spare")
 	if spare == null:
@@ -3304,6 +3337,630 @@ func _check_the_day_keeps_its_shape() -> void:
 			"nobody was observed socialising while awake on day %d — a dead social stat never socialises at all" % day_index)
 
 	world.queue_free()
+
+
+# --- Assertions 59-66: Gate 1 — a steered body in the town ------------------------
+
+# 59 — NULL IS A REAL ANSWER, and stands for "standing there". A steered body
+# with nothing chosen still pays the same upkeep every other body pays —
+# Brain._update_body never asks who is steering, only what happened this
+# tick — so one hour of choosing nothing has to move all three drives by
+# exactly one hour's worth, the same AMOUNT-not-direction discipline claims 5,
+# 31 and 49 already use for the same reason: a rate applied per tick instead
+# of per world hour still moves the number the right way, just by the wrong
+# amount.
+func _check_a_steered_body_with_no_verb_chosen_still_tires_hungers_and_grows_lonely() -> void:
+	var claim := "59 — a steered body with no verb chosen still tires, hungers and grows lonely"
+	var world := _add_a_disabled_game_scene()
+	var player := world.get_node_or_null("Population/Player") as Person
+	var population := world.get_node_or_null("Population") as Population
+	if player == null or population == null:
+		_require(false, claim, "the scene came up without a Population and a Player under it")
+		return
+
+	var tired_before: float = player.stats.get_stat(&"adenosine")
+	var hungry_before: float = player.stats.get_stat(&"hunger")
+	var lonely_before: float = player.stats.get_stat(&"social")
+
+	population.think_for_everyone(1.0)
+
+	_require(player.brain.current_action == null, claim,
+		"a player brain with nothing chosen picked \"%s\" on its own" % [
+			String(player.brain.current_action.name) if player.brain.current_action != null else "nothing"])
+
+	var moved_adenosine: float = player.stats.get_stat(&"adenosine") - tired_before
+	var expected_adenosine: float = player.brain.get_adenosine_accumulation()
+	_require(absf(moved_adenosine - expected_adenosine) < 0.001, claim,
+		"standing there for one hour moved adenosine by %.4f where one hour's worth is %.4f" % [
+			moved_adenosine, expected_adenosine])
+
+	var moved_hunger: float = player.stats.get_stat(&"hunger") - hungry_before
+	var expected_hunger: float = player.brain.get_hunger_accumulation()
+	_require(absf(moved_hunger - expected_hunger) < 0.001, claim,
+		"standing there for one hour moved hunger by %.4f where one hour's worth is %.4f" % [
+			moved_hunger, expected_hunger])
+
+	var moved_social: float = player.stats.get_stat(&"social") - lonely_before
+	var expected_social: float = player.brain.get_social_accumulation()
+	_require(absf(moved_social - expected_social) < 0.001, claim,
+		"standing there for one hour moved social by %.4f where one hour's worth is %.4f" % [
+			moved_social, expected_social])
+
+	world.queue_free()
+
+
+# 60 — Assert against the engine's OWN OUTPUT, never against an expected set
+# of names, so teaching the player a new Action cannot make this claim stale.
+# The identity-and-order comparison is VerbList's own claim about itself (see
+# get_drawn_actions' header); this is what proves it, driven from outside.
+func _check_the_verb_list_on_screen_is_exactly_the_open_ballot() -> void:
+	var claim := "60 — the verb list on screen is exactly the open ballot, and never a list of names"
+	var world := _add_a_disabled_game_scene()
+	var player := world.get_node_or_null("Population/Player") as Person
+	var population := world.get_node_or_null("Population") as Population
+	var verb_list := world.get_node_or_null("Screen/VerbList") as VerbList
+	if player == null or population == null or verb_list == null:
+		_require(false, claim, "the scene came up without a Population, a Player and Screen/VerbList")
+		return
+	var brain := player.brain as PlayerBrain
+	if brain == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain — player.tscn's script override did not take")
+		return
+
+	population.think_for_everyone(TICK_HOURS)
+	verb_list._process(0.0)
+	_require(_same_action_list(verb_list.get_drawn_actions(), brain.get_open_actions()), claim,
+		"the drawn list disagrees with the open ballot, by identity or by order, before anything about the ballot changed")
+	_require_one_button_per_drawn_action(verb_list, claim)
+
+	var size_before := verb_list.get_drawn_actions().size()
+
+	# Change the world so the ballot itself changes — a loaf makes Eat a
+	# candidate where it was not one before. If this file only ever asserted
+	# equality against a ballot that never moves, a list that never rebuilds
+	# would pass it for free; the size comparison below is what rules that out.
+	player.get_inventory().add(&"bread", 1)
+	population.think_for_everyone(TICK_HOURS)
+	verb_list._process(0.0)
+	_require(_same_action_list(verb_list.get_drawn_actions(), brain.get_open_actions()), claim,
+		"the drawn list disagrees with the open ballot after the ballot changed")
+	_require(verb_list.get_drawn_actions().size() != size_before, claim,
+		"giving the player a loaf did not change the size of his drawn ballot (%d before, %d after) — this claim cannot tell a list that redraws from one that never does" % [
+			size_before, verb_list.get_drawn_actions().size()])
+
+	world.queue_free()
+
+
+# get_drawn_actions() is VerbList's own bookkeeping copy of the list it was
+# HANDED, not a read of what it actually BUILT — so a loop in _rebuild_rows
+# that silently drops a row would leave get_drawn_actions() none the wiser.
+# This is the check with teeth for exactly that: it counts the real Button
+# nodes in the tree, through Godot's own public Node API, never VerbList's
+# private column. A count that disagrees means the panel promised something
+# it did not put on screen.
+#
+# CALLED ONLY ONCE, ON THE FIRST BUILD. A second rebuild in the same
+# hand-pumped tick would call queue_free() on the old buttons, and queued
+# deletion does not land until end of frame — this harness never yields one
+# — so a later count would double up stale rows with fresh ones and read
+# wrong for a reason that has nothing to do with the row-building loop under
+# test. The specified break drops a row on EVERY rebuild, including the very
+# first, so checking only the first is not a narrower claim.
+func _require_one_button_per_drawn_action(verb_list: VerbList, claim: String) -> void:
+	var buttons := verb_list.find_children("*", "Button", true, false)
+	_require(buttons.size() == verb_list.get_drawn_actions().size(), claim,
+		"get_drawn_actions() reports %d actions but the panel actually holds %d Button nodes — the drawn list must match what was actually built, not merely what it was handed" % [
+			verb_list.get_drawn_actions().size(), buttons.size()])
+
+
+# Identity AND order, the same two-part comparison VerbList._same_ballot uses
+# on itself — this file is checking that promise from outside, so it has to
+# ask the same question of it.
+func _same_action_list(left: Array[Action], right: Array[Action]) -> bool:
+	if left.size() != right.size():
+		return false
+	for i in left.size():
+		if left[i] != right[i]:
+			return false
+	return true
+
+
+# 61 — asserted in BOTH states of a gate that genuinely branches: shut without
+# bread, open with it. A claim asserted only in the shut state proves nothing
+# about the gate being asked at all — an always-closed gate and a genuinely
+# asked one look identical from that side alone.
+func _check_a_gate_that_says_no_never_reaches_the_players_ballot() -> void:
+	var claim := "61 — an action whose own gate says no never reaches the player's ballot"
+	var world := _add_a_disabled_game_scene()
+	var player := world.get_node_or_null("Population/Player") as Person
+	var population := world.get_node_or_null("Population") as Population
+	if player == null or population == null:
+		_require(false, claim, "the scene came up without a Population and a Player under it")
+		return
+
+	var eat: Eat = null
+	for action in player.brain.get_known_actions():
+		if action is Eat:
+			eat = action
+			break
+	if eat == null:
+		_require(false, claim, "the Player has no Eat action among what he knows — Eat must be on every person by composition")
+		return
+
+	# THE SHUT STATE — the Player is authored with no bread at all.
+	population.think_for_everyone(TICK_HOURS)
+	_require(not player.brain.get_open_actions().has(eat), claim,
+		"with no bread, Eat is still on the player's open ballot")
+	_require(not eat.is_available_to(player), claim,
+		"with no bread, Eat's own gate reads available")
+
+	# THE OPEN STATE — the same man, the same Action node, now holding a loaf.
+	player.get_inventory().add(&"bread", 1)
+	population.think_for_everyone(TICK_HOURS)
+	_require(player.brain.get_open_actions().has(eat), claim,
+		"with a loaf in hand, Eat is still off the player's open ballot")
+	_require(eat.is_available_to(player), claim,
+		"with a loaf in hand, Eat's own gate still reads unavailable")
+
+	world.queue_free()
+
+
+# 62 — THREE HALVES, because "choosing a verb runs that action's step, and
+# choosing nothing runs nothing" is really three separate claims about the
+# same fork: work performed where he stands, none performed while walking
+# there, and none performed while standing on a withdrawn bid.
+func _check_choosing_a_verb_runs_its_step_and_choosing_nothing_runs_nothing() -> void:
+	var claim := "62 — choosing a verb runs that action's step, and choosing nothing runs nothing"
+
+	# AT THE PLOT. 40 ticks of 0.01 hours at 2.5 grain/hour is exactly 1
+	# whole grain, and CommonPlot is unowned so he keeps all of it — see
+	# work_step.gd's _pay_out. Started at hour 0, where StayUp (47.3) still
+	# beats WorkForHire (43) for both Zoogs and Hobb, so neither of them sets
+	# off toward the grain fields' OWNED plot during this window — which is
+	# what makes "the fields' barn is untouched" a claim about THIS work and
+	# not theirs.
+	var world_a := _add_a_disabled_game_scene()
+	var player_a := world_a.get_node_or_null("Population/Player") as Person
+	var clock_a := world_a.get_node_or_null("Clock") as Clock
+	var population_a := world_a.get_node_or_null("Population") as Population
+	var common_field_a := world_a.get_node_or_null("Town/CommonField") as Place
+	var fields_a := world_a.get_node_or_null("Town/Fields") as Place
+	if player_a == null or clock_a == null or population_a == null or common_field_a == null or fields_a == null:
+		_require(false, claim, "the first world came up without a Player, a Clock, a Population, the CommonField and the Fields")
+		return
+	var brain_a := player_a.brain as PlayerBrain
+	if brain_a == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain")
+		return
+	var work_a: WorkTheField = null
+	for action in player_a.brain.get_known_actions():
+		if action is WorkTheField:
+			work_a = action
+			break
+	if work_a == null:
+		_require(false, claim, "the Player has no WorkTheField among what he knows")
+		return
+
+	_stand_at(player_a, common_field_a)
+	player_a.get_inventory().take(&"grain", player_a.get_inventory().get_count(&"grain"))
+	brain_a.choose_verb(work_a)
+
+	for tick in 40:
+		clock_a.advance(TICK_HOURS)
+		population_a.think_for_everyone(TICK_HOURS)
+
+	_require(player_a.get_inventory().get_count(&"grain") == 1, claim,
+		"40 ticks worked at the common field with Work chosen should leave the Player holding 1 grain and he holds %d" % player_a.get_inventory().get_count(&"grain"))
+	_require(fields_a.get_inventory().get_count(&"grain") == 0, claim,
+		"working the unowned common field should never touch the grain fields' barn, and it holds %d" % fields_a.get_inventory().get_count(&"grain"))
+	world_a.queue_free()
+
+	# ON THE ROAD. Mirrors claim 26's shape and its point exactly — a walking
+	# man produces nothing — for a hand-driven body instead of a scored one.
+	# The Fields' plot is owned by Marle and the Player has no obligation
+	# there, so it is never his candidate at all; the common field's unowned
+	# plot is the only station a bare WorkTheField will ever walk him toward.
+	var world_b := _add_a_disabled_game_scene()
+	var player_b := world_b.get_node_or_null("Population/Player") as Person
+	var population_b := world_b.get_node_or_null("Population") as Population
+	var inn_b := world_b.get_node_or_null("Town/Inn") as Place
+	var common_field_b := world_b.get_node_or_null("Town/CommonField") as Place
+	if player_b == null or population_b == null or inn_b == null or common_field_b == null:
+		_require(false, claim, "the second world came up without a Player, a Population, an Inn and the CommonField")
+		return
+	var brain_b := player_b.brain as PlayerBrain
+	if brain_b == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain")
+		return
+	var work_b: WorkTheField = null
+	for action in player_b.brain.get_known_actions():
+		if action is WorkTheField:
+			work_b = action
+			break
+	if work_b == null:
+		_require(false, claim, "the Player has no WorkTheField among what he knows")
+		return
+
+	_stand_at(player_b, inn_b)
+	player_b.get_inventory().take(&"grain", player_b.get_inventory().get_count(&"grain"))
+	brain_b.choose_verb(work_b)
+
+	var arrived := false
+	for tick in 200:
+		if player_b.get_current_place() == common_field_b:
+			arrived = true
+			break
+		_require(player_b.get_inventory().get_count(&"grain") == 0, claim,
+			"still on the road to the common field and already carrying %d grain — the yield is being paid for walking" % player_b.get_inventory().get_count(&"grain"))
+		population_b.think_for_everyone(TICK_HOURS)
+	_require(arrived, claim,
+		"the Player never reached the common field in 200 ticks — the walk half of this claim proved nothing")
+	world_b.queue_free()
+
+	# CHOOSING NOTHING. Standing on the plot itself, with the bid withdrawn —
+	# grain must not move on its own.
+	var world_c := _add_a_disabled_game_scene()
+	var player_c := world_c.get_node_or_null("Population/Player") as Person
+	var population_c := world_c.get_node_or_null("Population") as Population
+	var common_field_c := world_c.get_node_or_null("Town/CommonField") as Place
+	if player_c == null or population_c == null or common_field_c == null:
+		_require(false, claim, "the third world came up without a Player, a Population and the CommonField")
+		return
+	var brain_c := player_c.brain as PlayerBrain
+	if brain_c == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain")
+		return
+
+	_stand_at(player_c, common_field_c)
+	player_c.get_inventory().take(&"grain", player_c.get_inventory().get_count(&"grain"))
+	brain_c.stop_doing_anything()
+
+	for tick in 10:
+		population_c.think_for_everyone(TICK_HOURS)
+		_require(player_c.brain.current_action == null, claim,
+			"choosing nothing still ran an action — current_action reads \"%s\"" % [
+				String(player_c.brain.current_action.name) if player_c.brain.current_action != null else "nothing"])
+		_require(player_c.get_inventory().get_count(&"grain") == 0, claim,
+			"choosing nothing still produced %d grain" % player_c.get_inventory().get_count(&"grain"))
+
+	world_c.queue_free()
+
+
+# 63 — THE CLAIM WHOSE WHOLE POINT IS A BRANCH, so it has to be asserted in
+# the state where holding and dropping give different answers: dropped, then
+# the world reopens what it shut, and a held verb would resume on its own if
+# anything here remembered the plan instead of re-asking every tick.
+func _check_a_verb_dropped_from_under_him_is_dropped_not_held() -> void:
+	var claim := "63 — a verb dropped from under him is dropped, not held"
+	var world := _add_a_disabled_game_scene()
+	var player := world.get_node_or_null("Population/Player") as Person
+	var population := world.get_node_or_null("Population") as Population
+	var clock := world.get_node_or_null("Clock") as Clock
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	var common_field := world.get_node_or_null("Town/CommonField") as Place
+	var common_plot := world.get_node_or_null("Town/CommonField/CommonPlot") as Workstation
+	if player == null or population == null or clock == null or zoogs == null or common_field == null or common_plot == null:
+		_require(false, claim, "the scene came up without a Player, a Population, a Clock, a Zoogs, the CommonField and the CommonPlot")
+		return
+	var brain := player.brain as PlayerBrain
+	if brain == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain")
+		return
+	var work: WorkTheField = null
+	for action in player.brain.get_known_actions():
+		if action is WorkTheField:
+			work = action
+			break
+	if work == null:
+		_require(false, claim, "the Player has no WorkTheField among what he knows")
+		return
+
+	_stand_at(player, common_field)
+	brain.choose_verb(work)
+	population.think_for_everyone(TICK_HOURS)
+	_require(brain.get_chosen_verb() == work, claim,
+		"choosing Work and pumping a tick left get_chosen_verb() reading something else")
+	_require(player.brain.current_action == work, claim,
+		"choosing Work and pumping a tick left current_action reading something else")
+
+	# SHUT FROM THE WORLD, NOT FROM HIM. The grain fields' own plot is owned
+	# by Marle and the Player carries no obligation, so it was never his
+	# candidate; claiming the common field's plot away leaves him with no
+	# candidate at all — a gate shutting under him, not a choice he made.
+	common_plot.claimed_by = zoogs
+	common_plot.claimed_on_day = clock.day()
+	population.think_for_everyone(TICK_HOURS)
+	_require(brain.get_chosen_verb() == null, claim,
+		"the common plot was claimed out from under him and get_chosen_verb() still reads Work")
+	_require(player.brain.current_action == null, claim,
+		"the common plot was claimed out from under him and current_action still reads Work")
+
+	# REOPENED — AND THIS IS THE CLAIM. A held verb would resume here on its
+	# own; nothing does, because nothing here was ever suspended and restored.
+	common_plot.claimed_by = null
+	population.think_for_everyone(TICK_HOURS)
+	_require(brain.get_chosen_verb() == null, claim,
+		"the plot reopened and get_chosen_verb() reads Work again on its own — a dropped verb must not resume itself")
+	_require(player.brain.current_action == null, claim,
+		"the plot reopened and current_action reads Work again on its own — a dropped verb must not resume itself")
+
+	# NOT PERMANENT DAMAGE — chosen again, it runs.
+	brain.choose_verb(work)
+	population.think_for_everyone(TICK_HOURS)
+	_require(brain.get_chosen_verb() == work, claim,
+		"choosing Work again after the drop did not stick")
+	_require(player.brain.current_action == work, claim,
+		"choosing Work again after the drop did not make it his current action")
+
+	world.queue_free()
+
+
+# 64 — BOTH HALVES MATTER, and the second is the one with teeth: the fork
+# Gate 1 added lives entirely in PlayerBrain.pick_from_the_ballot, and nothing
+# about DecisionEngine or Brain.think_and_act changed to make room for it — so
+# an ordinary body on the exact same tick, thought by the exact same
+# Population loop, still picks by score.
+func _check_the_fork_changed_one_body_not_the_engine() -> void:
+	var claim := "64 — the fork changed one body, not the engine: an NPC on the same tick still picks by score"
+	var world := _add_a_disabled_game_scene()
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var player := world.get_node_or_null("Population/Player") as Person
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	if clock == null or population == null or player == null or zoogs == null:
+		_require(false, claim, "the scene came up without a Clock, a Population, a Player and a Zoogs")
+		return
+	var brain := player.brain as PlayerBrain
+	if brain == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain")
+		return
+	var work: WorkTheField = null
+	for action in player.brain.get_known_actions():
+		if action is WorkTheField:
+			work = action
+			break
+	if work == null:
+		_require(false, claim, "the Player has no WorkTheField among what he knows")
+		return
+
+	clock.advance(2.0) # the small hours — StayUp (49.98) outscores work (47.02) for the Player here
+	brain.choose_verb(work)
+	population.think_for_everyone(TICK_HOURS)
+
+	# HALF ONE. Read the SCORES RECORDED, never re-asked — re-gating would
+	# move Town's pressure counters and make this check write to the world it
+	# is measuring.
+	var zoogs_scores := zoogs.brain.get_last_scores()
+	var zoogs_best := _highest_scoring_open_action(zoogs.brain.get_open_actions(), zoogs_scores)
+	_require(zoogs_best != null and zoogs.brain.current_action == zoogs_best, claim,
+		"Zoogs' current_action reads \"%s\", not the highest recorded scorer \"%s\"" % [
+			String(zoogs.brain.current_action.name) if zoogs.brain.current_action != null else "nothing",
+			String(zoogs_best.name) if zoogs_best != null else "nothing"])
+
+	# HALF TWO — the state in which "picks by score" and "picks by hand" give
+	# different answers, and without it this claim would pass for free.
+	_require(player.brain.current_action == work, claim,
+		"the Player chose Work and current_action reads \"%s\" instead" % [
+			String(player.brain.current_action.name) if player.brain.current_action != null else "nothing"])
+	# THE PLAYER'S OWN BALLOT IS NEVER SCORED AT ALL — Decision 33's "the
+	# player's verb menu is get_available() drawn instead of scored" made
+	# mechanical: PlayerBrain.pick_from_the_ballot never calls
+	# DecisionEngine.get_highest_scoring, so his _last_scores holds nothing
+	# but NAN for the actions his own gates shut. There is no recorded number
+	# to read here the way half one just did for Zoogs, so this half asks
+	# each of his open actions directly — get_utility_score is a pure read
+	# with no telemetry side effect, unlike a gate, so asking it fresh here
+	# is not the thing claim 64's header warns against.
+	var player_best := _highest_scoring_action_by_score(player.brain.get_open_actions(), player)
+	_require(player_best != null and player_best != work, claim,
+		"at night Work is still the highest scorer on the Player's own ballot — this claim needs a state where the hand-picked verb and the top score disagree")
+
+	world.queue_free()
+
+
+# The highest-scoring entry among an open ballot, read off a recorded scores
+# dictionary rather than re-asked — see claim 64's own header for why
+# re-asking would write to the world it is trying to measure. Ties go to
+# whichever came first, the same rule DecisionEngine.get_highest_scoring uses.
+func _highest_scoring_open_action(open_actions: Array[Action], scores: Dictionary) -> Action:
+	var best: Action = null
+	var best_score := -INF
+	for action in open_actions:
+		var score: Variant = scores.get(action.name)
+		if not (score is float):
+			continue
+		var score_value: float = score
+		if not is_finite(score_value):
+			continue
+		if best == null or score_value > best_score:
+			best_score = score_value
+			best = action
+	return best
+
+
+# The mirror of the helper above for a ballot nobody ever scored — the
+# PLAYER's. Same tie rule as DecisionEngine.get_highest_scoring: strict
+# greater-than, so the first action encountered keeps the win on a tie.
+# get_utility_score is a pure read on every Action in this game (the sum a
+# gate is never allowed to be), so asking it directly here writes nothing to
+# the world it is describing.
+func _highest_scoring_action_by_score(open_actions: Array[Action], person: Person) -> Action:
+	var best: Action = null
+	var best_score := -INF
+	for action in open_actions:
+		var score: float = action.get_utility_score(person)
+		if not is_finite(score):
+			continue
+		if best == null or score > best_score:
+			best_score = score
+			best = action
+	return best
+
+
+# 65 — DECISION 17'S CLAIM, AND THE REASON THE BAND EXISTS. Read
+# enters_within/leaves_beyond off the node rather than hard-coding 3.0 and
+# 4.5, so retuning them on the tuning board cannot turn this red.
+#
+# Positions are set BY HAND and pumped through player.think_and_act(0.0)
+# directly rather than through Population — this claim is entirely about
+# _settle_where_he_stands, and driving one person directly is the same
+# isolation technique claims 14, 22 and 46 already use to keep a claim about
+# one mechanism from being muddied by everybody else in the world.
+func _check_the_players_place_is_a_band_and_does_not_flicker_on_a_boundary() -> void:
+	var claim := "65 — the player's place is a band, and it does not flicker on a boundary"
+	var world := _add_a_disabled_game_scene()
+	var player := world.get_node_or_null("Population/Player") as Person
+	var square := world.get_node_or_null("Town/Square") as Place
+	if player == null or square == null:
+		_require(false, claim, "the scene came up without a Player and Town/Square")
+		return
+	var brain := player.brain as PlayerBrain
+	if brain == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain")
+		return
+	# A DIRECTION CLEAR OF EVERY OTHER AUTHORED PLACE ALONG THE WHOLE
+	# TRAVERSE, hand-picked against game.tscn's own layout — Fields, Inn,
+	# Tavern and CommonField all stay well clear of this line between t=-7
+	# and t=+7 of the Square — so a crossing counted here is a crossing of
+	# the Square's own band and nothing else's.
+	var direction := Vector3(1.0, 0.0, -1.0).normalized()
+
+	# HALF ONE — ONE CHANGE PER CROSSING. Start well outside every place,
+	# walk a straight line through the Square's centre and out the far side.
+	var start_t := -7.0
+	var end_t := 7.0
+	var steps := 280
+	player.global_position = square.global_position + direction * start_t
+	player.think_and_act(0.0)
+	var previous_place := player.get_current_place()
+	var changes: Array[Place] = []
+	for i in range(1, steps + 1):
+		var t: float = start_t + (end_t - start_t) * float(i) / float(steps)
+		player.global_position = square.global_position + direction * t
+		player.think_and_act(0.0)
+		var now_place := player.get_current_place()
+		if now_place != previous_place:
+			changes.append(now_place)
+			previous_place = now_place
+	_require(changes.size() == 2, claim,
+		"walking a straight line through the Square and out the far side changed current_place %d times, not 2" % changes.size())
+	if changes.size() == 2:
+		_require(changes[0] == square, claim,
+			"the first change on the traverse reads %s, not the Square" % _describe_place(changes[0]))
+		_require(changes[1] == null, claim,
+			"the second change on the traverse reads %s, not nowhere" % _describe_place(changes[1]))
+
+	# HALF TWO — THE HYSTERESIS, AND THIS IS THE HALF WITH TEETH. A single-
+	# radius model answers the in-between distance differently depending on
+	# which way it is crossed; a band does not.
+	var midpoint: float = (brain.enters_within + brain.leaves_beyond) / 2.0
+	player.global_position = square.global_position + direction * midpoint
+	player.think_and_act(0.0)
+	_require(player.get_current_place() == null, claim,
+		"approaching from outside, parked at the midpoint between the two radii (%.2f), he reads %s — he has not entered yet" % [
+			midpoint, _describe_place(player.get_current_place())])
+
+	player.global_position = square.global_position + direction * (brain.enters_within * 0.5)
+	player.think_and_act(0.0)
+	_require(player.get_current_place() == square, claim,
+		"moved inside enters_within (%.2f), he reads %s, not the Square" % [
+			brain.enters_within, _describe_place(player.get_current_place())])
+
+	player.global_position = square.global_position + direction * midpoint
+	player.think_and_act(0.0)
+	_require(player.get_current_place() == square, claim,
+		"moved back out to the same midpoint distance (%.2f) he entered from, he now reads %s — a single-radius model would have dropped him here; the band must not" % [
+			midpoint, _describe_place(player.get_current_place())])
+
+	# HALF THREE — NO FLICKER. From inside, cross the INNER radius only, back
+	# and forth, ten times. Holding the Square means only the OUTER radius can
+	# evict him, so oscillating across the inner one alone must never move
+	# current_place at all.
+	var held_place := player.get_current_place()
+	for i in 10:
+		var factor: float = 0.8 if i % 2 == 0 else 1.2
+		var distance: float = brain.enters_within * factor
+		player.global_position = square.global_position + direction * distance
+		player.think_and_act(0.0)
+		_require(player.get_current_place() == held_place, claim,
+			"crossing the inner radius alone (to %.2f, %.2fx enters_within) changed current_place to %s" % [
+				distance, factor, _describe_place(player.get_current_place())])
+
+	world.queue_free()
+
+
+# 66 — THE STEP 2 TRAP, PINNED. Simply calling think_for_everyone(1.0) twice
+# would be VACUOUS here: that call site takes hours by construction and never
+# sees a real second, so it could never catch a real-frame constant leaking
+# into the player's own walk. This drives him through the REAL conversion —
+# clock.get_hours_elapsed(real_delta) — the only place the bug could live.
+func _check_the_player_covers_the_same_ground_per_world_hour_at_any_day_length() -> void:
+	var claim := "66 — the player covers the same ground per world hour at any day length"
+
+	var distance_60 := _walk_one_world_hour_at(60.0, claim)
+	var distance_600 := _walk_one_world_hour_at(600.0, claim)
+	if distance_60 < 0.0 or distance_600 < 0.0:
+		return
+
+	_require(absf(distance_60 - distance_600) < 0.001, claim,
+		"one world hour moved him %.5f units at a 60-second day (2.5 real seconds) and %.5f units at a 600-second day (25 real seconds) — real-frame integration is leaking through, not world hours" % [
+			distance_60, distance_600])
+
+	# A body that moved consistently but by the WRONG amount would still pass
+	# the comparison above, so this checks the amount itself against the one
+	# number it is supposed to equal — a third fresh world, so the expected
+	# figure is read off the same seam the body's own walk uses, never
+	# smuggled in from a run already under test.
+	var speed_world := _add_a_disabled_game_scene()
+	var speed_player := speed_world.get_node_or_null("Population/Player") as Person
+	if speed_player == null:
+		_require(false, claim, "a third world came up without a Player")
+		return
+	var expected_distance: float = speed_player.get_travel_speed() * 1.0
+	speed_world.queue_free()
+
+	_require(absf(distance_60 - expected_distance) < 0.001, claim,
+		"one world hour should move him exactly get_travel_speed() times 1.0 = %.5f units, and it moved him %.5f" % [
+			expected_distance, distance_60])
+
+
+# One world hour of walking, driven through the REAL clock conversion — one
+# simulated frame at a time — so the only path that could leak a real-second
+# constant through to the player's own walk is the one being exercised.
+# Returns -1.0 (and records a failure against `claim`) if the world did not
+# come up right.
+func _walk_one_world_hour_at(day_length_seconds: float, claim: String) -> float:
+	var world := _add_a_disabled_game_scene()
+	var player := world.get_node_or_null("Population/Player") as Person
+	var population := world.get_node_or_null("Population") as Population
+	var clock := world.get_node_or_null("Clock") as Clock
+	if player == null or population == null or clock == null:
+		_require(false, claim, "a world came up without a Player, a Population and a Clock")
+		return -1.0
+	var brain := player.brain as PlayerBrain
+	if brain == null:
+		_require(false, claim, "the Player's Brain is not a PlayerBrain")
+		return -1.0
+
+	clock.day_length_seconds = day_length_seconds
+	brain.point_toward(Vector3.RIGHT)
+	var start_position := player.global_position
+
+	var real_frame := 1.0 / 60.0 # a single frame at 60fps, in REAL seconds
+	var hours_accumulated := 0.0
+	while hours_accumulated < 1.0:
+		var hours_this_frame: float = clock.get_hours_elapsed(real_frame)
+		# CLAMP THE FINAL STEP so both runs total exactly one world hour to
+		# the float — a day length's ragged last frame must not add a
+		# different fraction of an hour to one run than to the other.
+		if hours_accumulated + hours_this_frame > 1.0:
+			hours_this_frame = 1.0 - hours_accumulated
+		population.think_for_everyone(hours_this_frame)
+		hours_accumulated += hours_this_frame
+
+	var distance: float = player.global_position.distance_to(start_position)
+	world.queue_free()
+	return distance
 
 
 func _report() -> void:

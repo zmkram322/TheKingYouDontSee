@@ -21,7 +21,7 @@ tracks their resolution.
 
 ## Index
 
-*Added 2026-08-19, extended 2026-08-20. Thirty-four sections is past the point where "highest number
+*Added 2026-08-19, extended 2026-08-20. Thirty-five sections is past the point where "highest number
 wins" can be applied by reading the file. **Scan up from the bottom** — a later
 ruling narrows an earlier one more often than it contradicts it.*
 
@@ -61,10 +61,12 @@ ruling narrows an earlier one more often than it contradicts it.*
 | 32 | The empty-venue trickle is a placeholder, not a mistake | |
 | 33 | **The player is the boss, and the ladder is re-cut from his seat.** A command is a *bid*. The verb menu is `get_available()` drawn. No code names a verb. | |
 | 34 | **A gap is measured in what can actually change hands.** `is_discharged()` is derived, never stamped. | |
+| 35 | **What makes a verb come and go, once freeness is public.** No gate reads where a man stands any more, so the player's ballot turns on what he CARRIES. The town gains an unclaimed field so he can act on the world at all. | |
 
-**If you read only three: 19–27** (how wanting works — before writing any
+**If you read only four: 19–27** (how wanting works — before writing any
 Action), **30** (how freeness is known — before writing any gate that asks where
-a man is standing), and **33** (whose seat the game is played from).
+a man is standing), **33** (whose seat the game is played from), and **35**
+(what 30 quietly did to every ballot in the game).
 
 ---
 
@@ -4460,6 +4462,37 @@ matters.
 mechanism — the shape this ledger has refused three times. It will take a number
 of its own when it is settled.
 
+**RAISED AND RE-REFUSED 2026-08-20, DURING GATE 1.** The obvious mechanism-shaped
+answer was put to the author: since Decision 31 says *a gap may only drive a verb
+that closes it in ONE act*, and `MakeBreadStep` bakes exactly one loaf, make the
+act bake up to the target and the target starts governing with the curve
+untouched. **The author refused it, and the refusal is sharper than the
+proposal:**
+
+> *"Closing gaps in one go sounds dangerous — one act may reduce the gap below
+> the action threshold."*
+
+That is the failure the proposal walks into and it is worth stating in full.
+An act sized to close the whole gap does not merely satisfy the want, it
+**overshoots the state in which the want was legible**: the man goes from
+plainly-short to plainly-stocked inside one tick, so every observer — the graph,
+the readout, a later gate reading the same stock — never sees the middle. A want
+that is only ever fully open or fully shut is a switch, and Decision 34's own
+opening argument is that a switch somebody flips is what produced the failure it
+was written to fix. **One-act closure is a legitimate shape for a gap that
+genuinely IS binary (a day's labour, employed or not) and a trap for one measured
+on a continuum.**
+
+So the question stands, now with a second wrong answer named beside the first:
+
+- **Not** retuning the exponent — a number standing in for a mechanism.
+- **Not** closing the gap in one act — a continuum quantised into a switch.
+
+**Still unruled. It blocks nothing** and Gate 1 changed no number touching it.
+Gate 1 does hand it a better instrument than the twelve-day pump did: the player
+bakes with his own hands, parks at two loaves against an authored target of six,
+and the inertness is watched rather than read off a table.
+
 ### Plan edits this implies
 
 | Where | Edit | Applied |
@@ -4468,3 +4501,135 @@ of its own when it is settled.
 | Decision 31 | Untouched. Work's score is still flat and still does not read the larder. | n/a |
 | `gate-1-session-prompt.md` | Banner: Gate 0 landed; the anchor numbers it should be watched against; the three carried-forward open items. | **applied** |
 | Seam ledger → *Installed* | **Payment** amended: paid through one door, `Obligation.take_worker_share()`. | **applied** |
+
+---
+
+## Decision 35 — What makes a verb come and go, once freeness is public
+
+**Settled 2026-08-20. Author's call**, made before a line of Gate 1 was written,
+on a hole found while reading rather than while building.
+
+### The question
+
+`gate-1-session-prompt.md` and `boss-scene-build-plan.md` both cut the same
+Moment:
+
+> *"You walk toward the fields on your own legs and **the list changes under
+> you** — Work appears when you are standing at the plot."*
+
+**Neither half of that sentence was true of the shipped code**, and both were
+true when the sentence was written. Two separate things had moved underneath it.
+
+**One: the player cannot work anything.** The only `field work` station in the
+world is `Town/Fields/Plot`, owned by Marle. `Workstation.is_permitted_to` says
+an owner's land is open to the owner and to whoever carries an obligation naming
+that place — the player is neither — so `WorkTheField.is_available_to` reads
+false for him **everywhere in town, at every hour**. The verb could not appear at
+the plot because it could not appear at all.
+
+**Two, and this is the one that generalises: no gate in the game reads where a
+man is standing any more.** Decision 30 moved freeness onto a public register —
+*"the register says whether it is worth going; his feet decide whether he gets
+it"* — and in doing so deleted the last positional term out of a gate.
+Enumerated, at the day this was settled:
+
+| Action | What its gate asks | Positional? |
+|---|---|---|
+| `StayUp` | is he awake | no |
+| `Sleep` | is any bed free anywhere | no |
+| `Wake` | is he asleep | no |
+| `Eat` | awake, and has he a loaf | no |
+| `MakeBread` | awake, and has he the grain | no |
+| `Socialise` | awake, and does a venue exist at all | no |
+| `WorkTheField` | awake, and is a permitted station free | no |
+
+**So a ballot cannot change under anybody's feet, player or NPC.** That is not a
+regression and nothing about it is wrong — Decision 30 argued the change at
+length and the dither it killed was real. It simply means a Moment written
+around walking into a verb was describing a game that had stopped existing
+eight commits earlier, and nobody noticed because until Gate 1 nobody had feet.
+
+### The ruling
+
+> **The player's ballot turns on what he CARRIES and what the town has DONE, not
+> on where he stands. And the town gains an unclaimed field, so that he can act
+> on the world at all.**
+
+Three parts, each with a consequence.
+
+**A. The Moment is re-cut, not rescued.** It now reads:
+
+> You spawn in the town square with an empty sack. Work is on your list because
+> there is unclaimed land in this town. You walk to it on your own legs, choose
+> Work, and the number in your own sack climbs. **At three grain, a verb you have
+> never seen appears on your list** — you can bake. Bake, and a fourth appears:
+> you can eat.
+
+That is a better beat than the authored one and it is not a consolation prize.
+The authored version had the world reveal a verb because you moved; this one has
+**your own labour reveal it**, which is the loop closing in your hands rather
+than a trigger firing. It is also the first thing in this project that shows
+work → grain → bread → eat to a person instead of to a probe.
+
+**B. `Town/CommonField` — one unowned `field work` station at a Place of its
+own.** Unowned land is the king's, which is the same answer as nobody's, so
+permission is wide open on it and the player can simply work it. **It is at its
+own Place deliberately, and that is load-bearing**: put an unowned plot at the
+grain fields instead and Zoogs' `WorkForHire` scopes candidates by his
+obligation's `place_name`, matches it, and **Zoogs gets an errand** — which
+Gate 1 forbids in as many words, because his idleness is Decision 30's finding
+made visible. At its own Place, no NPC in the town can see it: both farmers are
+scoped to the grain fields and Marle has no work action at all. **Measured, not
+argued: the probe's anchor numbers are byte-identical either side of this
+change** — cold start 21:14/05:52, settled 22:10/8.00 h/06:10, strong man 04:47.
+
+It is also the field Decision 33 quotes the author asking for — *"but there'd be
+an unclaimed field, then you can tell them to work the field"* — arriving five
+gates before Gate 6's writ needs somewhere to point.
+
+**C. `Town/Square`, and it earns its place for one reason only.** Nothing gates
+on it and no NPC reacts to it. It exists so that Decision 17's band has open
+ground to be watched on: a door is naturally discrete, and the band was only ever
+needed for the fields and the square. Non-gathering, so `Socialise` cannot see
+it and the town's evenings do not move.
+
+### What was rejected
+
+**Employing the player at the grain fields.** An `Obligation` plus `WorkForHire`
+would have let him work the existing plot with no new content, and it would have
+given the truest possible version of *the list changes under you*: Work drops off
+his ballot the moment Hobb claims the plot at dawn and returns at the day
+boundary. Refused on two counts. The boss on Marle's payroll is the wrong
+fiction for a ladder whose first sentence is *the player is the boss*. And it
+puts a third contender in the dawn race, which moves the one measurement this
+project has — the anchor — for a Moment, which is the worst possible reason.
+
+**Building nothing and dropping probe claim 4.** The gate would then prove the
+fork and nothing about the fork being *worth* anything. A verb list you cannot
+act on is a menu, and the whole point of drawing `get_available()` is that the
+things on it are real.
+
+### What this does NOT settle
+
+- **Whether a gate should ever read position again.** Decision 30's argument
+  stands untouched and this does not reopen it. What is now known is the *cost*
+  of that argument, which was never stated: no verb anywhere can be revealed by
+  arriving. If a later gate wants one — a verb that exists only at a threshing
+  floor, a door only openable from inside — that is a new question and it must
+  answer Decision 30 on its own terms, not lean on this.
+- **Whether the player should be able to steer while asleep.** He can, today.
+  Nothing gates his movement on `is_awake`, because Decision 33 leaves open
+  whether his own drives ever constrain him and a movement function is the wrong
+  place to answer it quietly. **Watch it; do not patch it.**
+- **What a second unclaimed field would do.** One is authored. The moment there
+  are two, `Town.find_workstations`' ordering starts deciding which the player
+  walks to, and that is a fine answer — it is just an unmeasured one.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| `gate-1-session-prompt.md` | Its Moment and its probe claim 4 both assume Work is revealed by arriving. Superseded by this decision; the file is spent either way. | **applied** (recorded here) |
+| `boss-scene-build-plan.md`, Gate 1 | Same sentence, same supersession. Gates 2–11 are unaffected — none of them turns on a positional gate. | **applied** (recorded here) |
+| `game.tscn` | `Town/Square`, `Town/CommonField` + `CommonPlot`, `Population/Player`. | **applied** |
+| `probe.gd` | Claims 18, 24 and 43 each narrowed to the stations they are actually about, rather than depending on the town holding exactly one plot. Claim 6's population count moved 4 → 5. | **applied** |

@@ -1,5 +1,23 @@
 # Gate 1 — A body you steer, and a verb list that changes under your feet
 
+> ## ✅ GATE 1 LANDED 2026-08-20 — this file is spent
+>
+> Built and verified. **Two things in this file were wrong when it was written
+> and are recorded rather than smoothed over**, both settled as **Decision 35**
+> before any code was cut:
+>
+> 1. **"Work appears when you are standing at the plot" cannot happen.** Decision
+>    30 made freeness a public register, and in doing so took the last positional
+>    term out of the last gate in the project. **No gate anywhere reads where a
+>    man is standing.** A ballot cannot change under anybody's feet.
+> 2. **The player could not work at all.** The only `field work` station is
+>    Marle's, and the player carries neither ownership nor an obligation — so
+>    `WorkTheField` read false for him everywhere, at every hour.
+>
+> Step 1 (the band), Step 2 (hours, not frames) and Step 0 (the fork) were all
+> correct and all landed as written. See `gate-1-findings-2026-08-20.md`.
+
+
 **Written 2026-08-19, for a fresh session.** First gate of the boss ladder
 (`boss-scene-build-plan.md`).
 

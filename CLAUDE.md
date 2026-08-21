@@ -8,15 +8,15 @@ something needs it.
 
 | Folder | What |
 |---|---|
-| `game/` | **The build.** Substrate: `person`, `stats`, `brain`, `action`, `action_step`, `decision_engine`, `clock`, `daylight`, `population`, `place`, `town`, `workstation`, `inventory`. |
+| `game/` | **The build.** Substrate: `person`, `stats`, `brain`, `action`, `action_step`, `decision_engine`, `clock`, `daylight`, `population`, `place`, `town`, `workstation`, `inventory`. Plus `player_brain` — the ONE fork in the whole substrate: a `Brain` whose winner comes from a hand instead of from a score, and whose `current_place` is written by input instead of by a step. `player.tscn` is an inherited scene, not a class; nothing downstream can tell his answers from an NPC's. |
 | `game/actions/` | The action library. One scene per action, instanced under a person's Brain. |
-| `game/ui/` | Watching and tuning. `stat_graph` plots a person's stats over time; `tuning_board` puts a slider on every exported number of whatever nodes you point it at. Both are their own scenes, both need a `CanvasLayer` parent in a 3D scene, both discover what to show by reflection so neither needs a line per stat or per knob. |
+| `game/ui/` | Watching and tuning. `stat_graph` plots a person's stats over time; `tuning_board` puts a slider on every exported number of whatever nodes you point it at; `verb_list` draws the player's open ballot and reports what he clicked. All three are their own scenes, all three need a `CanvasLayer` parent in a 3D scene, and all three discover what to show by reflection so none needs a line per stat, per knob or **per verb** — `verb_list` naming a verb is a failed build, on the same footing as code naming a playstyle. |
 | `assets/` | Art. `quaternius/` is 3D, `tiny_town`/`tiny_dungeon` are 2D. |
 | `_bmad-output/planning-artifacts/prd.md` | The requirements contract. FR numbers are stable identifiers. |
 | **The four "why" docs** | **What the game is FOR.** The plans say what to build; these say why any of it is worth building, and they are the thing to re-read when the work starts feeling like bookkeeping. `design-positioning-and-comparables.md` — the spine (*illegible authorship*: the gap between what the world attributes to you and what you authored), power defined as *how many people fall under the shadow of your decisions*, and what CK3/Dishonored/Mordor each prove or warn about. `design-multipath-routes-framework.md` — paths are distinct by **what breaks and who fights you**, never by what you watch; **no code may name a playstyle**. `poc-v2-system-spirit.md` — the ten tenets, incl. **no hard-fail states** and *legibility is a design constraint, not a nicety*. `design-session-2026-07-24-social-political-layer.md` — greeting rungs, LOOK held separate from GREET, and *you are a perfect reader of a deliberately foggy world.* |
 | `_bmad-output/boss-scene-build-plan.md` | **THE FORWARD LADDER — start here.** Eleven gates, cut from the player's seat: you walk the town, greet, beckon, give, and tell people what to do, **and they can refuse.** Read before adding to `game/`. |
 | `_bmad-output/proving-scene-build-plan.md` | **The record of the shipped substrate**, not the forward plan (superseded 2026-08-19, Decision 33). Rungs 0–6 shipped and every seam in them stands; read it for *why* `game/` is shaped the way it is. Its rungs 7–9 are re-seated as the boss ladder's Gate 10+. |
-| `_bmad-output/proving-scene-decisions.md` | **The authority. Read with whichever plan you are building from.** **Thirty-three** questions settled, each with the reasoning, indexed at the top of the file. Wins where it and a plan disagree, and the **highest number wins** within it. Three of them look like violations of the rules below until you read why they aren't. **19–27 settle how wanting works at all** — every want is a gap, `want = weight × gap^bite`, gates ask the world and never how much he wants it, failure marks the candidate. **28: Socialise's candidates are venues (`Place.is_gathering_place`), not crowds.** **33 (2026-08-19) re-seats the whole ladder in the player's seat** — a command is a *bid*, not an override; the player's verb menu is `get_available()` drawn instead of scored; and no code may name a verb. Read 19–27 and 33 before writing any new Action. |
+| `_bmad-output/proving-scene-decisions.md` | **The authority. Read with whichever plan you are building from.** **Thirty-five** questions settled, each with the reasoning, indexed at the top of the file. Wins where it and a plan disagree, and the **highest number wins** within it. Three of them look like violations of the rules below until you read why they aren't. **19–27 settle how wanting works at all** — every want is a gap, `want = weight × gap^bite`, gates ask the world and never how much he wants it, failure marks the candidate. **28: Socialise's candidates are venues (`Place.is_gathering_place`), not crowds.** **33 (2026-08-19) re-seats the whole ladder in the player's seat** — a command is a *bid*, not an override; the player's verb menu is `get_available()` drawn instead of scored; and no code may name a verb. **35 (2026-08-20) is the one that will surprise you: since 30 made freeness public, NOT ONE gate in the game reads where a man is standing, so no verb can be revealed by arriving anywhere** — a ballot turns on what he carries and what the town has done. Read 19–27, 33 and 35 before writing any new Action. |
 
 `tkyds-game/` is now **`game/` and `assets/` and nothing else.** `brain/`,
 `world/` and `skin/` were retired 2026-08-05; `board/`, `town/`, `sandbox/`,
@@ -138,13 +138,25 @@ ported yet; port them from git history when something needs them.
 
 ## Verifying
 
-**The engine moved to 4.7.2 on 2026-08-20.** Verified that day: the project
-parses clean and `game/probe.gd` returns **50/50 green with identical numbers
-under 4.4 and 4.7.2** — same 14747 checks, same bedtimes to the minute. The
-bump changed no behaviour. Two things are still stale and are the author's call
-to bump rather than a builder's: `project.godot` still declares
-`config/features=PackedStringArray("4.4", ...)`, and `game/probe.gd`'s own
-header still prints the 4.4 run lines.
+**The engine moved to 4.7.2 on 2026-08-20.** Verified that day against the
+then-current probe: identical numbers under 4.4 and 4.7.2 — same 14747 checks,
+same bedtimes to the minute. The bump changed no behaviour. Two things are still
+stale and are the author's call to bump rather than a builder's: `project.godot`
+still declares `config/features=PackedStringArray("4.4", ...)`, and
+`game/probe.gd`'s own header still prints the 4.4 run lines.
+
+**The standing count, after Gate 1: 63 claims, 14894 checks, all green.** The
+anchor every measurement is taken against, unmoved by Gate 0 or Gate 1:
+
+```
+cold start: turned in 21:14, up 05:52
+settled:    turns in 22:10, sleeps 8.00 h, up 06:10
+strong man (1.15): up 04:47
+```
+
+**Do not run the probe from the repo root.** `--path .` outside `tkyds-game/`
+finds no project, does nothing, and exits 0 — a silent false green that looks
+exactly like a clean pass. Pass the project path explicitly.
 
 There is no test suite for `game/`, and there is no framework — no GUT, no
 GdUnit, no fixtures, no runner. What there is instead is **`game/probe.gd`, a

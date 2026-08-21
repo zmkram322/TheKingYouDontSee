@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="1_person"]
+[ext_resource type="Script" path="res://game/player_brain.gd" id="2_player_brain"]
+[ext_resource type="PackedScene" path="res://game/actions/work_the_field.tscn" id="3_work_the_field"]
+
+[node name="Player" instance=ExtResource("1_person")]
+person_name = "You"
+tint = Color(0.94, 0.91, 0.76, 1)
+
+[node name="Brain" parent="." index="2"]
+script = ExtResource("2_player_brain")
+
+[node name="WorkTheField" parent="Brain" index="6" instance=ExtResource("3_work_the_field")]

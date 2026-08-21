@@ -27,9 +27,24 @@ extends CharacterBody3D
 @export var tint := Color(0.78, 0.74, 0.68)
 
 # Where he IS — a discrete fact he carries, not a distance to anything. Authored
-# per instance at birth, and after that GoToStep is the ONLY thing in the game
-# that writes it: cleared to null on the first tick of a journey, written again
-# on arrival. Null is a real state and means "on the way".
+# per instance at birth, and after that ONE thing writes it. Null is a real
+# state and means "on the way".
+#
+# WHICH one thing depends on what moves him, and that is the whole of Decision
+# 17. For everybody whose movement follows from a DECISION, it is GoToStep:
+# cleared to null on the first tick of a journey, written again on arrival. For
+# a body somebody STEERS, nobody chose "go to the Inn" — a stick was pushed —
+# so the writer is an input-driven one instead: PlayerBrain settles this field
+# from where his body actually stands, on a two-radius band, as the last thing
+# in his tick. Both are still exactly one writer per man, and both hand back the
+# same discrete crisp answer, which is the point: get_current_place() is what
+# every gate and every query in the game reads, and NOTHING downstream can tell
+# a steered body's answer from a decided one.
+#
+# What must never happen is TWO writers on one man. That is why the band settles
+# after the step rather than before it — a chosen verb whose step walks him
+# (WorkStep) writes this field too, and the band speaking last is what keeps the
+# count at one.
 #
 # (The probe writes it by hand too, and that is legal — it is authoring a
 # situation rather than moving a man. The one-writer rule is about the game.)

@@ -154,13 +154,24 @@ lying, and no gate below can be judged through it.
 
 ### Gate 1 — A body you steer, and a verb list that changes under your feet
 
+> **⚠ THE MOMENT BELOW IS SUPERSEDED BY DECISION 35 (2026-08-20).** "Work when
+> you reach the plot" describes a game that stopped existing at Decision 30:
+> freeness became a public register, and with it **the last positional term went
+> out of the last gate in the project.** No verb anywhere can be revealed by
+> arriving somewhere. The seam, the files and every probe claim but one are
+> unaffected; only this paragraph and claim 4's "at a plot" were wrong. Read
+> Decision 35 for the re-cut Moment — the list changes because of what you
+> CARRY, and it is a better beat.
+
 **Seam:** where a Person's decision comes from — input picking off
 `get_available()`, instead of `get_highest_scoring()` picking for him.
 
-**Moment:** you walk from the town square to the fields on your own legs, and
-**the verb list changes as you go** — empty in the road, Work when you reach the
-plot. You choose Work. Grain climbs in *your* sack. Nobody in town cares that
-you exist.
+**Moment:** ~~you walk from the town square to the fields on your own legs, and
+the verb list changes as you go — empty in the road, Work when you reach the
+plot.~~ You walk from the town square to the unclaimed common field on your own
+legs and choose Work. Grain climbs in *your* sack — and at three grain **a verb
+you have never seen appears on your list**, because you can now bake. Nobody in
+town cares that you exist.
 
 Cut in full below, and **handed off in `gate-1-session-prompt.md`** — build from
 that file, not from this summary.

@@ -18,6 +18,17 @@ extends Node3D
 # ambiguously when two places sit close together, and it makes arrival depend on
 # the frame rate. That model was tried and reverted on 2026-08-08.
 #
+# ONE BODY DOES READ ITS PLACE OFF DISTANCE, AND IT IS NOT THAT MODEL COMING
+# BACK. A body somebody STEERS has no decision to take the answer from — nobody
+# chose "go to the Inn", a stick was pushed — so Decision 17 gives it an
+# input-driven writer instead, in PlayerBrain. The thing that makes it not the
+# reverted model is that it uses TWO radii and not one: enter on crossing the
+# inner, leave only on crossing the outer, the same two-threshold shape the
+# sleep cycle uses on adenosine. One line is a thing you can stand on and
+# jitter across; a band is not. And the answer it writes is this same discrete
+# field, so every reader below still reads exactly one crisp place and cannot
+# tell which kind of body it came from.
+#
 # The second IS geometry, read live off this node's transform by
 # Person.get_travel_cost_to(). Drag this node in the editor and what it costs
 # changes while the game is running — which is standing check #3, geography must

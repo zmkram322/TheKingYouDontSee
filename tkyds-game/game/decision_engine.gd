@@ -24,7 +24,8 @@ extends RefCounted
 # identical.
 #
 # Both halves write into it, which is also why it's only trustworthy after a
-# full choose() — that's where it gets cleared.
+# full pass — that's where it gets cleared. A pass is started by
+# open_the_ballot, below, whichever kind of brain calls it.
 var _last_scores := {}
 
 
@@ -74,6 +75,24 @@ func get_highest_scoring(person: Person, actions: Array[Action]) -> Action:
 	return winner
 
 
-func choose(person: Person, actions: Array[Action]) -> Action:
+# Starts a pass and hands back the open list — the half a player's hand picks
+# from, and the half a Brain's own automatic pick starts from too. The clear
+# lives here, in the one spot every kind of brain is guaranteed to call, so
+# that whichever of them starts a pass, the readout the LAST one left behind
+# is gone before this one writes a single score into it.
+#
+# THERE IS DELIBERATELY NO ONE-CALL SHORTCUT THAT DOES BOTH HALVES. There was
+# — choose(), which opened the ballot and returned get_highest_scoring in one
+# line — and it was deleted when Brain grew pick_from_the_ballot, because it
+# had no caller left and because a shortcut here is a trap rather than a
+# convenience: a brain that called it would get the score-driven winner with
+# the fork silently skipped, and nothing would say so. Same reasoning as
+# Inventory having exactly one transfer path — a second way to do the whole
+# thing is a second place for the wrong half to happen.
+#
+# So: open the ballot here, pick the winner in the Brain. Two calls, one
+# clear, and no way to accidentally do the automatic thing for a body
+# somebody is steering.
+func open_the_ballot(person: Person, actions: Array[Action]) -> Array[Action]:
 	_last_scores.clear()
-	return get_highest_scoring(person, get_available(person, actions))
+	return get_available(person, actions)
