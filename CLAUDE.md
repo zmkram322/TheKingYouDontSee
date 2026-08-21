@@ -8,15 +8,16 @@ something needs it.
 
 | Folder | What |
 |---|---|
-| `game/` | **The build.** Substrate: `person`, `stats`, `brain`, `action`, `action_step`, `decision_engine`, `clock`, `daylight`, `population`, `place`, `town`, `workstation`, `inventory`. Plus `player_brain` — the ONE fork in the whole substrate: a `Brain` whose winner comes from a hand instead of from a score, and whose `current_place` is written by input instead of by a step. `player.tscn` is an inherited scene, not a class; nothing downstream can tell his answers from an NPC's. |
+| `game/` | **The build.** Substrate: `person`, `stats`, `brain`, `action`, `action_step`, `decision_engine`, `clock`, `daylight`, `population`, `place`, `town`, `workstation`, `inventory`. `person` also owns the body layer — the rig, and the one function per person per frame that decides which clip it plays. Plus `player_brain` — the ONE fork in the whole substrate: a `Brain` whose winner comes from a hand instead of from a score, and whose `current_place` is written by input instead of by a step. `player.tscn` is an inherited scene, not a class; nothing downstream can tell his answers from an NPC's. |
 | `game/actions/` | The action library. One scene per action, instanced under a person's Brain. |
 | `game/ui/` | Watching and tuning. `stat_graph` plots a person's stats over time; `tuning_board` puts a slider on every exported number of whatever nodes you point it at; `verb_list` draws the player's open ballot and reports what he clicked. All three are their own scenes, all three need a `CanvasLayer` parent in a 3D scene, and all three discover what to show by reflection so none needs a line per stat, per knob or **per verb** — `verb_list` naming a verb is a failed build, on the same footing as code naming a playstyle. |
-| `assets/` | Art. `quaternius/` is 3D, `tiny_town`/`tiny_dungeon` are 2D. |
+| `assets/` | Art. `quaternius/` is 3D, `tiny_town`/`tiny_dungeon` are 2D. `mixamo/` is the people: `y_bot.tscn` (the rig every person wears, carrying its own 180° turn because Mixamo faces +Z and Godot forward is -Z) plus `y_bot_animations.res`. Its four `.gd` files are **editor tooling, not game code** — `mixamo_import.gd` is the one place four Mixamo import traps are answered, `report_clips.gd` measures per-clip root drift and total yaw, `build_character.gd` rebuilds the rig and names any `.fbx` whose `.import` has drifted off the script, `clip_viewer.gd` eyeballs one clip. |
 | `_bmad-output/planning-artifacts/prd.md` | The requirements contract. FR numbers are stable identifiers. |
 | **The four "why" docs** | **What the game is FOR.** The plans say what to build; these say why any of it is worth building, and they are the thing to re-read when the work starts feeling like bookkeeping. `design-positioning-and-comparables.md` — the spine (*illegible authorship*: the gap between what the world attributes to you and what you authored), power defined as *how many people fall under the shadow of your decisions*, and what CK3/Dishonored/Mordor each prove or warn about. `design-multipath-routes-framework.md` — paths are distinct by **what breaks and who fights you**, never by what you watch; **no code may name a playstyle**. `poc-v2-system-spirit.md` — the ten tenets, incl. **no hard-fail states** and *legibility is a design constraint, not a nicety*. `design-session-2026-07-24-social-political-layer.md` — greeting rungs, LOOK held separate from GREET, and *you are a perfect reader of a deliberately foggy world.* |
 | `_bmad-output/boss-scene-build-plan.md` | **THE FORWARD LADDER — start here.** Eleven gates, cut from the player's seat: you walk the town, greet, beckon, give, and tell people what to do, **and they can refuse.** Read before adding to `game/`. |
 | `_bmad-output/proving-scene-build-plan.md` | **The record of the shipped substrate**, not the forward plan (superseded 2026-08-19, Decision 33). Rungs 0–6 shipped and every seam in them stands; read it for *why* `game/` is shaped the way it is. Its rungs 7–9 are re-seated as the boss ladder's Gate 10+. |
 | `_bmad-output/proving-scene-decisions.md` | **The authority. Read with whichever plan you are building from.** **Thirty-five** questions settled, each with the reasoning, indexed at the top of the file. Wins where it and a plan disagree, and the **highest number wins** within it. Three of them look like violations of the rules below until you read why they aren't. **19–27 settle how wanting works at all** — every want is a gap, `want = weight × gap^bite`, gates ask the world and never how much he wants it, failure marks the candidate. **28: Socialise's candidates are venues (`Place.is_gathering_place`), not crowds.** **33 (2026-08-19) re-seats the whole ladder in the player's seat** — a command is a *bid*, not an override; the player's verb menu is `get_available()` drawn instead of scored; and no code may name a verb. **35 (2026-08-20) is the one that will surprise you: since 30 made freeness public, NOT ONE gate in the game reads where a man is standing, so no verb can be revealed by arriving anywhere** — a ballot turns on what he carries and what the town has done. Read 19–27, 33 and 35 before writing any new Action. |
+| `_bmad-output/*-findings-*.md` | **What each session FOUND, as opposed to what it was told to build.** One per landed piece of work, and the place a builder's discoveries go so they are not left in a git commit message. `gate-0-` and `gate-1-findings-2026-08-20.md` — the two boss-ladder gates so far; Gate 1's carries **the watch list, and the standing note that its Moment has NOT been watched.** `body-and-animation-findings-2026-08-21.md` — the Mixamo body layer: the two-layer rule, the index-0 swap that guards Hobb's dawn race, and **four Mixamo import traps including a reimport that is a silent no-op.** |
 
 `tkyds-game/` is now **`game/` and `assets/` and nothing else.** `brain/`,
 `world/` and `skin/` were retired 2026-08-05; `board/`, `town/`, `sandbox/`,
@@ -85,6 +86,28 @@ sleeps, which reads as a balance problem and takes an hour to trace. Grep
 what he's doing). Same for everyone → **shared scene/resource** (what "sleep"
 means). Never store one person's progress on a shared action.
 
+**The body is two layers, and moving wins.** What a person looks like comes from
+exactly two places: **travel**, answered by *measured displacement* over the
+brain's tick in world hours against his own travel speed; and **everything
+else**, a clip name authored on the `ActionStep` beside `exertion`, for the same
+reason `exertion` lives there — in walk-there-then-dig only the step knows which
+half is happening. Travel wins over the declared clip, which is what lets
+`sleep.tscn` say `sleep` unconditionally and still show a man walking to his bed
+without one word about walking in it. **No file in `game/` maps an action to an
+animation** — a dictionary from action to clip is code naming verbs, forbidden
+on the same footing as `verb_list` naming one. Displacement rather than velocity
+because *nothing sets velocity*: `PlayerBrain` and `GoToStep` both integrate
+`global_position` by hand (Decision 4 forbids `move_and_slide`). The one thing
+this would lie about is a body moved for a reason that is not walking — a cart,
+a carried man, an author teleporting someone. Nothing does that yet.
+
+**Choosing a clip runs in `_process`, not `think_and_act`.** Presentation
+redraws as often as it is *looked at*, not as often as the world is stepped —
+the same split the readout answers to. Fold it back into the tick and the day
+`Population` thinks for a man every fourth frame, his legs stutter between
+thoughts. That function is also the seam where a visibility test installs when
+three people become thirty; deliberately not built.
+
 **Nothing outside `Clock` interprets a real-time delta.** `Clock` owns the one
 conversion from real seconds to world time; **every rate in `game/` is per world
 hour**, and every argument carrying one is named `hours`, not `delta`. Two
@@ -145,14 +168,22 @@ stale and are the author's call to bump rather than a builder's: `project.godot`
 still declares `config/features=PackedStringArray("4.4", ...)`, and
 `game/probe.gd`'s own header still prints the 4.4 run lines.
 
-**The standing count, after Gate 1: 63 claims, 14894 checks, all green.** The
-anchor every measurement is taken against, unmoved by Gate 0 or Gate 1:
+**The standing count, after the body swap: 64 claims, 14898 checks, all green.**
+The anchor every measurement is taken against, unmoved by Gate 0, by Gate 1, or
+by putting a real rig on every person:
 
 ```
 cold start: turned in 21:14, up 05:52
 settled:    turns in 22:10, sleeps 8.00 h, up 06:10
 strong man (1.15): up 04:47
 ```
+
+**That last line now guards node ORDER as well as strength.** `game.tscn`
+overrides Stats and Inventory *by index*, so anything inserted above them in
+`person.tscn` silently drops Hobb's 1.15 and turns the dawn race back into a
+coin flip. The rig REPLACED the capsule at index 0 rather than being added
+beside it, for exactly this reason. If `04:47` ever moves, look at the node
+order before you look at the arithmetic.
 
 **Do not run the probe from the repo root.** `--path .` outside `tkyds-game/`
 finds no project, does nothing, and exits 0 — a silent false green that looks
