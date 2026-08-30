@@ -157,6 +157,48 @@ func _process(_delta: float) -> bool:
 	npc.brain.current_action = null
 	sentinel.free()
 
+	# --- and now the path the RUNNING GAME actually uses -----------------------
+	#
+	# EVERYTHING ABOVE CALLS think_for_everyone BY HAND, which is not how this
+	# scene runs when you press play. Since 2026-08-30 Population owns an
+	# accumulator: _process banks real seconds and step_real_time spends them on
+	# whole ticks, advancing the Clock and thinking for everybody once each.
+	# exchange_population.gd overrides think_for_everyone and inherits all of
+	# that — so the question nobody had asked is whether the interrupt still
+	# installs when the BASE class is the one doing the calling.
+	#
+	# It should: GDScript dispatches virtually, so the base calling
+	# think_for_everyone reaches the override. "Should" is not evidence.
+	var clock: Clock = _scene.get_node(^"Clock") as Clock
+	_held("the scene has a Clock for the accumulator to drive", clock != null)
+	if clock != null:
+		var sun_before: float = clock.hours_elapsed
+		var real_seconds := 10.0 / 60.0 # ten frames' worth at 60fps
+		crowd.step_real_time(real_seconds)
+		_held("Population drives the Clock now that Clock has no _process of its own: %.4f -> %.4f h"
+			% [sun_before, clock.hours_elapsed], clock.hours_elapsed > sun_before)
+
+		var guard := Action.new()
+		npc.brain.current_action = guard
+		var stood := npc.global_position
+		var body_before: float = npc.stats.get_stat("adenosine")
+		var talking: Node = broker.begin(player, npc)
+		crowd.step_real_time(real_seconds)
+		_held("through the accumulator too, a held man still does not decide",
+			npc.brain.current_action == guard)
+		_held("and still does not move", npc.global_position.is_equal_approx(stood))
+		_held("and his body still runs: adenosine %.2f -> %.2f"
+			% [body_before, npc.stats.get_stat("adenosine")],
+			npc.stats.get_stat("adenosine") > body_before)
+		broker.end(talking)
+
+		npc.brain.current_action = guard
+		crowd.step_real_time(real_seconds)
+		_held("RELEASED, the accumulator decides for him again (the guard is real)",
+			npc.brain.current_action != guard)
+		npc.brain.current_action = null
+		guard.free()
+
 	print("")
 	print("seam check: all held." if _bad == 0 else "seam check: %d FAILED." % _bad)
 	quit(1 if _bad > 0 else 0)

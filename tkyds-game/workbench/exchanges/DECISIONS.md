@@ -402,6 +402,21 @@ rung ladder where each exchange warms a man up is permitted**, as is any
 multi-stage negotiation, and W1's eventual refusal model is not constrained by
 it.
 
+### The accumulator made this design better, 2026-08-30
+
+Decision 39 landed a fixed-tick accumulator after this section was written, and
+it improves the shape above rather than disturbing it: **an exchange of
+`takes_hours` now spans the same number of ticks on every machine.** Before, a
+0.2-hour conversation was thirty ticks at 60fps and twelve at 144, so the number
+of decisions a held man lost to talking depended on his frame rate. Now it does
+not, and "one number owns both the hold and the animation" is frame-rate
+independent as well as fidelity independent.
+
+One consequence worth knowing: `began_at_hour` is compared against a
+`Clock.hours_elapsed` that now advances in whole quanta, so an exchange ends on a
+tick boundary and may overrun `takes_hours` by up to one tick. That is
+deterministic and identical everywhere, which is better than the alternative.
+
 ### What is still open
 
 - **What `takes_hours` should be**, and whether it is one number for all

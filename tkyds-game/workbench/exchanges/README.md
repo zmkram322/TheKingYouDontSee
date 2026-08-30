@@ -20,22 +20,45 @@ probe loads.
 | Mouse | look; pitch clamped to −60°..30° |
 | Escape | release the cursor. Click anywhere to take it back |
 
-## The eight warnings on startup are correct
+## The three warnings on startup are correct
 
-`person.gd` says so out loud when a body has no world around it, and this scene
-deliberately gives it none — the NPC is a mannequin, so there is no `Clock`, no
-`Town`, no `Population` and no `Place`. Expect four per body, twice:
+> **This section said EIGHT until 2026-08-30 and was wrong.** It described a
+> scene that had no `Clock`, no `Town` and no `Population`; the scene grew all
+> three while this file was not updated. Left visible rather than quietly
+> rewritten, because a README that tells you to expect warnings you do not get
+> is worse than no README — it trains you to ignore the count.
+
+`person.gd` says so out loud when a body has no world around it. This scene now
+has a `Clock`, a `Town` and a `Population`, all wired, so the only thing missing
+is a `Place`. **Expect exactly one warning per body, three bodies:**
 
 ```
-X has no Population above him — he will never think
-X has no Town — he can never be asked who else is here
-X has no Clock — for him the sun never rises
-X starts nowhere — no place query will ever find him
+You starts nowhere — no place query will ever find him
+Somebody starts nowhere — no place query will ever find him
+Another starts nowhere — no place query will ever find him
 ```
 
 Do not silence them. CLAUDE.md is explicit that a silent null guard is how a
 dead day/night cycle shipped through two commits, and "it runs without errors"
 stopped counting as evidence here because of it.
+
+## The clock is driven from above now
+
+Since 2026-08-30 (project Decision 39) `Clock` has no `_process` and does not
+advance itself. **`Population` owns the step loop** — it banks real seconds and
+spends them on whole fixed ticks, advancing the Clock and thinking for everybody
+once per tick.
+
+`exchange_population.gd` overrides only `think_for_everyone`, so it inherits the
+accumulator whole and the interrupt still installs: the base class doing the
+calling still reaches the override. **Measured, not assumed** — `_seam_check.gd`
+drives `step_real_time` directly and asserts a held man neither decides nor moves
+while his body goes on running.
+
+**What it means for this scene:** nothing to change, and one thing to know — a
+single `step_real_time` call is capped at `Population.MAX_TICKS_PER_FRAME`, so
+handing it ten frames' worth of seconds buys eight ticks, not ten. That is the
+stall ceiling doing its job, not a bug in here.
 
 ## What this scene is actually testing
 
