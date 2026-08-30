@@ -7,11 +7,31 @@ extends Node
 # It is a `for` loop. That is the whole of it, deliberately — no stagger, no
 # jitter, no frame budget, no priority tiers, no tick-rate export. What earns
 # the node at one person on screen is not what it does today but the fact that
-# it is a CALL SITE: everything later installs here and nowhere else. Spreading
-# people across frames, a budget, promoting a distant village to full
-# simulation and collapsing it again, replaying a run tick-for-tick — all of it
-# is a change to this loop. The engine must never have called a Brain directly,
-# because every one of those would then be a change to every Person instead.
+# it is a CALL SITE: everything later installs here and nowhere else. A budget,
+# promoting a distant village to full simulation and collapsing it again,
+# replaying a run tick-for-tick — all of it is a change to this loop. The engine
+# must never have called a Brain directly, because every one of those would then
+# be a change to every Person instead.
+#
+# TWO OF THOSE LATERS HAVE SINCE BEEN RULED OUT, and this is where somebody
+# would come looking for permission to build them:
+#
+#   COLLAPSING A DISTANT VILLAGE MEANS UNBOUNDED BY THE FRAME RATE. It does NOT
+#   mean bigger `hours`. Decision 39: a region far from the player runs the same
+#   size ticks as everybody else, just as fast as it can with nothing drawn —
+#   which is exactly what probe.gd already does. Hand one region four hours
+#   where another gets a hundredth and it behaves differently: a man loses no
+#   decisions to a conversation that would cost him twenty, a dawn race becomes
+#   whoever this loop reaches first, and any threshold crossed and re-crossed
+#   inside the tick never happened. Watched-versus-unwatched divergence is the
+#   one bug class where looking at it changes it. A region too expensive to keep
+#   current may run FEWER ticks per frame and fall behind; it may not run bigger
+#   ones.
+#
+#   SPREADING PEOPLE ACROSS FRAMES IS OUT ENTIRELY — it was listed here as a
+#   later and it is not one. Half the town this frame and half the next breaks
+#   the serial guarantee below, which is the whole reason contention needs no
+#   locking. Splitting BETWEEN ticks is safe. Splitting WITHIN one is not.
 #
 # It is also where real time stops. Population reads the Clock once per tick and
 # hands the same `hours` to everybody, so nothing below this node ever sees a

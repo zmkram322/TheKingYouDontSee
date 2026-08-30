@@ -16,8 +16,8 @@ something needs it.
 | **The four "why" docs** | **What the game is FOR.** The plans say what to build; these say why any of it is worth building, and they are the thing to re-read when the work starts feeling like bookkeeping. `design-positioning-and-comparables.md` — the spine (*illegible authorship*: the gap between what the world attributes to you and what you authored), power defined as *how many people fall under the shadow of your decisions*, and what CK3/Dishonored/Mordor each prove or warn about. `design-multipath-routes-framework.md` — paths are distinct by **what breaks and who fights you**, never by what you watch; **no code may name a playstyle**. `poc-v2-system-spirit.md` — the ten tenets, incl. **no hard-fail states** and *legibility is a design constraint, not a nicety*. `design-session-2026-07-24-social-political-layer.md` — greeting rungs, LOOK held separate from GREET, and *you are a perfect reader of a deliberately foggy world.* |
 | `_bmad-output/boss-scene-build-plan.md` | **THE FORWARD LADDER — start here.** Eleven gates, cut from the player's seat: you walk the town, greet, beckon, give, and tell people what to do, **and they can refuse.** Read before adding to `game/`. |
 | `_bmad-output/proving-scene-build-plan.md` | **The record of the shipped substrate**, not the forward plan (superseded 2026-08-19, Decision 33). Rungs 0–6 shipped and every seam in them stands; read it for *why* `game/` is shaped the way it is. Its rungs 7–9 are re-seated as the boss ladder's Gate 10+. |
-| `_bmad-output/proving-scene-decisions.md` | **The authority. Read with whichever plan you are building from.** **Thirty-five** questions settled, each with the reasoning, indexed at the top of the file. Wins where it and a plan disagree, and the **highest number wins** within it. Three of them look like violations of the rules below until you read why they aren't. **19–27 settle how wanting works at all** — every want is a gap, `want = weight × gap^bite`, gates ask the world and never how much he wants it, failure marks the candidate. **28: Socialise's candidates are venues (`Place.is_gathering_place`), not crowds.** **33 (2026-08-19) re-seats the whole ladder in the player's seat** — a command is a *bid*, not an override; the player's verb menu is `get_available()` drawn instead of scored; and no code may name a verb. **35 (2026-08-20) is the one that will surprise you: since 30 made freeness public, NOT ONE gate in the game reads where a man is standing, so no verb can be revealed by arriving anywhere** — a ballot turns on what he carries and what the town has done. Read 19–27, 33 and 35 before writing any new Action. |
-| `_bmad-output/*-findings-*.md` | **What each session FOUND, as opposed to what it was told to build.** One per landed piece of work, and the place a builder's discoveries go so they are not left in a git commit message. `gate-0-` and `gate-1-findings-2026-08-20.md` — the two boss-ladder gates so far; Gate 1's carries **the watch list, and the standing note that its Moment has NOT been watched.** `body-and-animation-findings-2026-08-21.md` — the Mixamo body layer: the two-layer rule, the index-0 swap that guards Hobb's dawn race, and **four Mixamo import traps including a reimport that is a silent no-op.** |
+| `_bmad-output/proving-scene-decisions.md` | **The authority. Read with whichever plan you are building from.** **Thirty-nine** questions settled, each with the reasoning, indexed at the top of the file. Wins where it and a plan disagree, and the **highest number wins** within it. Three of them look like violations of the rules below until you read why they aren't. **19–27 settle how wanting works at all** — every want is a gap, `want = weight × gap^bite`, gates ask the world and never how much he wants it, failure marks the candidate. **28: Socialise's candidates are venues (`Place.is_gathering_place`), not crowds.** **33 (2026-08-19) re-seats the whole ladder in the player's seat** — a command is a *bid*, not an override; the player's verb menu is `get_available()` drawn instead of scored; and no code may name a verb. **35 (2026-08-20) is the one that will surprise you: since 30 made freeness public, NOT ONE gate in the game reads where a man is standing, so no verb can be revealed by arriving anywhere** — a ballot turns on what he carries and what the town has done. Read 19–27, 33 and 35 before writing any new Action. **36–38 (2026-08-28) are the first sections that rule on code which does NOT exist**, settled ahead of it because everything layers on top: **36** — a `Condition` is the one shape a modifier takes; intensity is a stat and the condition is the translation, so conditions attach by composition and are inert at zero; **a factor of 0 is a gate and is forbidden**, and no condition may read another. **37** — pressure is APPLIED, never transmitted: a lord's gap drives his own ballot, so an unmet need sets *how often he shows up*, not a number on anybody else. **38** — a quota breaks the man who does the work and is safe on the man who directs it. **39 (2026-08-29) is the opposite kind of section — the code already does it, and what is settled is that an optimisation is OFF THE TABLE: there are NO coarse ticks.** A distant region runs unbounded by the frame rate, never at bigger `hours`; `probe.gd` is already that execution model, and spreading people across frames is out entirely because it breaks the serial loop. |
+| `_bmad-output/*-findings-*.md` | **What each session FOUND, as opposed to what it was told to build.** One per landed piece of work, and the place a builder's discoveries go so they are not left in a git commit message. `gate-0-` and `gate-1-findings-2026-08-20.md` — the two boss-ladder gates so far; Gate 1's carries **the watch list, and the standing note that its Moment has NOT been watched.** `body-and-animation-findings-2026-08-21.md` — the Mixamo body layer: the two-layer rule, the index-0 swap that guards Hobb's dawn race, and **four Mixamo import traps including a reimport that is a silent no-op.** `rimworld-comparison-findings-2026-08-28.md` — the study that produced Decisions 36–38: where RimWorld's extensibility actually comes from (few primitives, many instances; **no modifier reads another**), the two corrections it forced to claims already on record, and **a new species of vacuous assertion — a seam check that passed for a week while asserting the opposite of what the design wanted.** Breaking the code would have made it fail correctly, so the standing discipline could never have caught it. |
 
 `tkyds-game/` is now **`game/` and `assets/` and nothing else.** `brain/`,
 `world/` and `skin/` were retired 2026-08-05; `board/`, `town/`, `sandbox/`,
@@ -69,11 +69,16 @@ destroys, `hand_over` moves.** A world total may change only where `add` or
 half-completed transfer to hide. `hand_over` is take-then-add: both halves or
 neither.
 
-**Upkeep goes in `Brain._update_body`. Effects go in the action.** Two
+**Upkeep goes in `Brain.run_upkeep`. Effects go in the action.** Two
 different things:
 
 - *Happens to you regardless of what you chose* — adenosine rising, hunger
-  rising, a wound bleeding, fear fading. One place: `_update_body`.
+  rising, a wound bleeding, fear fading. One place: `run_upkeep`.
+  **It is PUBLIC, and anything that holds a man out of `Population`'s loop must
+  call `Person.run_upkeep` rather than passing him over** — skipping him skips
+  the tail of `think_and_act`, which stops his hunger, his tiredness and his
+  loneliness while the man beside him gets all three. A conversation was once a
+  free night's rest for exactly this reason.
 - *Happens because of what you chose* — eating drops hunger, walking moves you,
   grinding makes flour. That's the action's whole job; it belongs there.
 
@@ -81,6 +86,17 @@ Only the first is the rule. Put upkeep inside an action and the next action you
 write silently doesn't have it — you get a farmhand who works forever and never
 sleeps, which reads as a balance problem and takes an hour to trace. Grep
 `game/actions/` for `adenosine`; it should return nothing.
+
+**Every question a decision asks goes through one named accessor over the single
+copy of the truth.** Never a maintained index, never an Action reaching past the
+accessor into the tree. `Town.find_people_at` loops the people and asks each one
+where he is, rather than Places keeping occupancy lists — so there is exactly one
+copy of "where Zoogs is" and one copy cannot contradict another. Same wall as
+`get_stat` and `get_count`, and for the same reason: **the day it needs to be an
+index, that function body changes and no caller moves.** It is roughly one
+pointer comparison per person per call and stops being free somewhere in the low
+hundreds of people, which is two orders of magnitude away. Do not pre-build the
+index; do not let a second copy exist.
 
 **Node vs shared file:** different for every person → **Node** (stats, brain,
 what he's doing). Same for everyone → **shared scene/resource** (what "sleep"

@@ -55,13 +55,24 @@ ruling narrows an earlier one more often than it contradicts it.*
 | 26 | Where bread comes from, and the rung that closes the loop | |
 | 27 | Hunger is two gaps, and only the slow one is a lens | |
 | 28 | **Socialise's candidates are venues, not crowds** | 32 |
-| 29 | The crop belongs to the land. A worker is **paid**, not indebted. | 31, 33 |
+| 29 | The crop belongs to the land. A worker is **paid**, not indebted. | 31, 33, 38 |
 | 30 | **A claim is public.** Freeness is read from the register, not the doorstep. | |
 | 31 | A gap drives the verb that closes it in one go | |
 | 32 | The empty-venue trickle is a placeholder, not a mistake | |
 | 33 | **The player is the boss, and the ladder is re-cut from his seat.** A command is a *bid*. The verb menu is `get_available()` drawn. No code names a verb. | |
 | 34 | **A gap is measured in what can actually change hands.** `is_discharged()` is derived, never stamped. | |
 | 35 | **What makes a verb come and go, once freeness is public.** No gate reads where a man stands any more, so the player's ballot turns on what he CARRIES. The town gains an unclaimed field so he can act on the world at all. | |
+| 36 | **A `Condition` is the one shape a modifier takes.** Intensity is a stat; the condition is the translation. Zero is a gate and is forbidden. No condition reads another. | |
+| 37 | **Pressure is applied, never transmitted.** A lord's gap drives HIS ballot, not the steward's number. It sets how often he shows up. | |
+| 38 | **A quota is safe one layer above the labour.** Decision 29's trap reaches the man who DOES the work, never the man who DIRECTS it — so the quota it deleted comes back one layer up, WITHOUT the debt semantics. | |
+| 39 | **The simulation is always full-resolution — there are no coarse ticks.** A distant region runs unbounded by the frame rate, never at bigger `hours`. `probe.gd` is already that execution model. Retires a constraint 37–38's conversation had argued from the opposite premise. | |
+
+**36–39 are rulings about what to build, not records of what was built.** Every
+other section in this file describes shipped code. 36–38 describe code that does not exist, settled ahead of it
+because the cost of getting them wrong is paid by everything layered on top;
+nothing in them has been measured. **39 is the opposite case** — the code already
+behaves that way, and what is settled is that an optimisation which would change
+it is off the table.
 
 **If you read only four: 19–27** (how wanting works — before writing any
 Action), **30** (how freeness is known — before writing any gate that asks where
@@ -4633,3 +4644,620 @@ things on it are real.
 | `boss-scene-build-plan.md`, Gate 1 | Same sentence, same supersession. Gates 2–11 are unaffected — none of them turns on a positional gate. | **applied** (recorded here) |
 | `game.tscn` | `Town/Square`, `Town/CommonField` + `CommonPlot`, `Population/Player`. | **applied** |
 | `probe.gd` | Claims 18, 24 and 43 each narrowed to the stations they are actually about, rather than depending on the town holding exactly one plot. Claim 6's population count moved 4 → 5. | **applied** |
+
+---
+
+## Decision 36 — A condition is the one shape a modifier takes
+
+**Settled 2026-08-28**, out of a study of RimWorld's extensibility (see
+`rimworld-comparison-findings-2026-08-28.md`). **Nothing here is built.** This
+settles the shape before five separate things get written as five separate
+mechanisms.
+
+### The problem this exists to stop
+
+Five things are queued behind a primitive that does not exist:
+
+- **fear, drink, grief** — named in Decision 22, never built
+- **a lord's writ, a guild rate, a season's bargain** — named on
+  `Obligation.get_weight_at_scoring_time()`, never built
+- **hierarchy pressure** — Decision 37, below
+- **standing** — Gate 2 of the boss ladder
+- **precepts** — a value system that makes the same act read differently to
+  different people; the one steal worth taking from RimWorld
+
+`lens` appears **zero times** in the codebase. Decision 22 is a ruling about how
+modifiers must behave and has never been code. So each of those five is
+currently on course to be written as its own mechanism, which is the shape that
+makes a substrate expensive: n systems, n-squared interactions.
+
+**What RimWorld actually proves is not its modding API.** It is that a game can
+carry four DLCs without a maintenance collapse by having very few mechanisms and
+enormous numbers of *instances* of them. Ideology did not add a religion system;
+precepts are data that emit an existing modifier and gate an existing job. The
+lesson is primitive-count, and it transfers. The Def system does **not** transfer
+— it is why RimWorld cannot be understood by reading it, which is a direct trade
+against this project's first tenet.
+
+### The seams it installs into — six, not four
+
+| Seam | Body today |
+|---|---|
+| `Brain.get_adenosine_accumulation()` | `base_adenosine_per_hour * get_exertion()` |
+| `Brain.get_adenosine_recovery()` | `base_adenosine_cleared_per_hour * strength` |
+| `Brain.get_hunger_accumulation()` | `base_hunger_per_hour` |
+| `Brain.get_social_accumulation()` | `base_social_per_hour` |
+| `WorkStep.get_yield_per_hour(person)` | `base_grain_per_hour` |
+| `Obligation.get_weight_at_scoring_time()` | `weight` |
+
+**Two of them already multiply by a factor**, so this generalises a pattern
+proven twice rather than inventing one. Every one of those getters already
+carries a comment saying that everything which will ever change it lands there
+with no caller moving. This is that landing.
+
+**THE TRAP IN THAT TABLE: `WorkStep` IS A SHARED SCENE.** Same resource for
+everybody, per the node-vs-shared-file rule — so it can never hold a condition
+and must never store one. It already takes `person` as an argument, and that is
+the door: it asks the man. The four `Brain` getters reach him the same way;
+`Obligation` reaches him with `get_parent()`.
+
+### Where it lives
+
+**A Node under the Person**, found by walking children — the identical shape
+`get_obligations()` and `reload_known_actions()` already use. The tree is the
+store. Nothing keeps a parallel list, so nothing can disagree with it, and a
+condition exists exactly as long as its node does.
+
+```gdscript
+func get_conditions() -> Array[Condition]:
+```
+
+### Named `Condition`, not `Lens`
+
+Decision 22's word is *lens*, and it would normally be honoured. It is dropped
+under naming rule 4 — *if a name hides what the thing does, rename it.* A lens is
+about **seeing**; this changes how fast a man tires. `Condition` is plain
+English, covers drunk / frightened / grieving / bound-by-a-writ, and is not CS
+vocabulary. Checked and free, as are `Lens`, `Modifier`, `Influence`, `Sway` and
+`Pressure`.
+
+### THE RULING THAT MAKES IT CHEAP — intensity is a stat, the condition is the translation
+
+Decision 22 names fear, drink and grief as lenses. `CLAUDE.md` names *"fear
+fading"* as upkeep — that is, a stat. **Both are right, once split:**
+
+> **A stat is a magnitude that changes over time. A condition is the translation
+> from that magnitude into an effect on a rate or a weight.**
+
+`fear` is a number that rises when something frightens him and decays in
+`run_upkeep`, one more line beside hunger. `Frightened` is a Condition whose
+factor is computed from that number.
+
+**The payoff is that conditions attach by composition and never move.** Every
+person carries the same set, permanently — exactly as eat and flee are on
+everybody's ballot by composition rather than by a flag — and each returns `1.0`
+while its driving stat is zero. Nothing installs, nothing removes, nothing can
+be forgotten.
+
+The alternative — install a condition when he is frightened, remove it when he
+calms — is **a flag somebody has to remember to clear**, which is the shape this
+substrate has already rejected twice: once when `_held` moved off a stored array
+onto a derived question (W3), and once when `is_discharged()` stopped reading a
+mark somebody flipped (Decision 34).
+
+**Two flavours, one class.** A *driven* condition computes its factor from a stat
+(fear, drink, grief). An *installed* condition carries an authored factor and is
+attached when something happens (a precept, a season). They differ only in
+whether the factor is computed or declared, and only the second ever needs an
+expiry — which is the proven lazy day-stamp, read at read time, swept by nobody.
+
+### The two rules that keep it from becoming a system
+
+**1. A condition may never read another condition.** It may read the person's
+stats and the world; it may not read its siblings. This is the whole of what
+makes twelve of them composable without anyone having considered that
+combination, and it is precisely what RimWorld gets right — no hediff ever
+references another hediff, which is why stacking is O(n) and not O(n-squared).
+
+They still interact *through the world* — a condition slowing recovery leaves
+more adenosine, which another condition reads. That is unavoidable and fine. The
+ban is on direct reads.
+
+**2. ZERO IS A GATE, AND IS THEREFORE FORBIDDEN.** `want = weight x gap^bite`. A
+factor of `0.0` sets a want to zero, which is *outbid by everything, for ever* —
+barred in all but name. Decision 22 says a lens may never gate, and Decision 22's
+own **"outbid, never barred"** is broken by a single zero.
+
+**This is enforcement, not documentation.** Factors are clamped strictly above
+zero at the door, with a warning, and are never trusted to the author. A silent
+zero presents as *"this action mysteriously never fires"*, which is the worst
+diagnosis available in this codebase and the exact family as the silent null
+guard that shipped a dead day/night cycle.
+
+### What it may not touch, restated from Decision 22
+
+**It may multiply a `weight`, or change a rate. It may never touch a `gap`, and
+it may never gate.** A gap is a fact about the world — how empty the larder is,
+how far past dawn he slept. A condition is how loudly he feels about it. Letting
+one write a gap makes the world's own bookkeeping a matter of opinion.
+
+### The stacking problem arrives immediately, and the answer is drawing it
+
+`brain.gd` already warns: *"three 2x modifiers is 8x, not 6x. At four factors,
+revisit; not before."* A general primitive makes four factors trivial — five
+grievances at 1.5x is 7.6x.
+
+**Multiply anyway, and make the product drawable.** The answer to runaway
+stacking, in a project whose stated constraint is legibility, is seeing it rather
+than preventing it. Bounding the product hides the compounding and leaves a
+tuning mystery.
+
+**WHICH LANDS ON A REAL GAP IN THE TOOLING.** `stat_graph` samples through
+`person.stats.get_stat_names()` — it can plot **stats and nothing else**. Every
+number a condition touches is a rate or a weight, none of which is a stat. So
+today the effects of a condition are visible (his hunger climbs, the line bends)
+and its cause is invisible. **The one number that explains his behaviour is the
+one number the graph structurally cannot draw.**
+
+The fix is not to make `weight` a stat — it is not his, it belongs to a
+relationship, and `Stats` is the wrong owner. It is for `stat_graph` to discover
+numbers the way `tuning_board` already does: by reflecting over exported numbers
+on the nodes it is pointed at. That keeps the property `CLAUDE.md` names for all
+three UI tools — **no line per stat, per knob or per verb.** A graph with
+`weight` hardcoded into it is the same failure as `verb_list` naming a verb.
+
+### What this does NOT settle
+
+- **The clamp floor.** "Strictly above zero" is the rule; whether that is
+  `0.01`, an epsilon, or a warn-and-substitute is unmeasured and should be
+  chosen against a real condition rather than in advance.
+- **Whether the six getters walk the children on every call.** They run every
+  tick for every person. Walking a handful of nodes is almost certainly free at
+  three people and is certainly not free at three hundred; the cache seam is
+  `reload_known_actions`'s shape if it is ever wanted. **Do not pre-build it.**
+- **Whether a condition may modify a getter belonging to someone else.** Nothing
+  here permits it and nothing here argues it. Assume no until a case is made.
+- **Expiry granularity.** `Obligation` and `Workstation` both day-stamp. Drink
+  and fear are hour-scale. If installed conditions ever need hours, that is a new
+  question about what `Clock` exposes, not a rewrite of this.
+- **Whether `exertion` and `strength` should become conditions.** They are the
+  two factors that already exist and they work. Folding them in is tidying, and
+  tidying that moves Hobb's `04:47` is not tidying.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| — | Nothing is built. This section is the specification, and the first thing that needs a modifier is the thing that should build it. | **not applied** |
+| `stat_graph.gd` | Must discover by reflection over the tree rather than through `get_stat_names()`, or a condition's cause is undrawable. Blocks nothing until the first condition exists. | **not applied** |
+
+---
+
+## Decision 37 — Pressure is applied, never transmitted
+
+**Settled 2026-08-28.** **Nothing here is built.** It settles the mechanism by
+which a decision at the top of a hierarchy reaches the bottom, which the boss
+ladder needs before Gate 6's writ and which W3 in the workbench file already
+names as the point of NPC-to-NPC exchanges.
+
+### The question, asked plainly
+
+A lord wants grain. As his need goes unmet, does that raise the `weight` on his
+steward's obligation — so that the steward feels more pressure and leans harder
+on his workers?
+
+**No.** The lord's gap drives **the lord's own ballot** and touches nothing else.
+
+### The mechanism
+
+1. The lord wants grain. `wanted - in_barn` is a gap **on his own node**.
+2. That gap scores **his** actions, `want = weight x gap^bite`, the same as
+   everybody's. With an empty barn, *lean on the steward* outbids whatever else
+   his day held.
+3. Leaning is **an exchange**. It costs him hours, it holds both parties out of
+   the ballot, and it can be refused.
+4. If it lands, it **writes a number** — sets a weight, a quota, a deadline on
+   the steward's obligation. A discrete act, at a moment, by a named man.
+5. That number **persists**. It does not decay and it does not track the lord's
+   mood. It sits there until somebody comes and changes it.
+6. The steward now holds a heavier obligation and a gap of his own, and the same
+   thing happens one layer down.
+
+**Pressure is applied, not transmitted. Every hop is somebody choosing to spend
+time on it.**
+
+### THE REFRAME — his gap sets how often he shows up, not how big the number is
+
+An unmet need does not raise anyone else's number. It raises **his own
+likelihood of acting.** A lord badly behind on grain has *lean on the steward*
+winning his ballot repeatedly, so he keeps turning up. A lord who is fine has it
+losing to everything, so he is never seen.
+
+**The pressure a steward feels is a lord who keeps appearing.** That is better
+fiction than a multiplier, it is free from the substrate as it already stands,
+and — the point — it is *watchable* rather than readable off a number.
+
+### Why the continuous version is wrong, on four counts
+
+- **It is a second, quieter override.** W5 already warns about exactly this
+  shape. A live coupling bends a man without anyone acting, at no cost, from any
+  distance. It deletes the action economy whole.
+- **It breaks the carried/read line** (below). A lord's appetite is not a world
+  fact. If a steward's weight tracks it live, the steward is reading his lord's
+  mind — with no delivery, and no point at which anyone could refuse.
+- **It is illegible.** `issued_by` (Decision 38) works because a weight was
+  *set*, by someone, at a moment. A weight that drifts has no author, so the
+  cascade stops being traceable — and this project has already ruled that
+  *legibility is a design constraint, not a nicety.*
+- **It kills the middle man.** A steward who transmits pressure automatically is
+  not choosing to lean on anybody. He is a belt. The whole reason a hierarchy is
+  interesting is that your instrument is a person with his own ballot.
+
+### The line this rests on — what is read, and what must be carried
+
+> **Facts about the world are read. Facts about a relationship are carried.**
+
+The price of grain, the season, the law, whether it is daylight — nobody
+delivers the weather, and an obligation may read them freely. **What one man
+specifically owes another must be carried to him by an exchange**, at cost, and
+may be refused.
+
+That is not arbitrary; it is the line this codebase already draws. Decision 30
+made freeness public. Decision 35 confirmed no gate reads where a man is
+standing. `obligation.gd` says stored intent exists *precisely* because "no
+amount of looking at the world tells you who this man agreed to work for."
+
+**And it hands over the overt/covert spectrum as an economic fact rather than a
+theme:** a lord who changes *the world* reaches everybody at once, cheaply and
+visibly. A man who changes *individuals* pays one expensive exchange each, and
+nobody can read the pattern. Same substrate, opposite economics.
+
+### The one thing that varies without a new visit
+
+A term set at the last exchange may itself be time-varying. *"Two hundred grain
+**by winter**"* gets louder as winter comes, with nobody visiting.
+
+That is legal, and the distinction is exact: **it is not the lord's live
+appetite leaking, it is a term of the deal, ticking** — authored at a moment,
+delivered by an exchange, and thereafter the steward's own to feel. Carried
+once, then read for ever.
+
+### The boundary between the two primitives
+
+Settled here because it decides where `issued_by` has to exist:
+
+> **An `Obligation` is a deal with a named counterparty. A `Condition` is a
+> modifier with nobody on the other end.**
+
+A writ setting a wage or a quota is an obligation field — it has an issuer, it is
+traceable, it was carried, and somebody could have refused it. A precept, a
+season, drink, fear and grief are conditions — no counterparty, nothing to
+trace, nobody to refuse. **So `issued_by` lives on `Obligation` only**, and
+`Condition` never needs it.
+
+### What falls out for free
+
+- **Attention is rationed by his own gaps.** A lord with finite hours and three
+  things behind goes to whichever is worst. A steward who performs is left alone;
+  one who does not gets a lord in his face. Emergent management, nobody wrote it.
+- **Satisfaction does not propagate.** The lord's gap closes and he stops coming
+  — but the weight he set is still on the steward, because it persists. The
+  steward grinds on at the elevated number until told otherwise.
+- **Silence is ambiguous, honestly.** A steward who has not seen his lord in a
+  month cannot tell whether he is doing well or has been forgotten.
+
+### What this does NOT settle
+
+- **Whether an obligation decays.** The author's call, stated 2026-08-28 and
+  deliberately not argued here: *"my gut says persist but still interruptable,
+  overridable by a higher power."* Recorded as an inclination, not a ruling.
+  Persisting means reach accumulates for free and a twentieth farmer costs what
+  the first did; decaying makes holding power an upkeep in exchanges. Unmeasured
+  either way.
+- **What a refusal is actually driven by.** W1's open question is untouched.
+  Decision 38 offers a candidate, and it is a candidate only.
+- **Fan-out.** Everything here is one-to-one. Whether a lord may address a crowd
+  — O(1) delivery to n people, presumably at worse compliance per head — is a
+  real and attractive question and is not asked here.
+- **Whether a message degrades per hop.** If it can, hierarchy depth *is* the
+  illegibility the title is about, and the farmer blames the steward standing in
+  front of him. Named because it is the most on-thesis thing in this area; not
+  settled.
+- **Attribution.** Nobody in this town believes anything about anybody, so
+  nothing can yet be *mis*attributed. That is the primitive the spine actually
+  needs and it is worthless before there is a hierarchy deep enough to
+  misattribute through. Not settled, deliberately late.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| `boss-scene-build-plan.md`, Gate 6 | The writ is the first delivery. It sets a number on somebody else's obligation; it does not couple two people's needs. | **not applied** |
+| `workbench/exchanges/DECISIONS.md`, W5 | Consistent, and now narrower: an exchange result raising `weight` is the ONLY channel from one man's need to another man's number. | **not applied** |
+
+---
+
+## Decision 38 — A quota is safe one layer above the labour
+
+**Settled 2026-08-28.** **Nothing here is built.** It resolves an apparent
+contradiction between the author's instinct that hierarchies push quotas
+downward and Decision 29's finding that quotas break the loop.
+
+### The contradiction
+
+Decision 29 deleted the quota model outright. Measured over six days, a daily
+grain debt on the worker meant **meeting the quota and stopping work were the
+same event** — grain came off the plot one unit at a time and the delivery leg
+ran in the same tick, so no man ever *held* a grain, `MakeBread`'s gate never
+opened, and the loop work -> grain -> bread -> eat could not fire at any tuning.
+
+Decision 31 generalised it: *"a gap drives the action that closes it in ONE act;
+an action whose output closes its own driver slowly and continuously must not be
+scored on that gap."*
+
+So "the lord raises the quota" looks forbidden.
+
+### The ruling
+
+**Neither finding reaches the man who DIRECTS the work.**
+
+A steward's gap is not closed continuously by his own step. He does not work the
+field — he leans on farmers, and his gap closes in **discrete jumps, when other
+people's deliveries arrive.** He cannot grind it down himself, so there is no
+tick on which "meeting it" and "stopping" could be the same event.
+
+The trap that killed quotas at the labour layer is **structurally absent** one
+layer up. A quota on a director is safe for a reason, not by luck.
+
+### IT IS THE SAME WORD FOR THE SAME FIELD — THIS IS A RESTORATION, NOT A NEW DESIGN
+
+Said plainly, because reading 29 and 38 together should not look like 38
+reversing 29. **It does not reverse it. It narrows where it applies.**
+
+A quota is exactly what `Obligation` used to carry and what Decision 29 removed
+— `owed_item` / `owed_count`, tracked down by `delivered_count` /
+`delivered_on_day` / `note_delivery()`. **The field shape is in git and the
+arithmetic largely still applies.** What changed is not the mechanism, it is
+**who holds one**:
+
+| | The farmer | The steward |
+|---|---|---|
+| Holds a quota | **no** — Decision 29 | **yes** — this section |
+| What drives him | `weight`, flat all day (Decision 31) | the quota |
+| Who closes it | his own step, continuously | other people, in discrete jumps |
+
+**AND THE SECOND HALF OF DECISION 29 MUST NOT COME BACK WITH IT.** That section
+found two things, and only the first is narrowed here. The second stands
+untouched: the old quota modelled employment as a **grain DEBT**, as though the
+crop were the worker's to owe. *"The grain was never the worker's to OWE. Hobb
+works Marle's land under Marle's employment; the crop is Marle's from the moment
+it leaves the ground."*
+
+So a steward's quota is **an outcome he is accountable for, never goods he
+personally owes.** Restore the field and the debt semantics come back with it
+unless somebody is watching for exactly this — which would quietly undo Decision
+29's real finding while appearing to honour it.
+
+**Vocabulary, fixed here:** this file says **quota** for the thing an obligation
+carries and **gap** for what it is measured as. A quota IS a gap — a live
+measurement of what is owed against what has arrived, feeding `weight x gap^bite`
+like every other want since Decision 19. Two words, one object, and they are not
+interchangeable: *every* want has a gap, and only a director's obligation has a
+quota.
+
+### What that makes the whole stack
+
+> **Every layer holds its own gap. Only weight propagates downward.**
+
+- The **lord** wants grain. That gap drives him to lean on the steward
+  (Decision 37).
+- The **steward** wants his quota. That gap drives him to lean on farmers.
+- The **farmer** has no quota at all. He has a heavier `weight`.
+
+### AND THAT ANSWERS WHAT PRESSURE ACTUALLY DOES AT THE BOTTOM
+
+**The working layer is already saturated.** A farmer works every daylight hour —
+`WorkForHire` scores flat all day by Decision 31, so it never gets quieter and
+there are no unworked hours left to buy. Weight from above therefore **cannot
+make him work more.** What it does is make work outbid the other things on his
+ballot.
+
+**So pressure converts a man's needs into labour.** A lord leaning on a steward
+leaning on a farmer produces, at the bottom, a man who skips supper and stays in
+the field past dark. He does not die — there are no hard-fail states — he simply
+accumulates hunger, loneliness and adenosine that nothing is paying off.
+
+That is a complete loop, and every part of it is already built except the leaning.
+
+### A candidate answer to W1, offered as a candidate
+
+W1 gave up the property that a refusal names whatever outbid you, and left the
+important question open: *if that is no longer what refuses, what does?*
+
+**Accumulated unmet need is a candidate.** The man who refuses is the man whose
+stats have been ground down by a season of being leaned on. Not a new stat and
+not a mood system — the three gaps already running in `run_upkeep`, read at the
+moment of the ask.
+
+Its attraction is that the excuse then names something **true, and caused by the
+player** — which is the property W1 was most worried about giving up. It just
+names *the cumulative cost of your own commands* rather than *whatever outbid you
+this tick*.
+
+**It is not settled.** It has not been measured, W2's no-path is still unwritten,
+and the ordering hazard below is real.
+
+### What this does NOT settle
+
+- **Whether accumulated unmet need is what refuses.** Candidate only. See above.
+- **THE GATE ORDERING HAZARD, which is the live risk in this area.** Beckon
+  (Gate 3) is where refusal first exists. Give (Gate 4) and the wage (Gate 8) are
+  the tools that convert a refusal into future compliance, and they arrive
+  *after* it. Between those gates a player has been taught that people say no and
+  handed nothing to do about it. RimWorld never has this problem because drafting
+  is always available as an escape hatch; this design has deliberately refused
+  that hatch, which means **the refusal rate is a tuning surface with no safety
+  valve.** The cheapest fix is ordering, not mechanism. Named here, not solved.
+- **What "lean on somebody" is, as an Action.** It is an exchange with a result
+  that writes a number. Its gate, its score and its step are unwritten.
+- **What the lord's grain gap is measured against.** `wanted - in_barn` is the
+  obvious shape and is not the only one.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| `boss-scene-build-plan.md`, Gates 3-8 | The ordering hazard above is a real risk to the ladder as sequenced and should be answered before Gate 3 ships. | **not applied** |
+| `obligation.gd` | Gains back a **quota** — the field Decision 29 removed, returning at a different layer and WITHOUT the debt semantics — alongside the weight and the wage it already carries. Directors only. | **not applied** |
+
+---
+
+## Decision 39 — The simulation is always full-resolution. There are no coarse ticks.
+
+**Settled 2026-08-29** (author's call, correcting a design conversation that had
+assumed the opposite). This one is unusual in that **the code already does it** —
+what is settled is that it stays that way, and that a whole family of
+optimisations is off the table.
+
+### The question
+
+`population.gd` names the scenario in its own header: *"promoting a distant
+village to full simulation and collapsing it again."* So: when a region is far
+from the player, or nobody is watching it, does it step at a **bigger `hours` per
+tick** — four hours at a time instead of a hundredth?
+
+**No. A tick is never deliberately enlarged — not for distance, not for
+population, not for whether anyone is looking.**
+
+**Stated precisely, because "the tick size never changes" would be false.** In
+the live game the tick is the frame delta converted — `Population._process` hands
+`Clock.get_hours_elapsed(delta)` down, so at 60 fps and a 60-second day a tick is
+about 0.0067 hours, and it jitters with the frame rate. The probe passes a fixed
+0.01. **Neither is a fidelity choice; both are small.** What this section forbids
+is the deliberate enlargement — handing a distant region four hours where a near
+one gets a hundredth, so that its people think once where the others think six
+hundred times.
+
+What changes when nobody is watching is **wall-clock speed and whether
+presentation runs** — never the resolution of the simulation. The author's
+words: *"we'll always step the ticks, they'll just be unbounded by not having to
+draw on the screen, and it takes how long it takes but definitely sped up.
+otherwise you get all sorts of problems."*
+
+### Why — the failure mode is what decides it
+
+A coarse-ticked region **behaves differently from a fine-ticked one**, and the
+difference is not a rounding error. Three examples out of the design
+conversation that produced this section:
+
+- A held man loses twenty ballots to a 0.2-hour conversation at 0.01-hour ticks,
+  and **zero** at four-hour ticks — he only got one decision for the whole tick
+  anyway. So the cost of talking to somebody depends on whether anyone is
+  watching.
+- Contention resolves differently. Two farmers racing for a plot at fine
+  resolution is a real race; at four hours a tick it is whoever the loop reaches
+  first, with the whole morning collapsed into one comparison.
+- Any threshold crossed and re-crossed inside one coarse tick simply never
+  happened.
+
+**Watched-versus-unwatched divergence is the least debuggable class of bug this
+project could adopt**, because the act of looking at it changes it. A hitch —
+the player waiting while a region catches up — is survivable, visible, and
+profileable. In a game with no hard-fail states and no reflex demands, that trade
+is not close.
+
+**This is the Dwarf Fortress trade, taken deliberately.** It is why that game is
+deep and why it stutters.
+
+### It already works, and it is already measured
+
+**`probe.gd` IS the collapsed-region execution model.** It loads the real
+`game.tscn`, pumps `think_for_everyone(0.01)` by hand, and runs 48 simulated
+hours with nothing drawn — real scene, real people, same tick size, unbounded by
+frame rate. **14898 checks a run.** There is no second code path to write and no
+approximation to reconcile, because the thing a distant region would do is the
+thing the probe has been doing since rung 0.
+
+The architecture that permits it is already load-bearing and already documented:
+**presentation redraws as often as it is LOOKED AT, not as often as the world is
+stepped.** `Person._show_the_body()` runs in `_process`; `think_and_act` runs
+from `Population`. That split was written for frame-rate independence and turns
+out to be the LOD architecture.
+
+### What it costs, stated plainly
+
+**A region's cost does not shrink with distance.** Five hundred people across a
+kingdom simulating a week is five hundred x 168 hours x 100 ticks an hour of
+person-ticks whether anybody is watching or not. This decision buys correctness
+with compute and nothing else.
+
+### The mitigation that preserves everything — run BEHIND, never COARSER
+
+A region that is too expensive to keep current may run **fewer ticks per frame**
+and fall behind, catching up over time. That is a **queue depth, not a fidelity
+change**: every tick it eventually runs is the same size as every other tick in
+the game.
+
+**SPLIT BETWEEN TICKS, NEVER WITHIN ONE.** `population.gd` is emphatic that
+people are walked one at a time with nothing running in between, because that is
+what makes contention correct with no locking anywhere. Running half a town's
+people this frame and half the next **breaks that**, silently and only under
+contention. Running the whole town fewer times does not.
+
+### The consequence, and the thing that pays for it
+
+Regions running behind means **regions sit at different world-times** — the
+lagging one at hour 100 while the player's is at 103. That is fine until
+something spans them.
+
+**And travel time is the catch-up budget.** You can only exchange with somebody
+you are standing next to, so a cross-region conversation requires walking there —
+and the region being walked toward has the entire journey to catch up. *The thing
+that makes reconciliation necessary is the same thing that pays for it.* Nothing
+needs building for this; it falls out of the fact that talking requires
+proximity.
+
+### WHAT THIS RETIRES — a constraint argued from the rejected premise
+
+The design conversation that led here had proposed, as a hard requirement, that
+**an exchange must be resolvable in one call with no accumulated conversational
+state** — because a coarse-ticked region could not reproduce a conversation that
+developed over many fine ticks.
+
+**That justification is gone with the premise, and is withdrawn rather than
+re-argued.** What remains is weaker and is a preference, not a rule: single-call
+resolution is marginally kinder to tick-for-tick replay (which `population.gd`
+names as a thing its call site enables) and makes fast-forward cheaper. Neither
+is a requirement.
+
+**So a greeting-rung ladder in which each exchange warms a man up is back on the
+table**, as is any multi-stage negotiation. Whatever eventually answers W1 is not
+constrained by this.
+
+### What this does NOT settle
+
+- **Whether a distant region is ever UNLOADED.** This section is about tick
+  *size*, not about whether bodies exist. Despawning a region's people is a
+  different question with different consequences — every stored `Person`
+  reference in an exchange or an obligation would need `is_instance_valid` to do
+  real work, and an exchange whose party was unloaded would end **silently**,
+  which `CLAUDE.md`'s standing rule against silent guards would not accept.
+  Unasked here.
+- **What the hitch budget is.** "It takes how long it takes" is the ruling; how
+  long is too long before a region must be allowed to fall behind is unmeasured,
+  and should be measured rather than guessed.
+- **Whether a tick should be BOUNDED, and at what.** Nothing clamps
+  `get_hours_elapsed` today, so a frame hitch or a debugger pause hands the whole
+  town one enormous tick — which is precisely the coarse step this section
+  forbids, arriving by accident rather than by design. A `maxf` in `Clock` is the
+  obvious guard and is deliberately not specified here; it wants measuring.
+- **What tick size is RIGHT.** 0.01 is what the probe measures at and ~0.0067 is
+  what 60 fps produces. Nothing here argues either is correct — only that no
+  region gets a deliberately larger one than another.
+
+### Plan edits this implies
+
+| Where | Edit | Applied |
+|---|---|---|
+| — | Nothing to build. The code already behaves this way; this section forbids the optimisation that would change it. | **not applied** |
+| `population.gd` header | Its "collapsing it again" line reads as though coarse stepping were the intent. It is the one place a future builder would look for permission to do it, and should say instead that collapsing means *unbounded by the frame rate*, never *bigger hours*. | **not applied** |
