@@ -103,6 +103,9 @@ func _show_the_body() -> void:
 	_play(resting_clip if doing.is_empty() else doing)
 
 # KNOWN, AND NOT WORTH A BLEND TREE YET: `jump`, `jump_down` and `run_jump`
-# import as LOOP_NONE (see assets/mixamo/mixamo_import.gd), so a long fall
-# plays its clip once and then holds the last pose. Note it when watching; do
-# not build a state machine to fix it until a fall is long enough to look wrong.
+# import as LOOP_NONE (see assets/mixamo/mixamo_import.gd), so a long fall runs
+# out of clip. AS OF 2026-08-30 IT NO LONGER HOLDS THE LAST POSE — Person._play
+# now rests a one-shot that has run its course, so a long enough fall shows him
+# idling in mid-air instead of frozen mid-jump. Both are wrong and the new one
+# is wrong more honestly. Note it when watching; do not build a state machine to
+# fix it until a fall is long enough for either to look wrong.

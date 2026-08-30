@@ -254,10 +254,41 @@ func settle(initiator: Person, recipient: Person) -> void:
 func land_on(what: PackedScene, person: Person) -> Action:
 	if what == null or person == null or person.brain == null:
 		return null
+	_discharge_his_standing_orders(what, person)
 	var already := find_landed(what, person)
 	if already != null:
 		return already
 	return person.brain.learn(what)
+
+
+# THE LAST ORDER WINS. Anything he was told to do that is still standing is
+# discharged the moment you tell him to do something else — one man, one errand
+# from you at a time.
+#
+# WHY IT IS A RULE AND NOT A NUMBER. A summons pulls at 100 and an errand at 75,
+# so a man who had agreed to follow you went on following you when you asked him
+# to work the ground: the ask landed, and was outbid by the order he was already
+# under, for ever. The tempting fix is to move one of those numbers — and that is
+# W9's trap exactly, a hand-tuned fight to be re-fought every time a drive is
+# added. Superseding is not a scoring question at all. **He did not decline; he
+# was never asked to choose**, because the old order stopped existing the moment
+# the new one arrived.
+#
+# ASKED OF HIS OWN ACTIONS BY DUCK TYPE, so this file names no verb and does not
+# know what a summons is. An action that CAN be called off answers `discharge`;
+# one that cannot — an errand, today — simply does not, and is left standing.
+# That asymmetry is deliberate rather than an omission: being called to somebody
+# is a thing you stop doing, and a job you agreed to is not.
+#
+# AND NEVER THE ONE ARRIVING. Landing the same order twice must not cancel it —
+# `land_on` hands back what is already there, so without this guard asking a man
+# twice would discharge him on the second ask.
+func _discharge_his_standing_orders(arriving: PackedScene, person: Person) -> void:
+	for action in person.brain.get_known_actions():
+		if action.scene_file_path == arriving.resource_path:
+			continue
+		if action.has_method(&"discharge"):
+			action.call(&"discharge")
 
 
 # Is this already in his repertoire? Asked by walking what he knows rather than

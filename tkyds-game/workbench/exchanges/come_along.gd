@@ -105,3 +105,11 @@ func is_catching_up_to(person: Person, leader: Person) -> bool:
 	var toward := summoner.global_position - person.global_position
 	toward.y = 0.0
 	return toward.length() > closes_to
+
+
+# CALLED OFF. Forgetting who called him is exactly what being finished means —
+# the gate above is "is somebody calling me" — so this is the same one line the
+# arrival already uses, given a name and a second caller. Nothing else has to
+# change and there is still no "done" flag to keep in step with anything.
+func discharge() -> void:
+	summoner = null

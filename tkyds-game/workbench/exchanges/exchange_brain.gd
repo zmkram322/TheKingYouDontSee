@@ -49,6 +49,25 @@ const FollowCamera := preload("res://workbench/exchanges/follow_camera.gd")
 # per second.
 @export var braking := 24.0
 
+# THE GESTURE HE IS STANDING STILL FOR. Press a verb and the stick goes dead
+# until his body has got through the clip that verb's own step declares — so a
+# take is a man reaching into a basket rather than a man sliding away from one
+# mid-reach, and a greeting cannot be walked out of halfway through the wave.
+#
+# A CLIP NAME AND NOT A TIMER, and W11b is why: a second number counting down
+# beside the animation is a number that races it, and dragging any tuning slider
+# makes them disagree. The AnimationPlayer already knows when a clip has run
+# out — Person.is_gesture_pending asks it — so there is exactly one answer and
+# nothing to keep in step.
+#
+# IT CANNOT STICK. Three separate things end it: the clip finishing, the chosen
+# verb being dropped out from under him, and a clip that loops never being
+# pending in the first place (so telling a man to work the ground does not weld
+# his feet to the floor). A man frozen for ever by a UI is the failure this is
+# most worth guarding, and it is guarded by the hold being DERIVED rather than
+# remembered — this field is a question, not a state.
+var _gesturing: StringName = &""
+
 # Which rig says where forward is.
 #
 # THE NOTE THAT WAS HERE WAS WRONG, AND IT WAS WRONG BECAUSE IT BELIEVED THE
@@ -114,10 +133,20 @@ func _physics_process(delta: float) -> void:
 	# ONE SHOVE, ON THE PRESS. tutorial_character.gd read BOTH
 	# is_action_just_pressed AND is_action_pressed and added lift on each, so
 	# holding the key flew. just_pressed alone is the whole of a jump.
-	if person.is_on_floor() and Input.is_action_just_pressed(&"ui_jump"):
+	if person.is_on_floor() and not _is_still_gesturing() and Input.is_action_just_pressed(&"ui_jump"):
 		moving.y = jump_speed
 
-	var steer := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	# THE STICK, AND WHETHER HE STILL HAS IT. Asked before the input is read
+	# rather than after, so a held man never has a direction worked out for him
+	# and then thrown away.
+	var steer := Vector2.ZERO
+	if _is_still_gesturing():
+		# Braking is left running below, so he COASTS TO A STOP rather than
+		# stopping dead on the keypress. A body that halts in one frame reads as
+		# a dropped input; a body that settles reads as a man planting his feet.
+		pass
+	else:
+		steer = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var pointed := Vector3(steer.x, 0.0, steer.y)
 	if _camera != null:
 		pointed = _camera.get_steering_basis() * pointed
@@ -143,3 +172,42 @@ func _physics_process(delta: float) -> void:
 # and a movement function is the wrong place to answer that quietly. It is
 # no longer moot: exchanges.tscn now has a Population, so he genuinely does
 # tire, and steering a sleeping man is a thing you can actually watch here.
+
+
+# Is he mid-gesture — and, every time it is asked, is that still TRUE? The field
+# is cleared here rather than anywhere else, so there is one place a hold can end
+# and no way to leave one standing.
+func _is_still_gesturing() -> bool:
+	if _gesturing.is_empty():
+		return false
+	if person == null or get_chosen_verb() == null 			or not person.is_gesture_pending(_gesturing):
+		_gesturing = &""
+		return false
+	return true
+
+
+# A PRESS IS WHAT STARTS ONE, which is the whole reason this override exists.
+# choose_verb is already the one door a hand comes through (Decision 33: the
+# command is a bid), so the hold is picked up exactly where the intent is and
+# nowhere else — the arc does not know this happens and did not have to change.
+func choose_verb(action: Action) -> void:
+	super(action)
+	_gesturing = &""
+	if person == null or action == null:
+		return
+	# Said again out loud, because he may have made this very gesture a moment
+	# ago and a spent one would read as already finished.
+	person.start_gesture_again()
+	_gesturing = _find_declared_clip(action)
+
+
+# Whatever the action's own step says his body does. Read off the step rather
+# than off a table here, for the reason the whole body layer exists: a file in
+# game/ mapping a verb to an animation is code naming verbs. This does not know
+# what it found and does not look.
+func _find_declared_clip(action: Action) -> StringName:
+	for child in action.get_children():
+		var step := child as ActionStep
+		if step != null and not step.clip.is_empty():
+			return step.clip
+	return &""

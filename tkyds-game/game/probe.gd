@@ -97,7 +97,23 @@ var _kept_night := -1.0
 var _kept_strong_morning := -1.0
 
 
+# WHICH CLAIMS TO RUN, off the command line: `--script game/probe.gd -- 4 13`.
+# There is one reason this exists and it is not tidiness — a full run takes over
+# two and a half minutes, almost all of it standing up a fresh game scene per
+# claim, and the discipline this project runs on is BREAKING THE CODE AND
+# WATCHING THE CLAIM GO RED. At three minutes a break, that discipline gets
+# skipped, which is the only way it ever fails.
+#
+# EMPTY MEANS EVERYTHING, and a filtered run says so in block capitals and
+# REFUSES to print "all N claims held" (see _report). A filter you have to
+# remember to switch off is a filter that one day reports a clean town it never
+# simulated — which is precisely the shape of the vacuous pass this file exists
+# to catch, wearing a different hat.
+var _only_these := PackedStringArray()
+
+
 func _initialize() -> void:
+	_only_these = OS.get_cmdline_user_args()
 	_game = _add_a_disabled_game_scene()
 
 
@@ -128,63 +144,63 @@ func _process(_delta: float) -> bool:
 		quit(1)
 		return true
 	_pump_the_opening_days()
-	_check_everyone_is_ticked_once_per_call()
-	_check_the_town_survives_losing_somebody()
-	_check_a_man_carries_his_place()
-	_check_who_is_where_is_asked_not_remembered()
-	_check_travel_cost_is_read_and_never_bars()
-	_check_the_cycle_is_anchored_to_the_sun()
-	_check_two_farmers_one_plot()
-	_check_a_claim_survives_a_day_boundary()
-	_check_an_unworked_claim_lapses_at_the_boundary()
-	_check_a_plot_cannot_be_claimed_from_the_wrong_place()
-	_check_freeing_the_holder_frees_the_plot_within_two_ticks()
-	_check_no_stations_and_every_station_taken_are_different_counters()
-	_check_a_man_walks_the_gap_shut()
-	_check_a_held_plot_reads_taken_from_anywhere_in_town()
-	_check_the_dither_is_gone_across_arrival_departure_and_after()
-	_check_the_day_boundary_reopens_a_held_plot_from_the_same_spot()
-	_check_the_dawn_race_survives_the_register()
-	_check_the_bedless_man_does_not_pace_the_doorway()
-	_check_the_nearer_station_wins_and_moving_a_place_changes_it()
-	_check_working_a_plot_yields_grain()
-	_check_a_walking_man_produces_nothing()
-	_check_taking_more_than_he_has_moves_nothing()
-	_check_handing_over_conserves_and_is_all_or_nothing()
-	_check_only_creation_and_destruction_move_a_world_total()
-	_check_every_scene_is_wired()
-	_check_hunger_rises_for_an_idle_man()
-	_check_eating_drops_hunger_and_a_loaf()
-	_check_no_bread_means_off_the_ballot()
-	_check_hunger_never_goes_negative()
-	_check_adenosine_is_written_only_in_brain()
-	_check_eat_is_on_every_person_by_composition()
-	_check_baking_turns_grain_into_bread()
-	_check_bread_wins_over_baking_and_grain_alone_bakes()
-	_check_neither_grain_nor_bread_means_neither_and_hunger_still_rises()
-	_check_expired_obligation_leaves_the_candidate_set()
-	_check_owned_plot_refuses_the_unemployed_and_counts_it()
-	_check_work_score_is_unchanged_by_his_sack()
-	_check_short_larder_bakes_full_larder_does_not()
-	_check_crop_splits_between_owner_and_worker_and_conserves()
-	_check_unowned_land_worker_keeps_all_of_it()
-	_check_a_man_holds_three_grain_and_bakes()
-	_check_twenty_one_sleepers_leave_one_standing()
-	_check_a_sleeper_holds_his_bed_across_midnight()
-	_check_an_abandoned_bed_lapses_at_the_boundary()
-	_check_a_lonely_man_goes_where_company_is_to_be_found()
-	_check_social_rises_for_an_idle_man()
-	_check_the_day_keeps_its_shape()
-	_check_a_steered_body_with_no_verb_chosen_still_tires_hungers_and_grows_lonely()
-	_check_the_verb_list_on_screen_is_exactly_the_open_ballot()
-	_check_a_gate_that_says_no_never_reaches_the_players_ballot()
-	_check_choosing_a_verb_runs_its_step_and_choosing_nothing_runs_nothing()
-	_check_a_verb_dropped_from_under_him_is_dropped_not_held()
-	_check_the_fork_changed_one_body_not_the_engine()
-	_check_the_players_place_is_a_band_and_does_not_flicker_on_a_boundary()
-	_check_the_player_covers_the_same_ground_per_world_hour_at_any_day_length()
-	_check_a_mans_body_shows_the_work_his_step_declares()
-	_check_a_stalled_frame_buys_more_ticks_never_a_bigger_one()
+	_run(_check_everyone_is_ticked_once_per_call, "5")
+	_run(_check_the_town_survives_losing_somebody, "6")
+	_run(_check_a_man_carries_his_place, "7")
+	_run(_check_who_is_where_is_asked_not_remembered, "8")
+	_run(_check_travel_cost_is_read_and_never_bars, "9")
+	_run(_check_the_cycle_is_anchored_to_the_sun, "10,11,12")
+	_run(_check_two_farmers_one_plot, "13")
+	_run(_check_a_claim_survives_a_day_boundary, "14")
+	_run(_check_an_unworked_claim_lapses_at_the_boundary, "15")
+	_run(_check_a_plot_cannot_be_claimed_from_the_wrong_place, "16")
+	_run(_check_freeing_the_holder_frees_the_plot_within_two_ticks, "17")
+	_run(_check_no_stations_and_every_station_taken_are_different_counters, "18")
+	_run(_check_a_man_walks_the_gap_shut, "19,20")
+	_run(_check_a_held_plot_reads_taken_from_anywhere_in_town, "21")
+	_run(_check_the_dither_is_gone_across_arrival_departure_and_after, "22")
+	_run(_check_the_day_boundary_reopens_a_held_plot_from_the_same_spot, "51")
+	_run(_check_the_dawn_race_survives_the_register, "52")
+	_run(_check_the_bedless_man_does_not_pace_the_doorway, "53")
+	_run(_check_the_nearer_station_wins_and_moving_a_place_changes_it, "23,24")
+	_run(_check_working_a_plot_yields_grain, "25")
+	_run(_check_a_walking_man_produces_nothing, "26")
+	_run(_check_taking_more_than_he_has_moves_nothing, "27")
+	_run(_check_handing_over_conserves_and_is_all_or_nothing, "28,29")
+	_run(_check_only_creation_and_destruction_move_a_world_total, "30")
+	_run(_check_every_scene_is_wired, "4")
+	_run(_check_hunger_rises_for_an_idle_man, "31")
+	_run(_check_eating_drops_hunger_and_a_loaf, "32")
+	_run(_check_no_bread_means_off_the_ballot, "33")
+	_run(_check_hunger_never_goes_negative, "34")
+	_run(_check_adenosine_is_written_only_in_brain, "35")
+	_run(_check_eat_is_on_every_person_by_composition, "36")
+	_run(_check_baking_turns_grain_into_bread, "37")
+	_run(_check_bread_wins_over_baking_and_grain_alone_bakes, "38")
+	_run(_check_neither_grain_nor_bread_means_neither_and_hunger_still_rises, "39")
+	_run(_check_expired_obligation_leaves_the_candidate_set, "41")
+	_run(_check_owned_plot_refuses_the_unemployed_and_counts_it, "43")
+	_run(_check_work_score_is_unchanged_by_his_sack, "54")
+	_run(_check_short_larder_bakes_full_larder_does_not, "55")
+	_run(_check_crop_splits_between_owner_and_worker_and_conserves, "56")
+	_run(_check_unowned_land_worker_keeps_all_of_it, "57")
+	_run(_check_a_man_holds_three_grain_and_bakes, "58")
+	_run(_check_twenty_one_sleepers_leave_one_standing, "45")
+	_run(_check_a_sleeper_holds_his_bed_across_midnight, "46")
+	_run(_check_an_abandoned_bed_lapses_at_the_boundary, "47")
+	_run(_check_a_lonely_man_goes_where_company_is_to_be_found, "48")
+	_run(_check_social_rises_for_an_idle_man, "49")
+	_run(_check_the_day_keeps_its_shape, "50")
+	_run(_check_a_steered_body_with_no_verb_chosen_still_tires_hungers_and_grows_lonely, "59")
+	_run(_check_the_verb_list_on_screen_is_exactly_the_open_ballot, "60")
+	_run(_check_a_gate_that_says_no_never_reaches_the_players_ballot, "61")
+	_run(_check_choosing_a_verb_runs_its_step_and_choosing_nothing_runs_nothing, "62")
+	_run(_check_a_verb_dropped_from_under_him_is_dropped_not_held, "63")
+	_run(_check_the_fork_changed_one_body_not_the_engine, "64")
+	_run(_check_the_players_place_is_a_band_and_does_not_flicker_on_a_boundary, "65")
+	_run(_check_the_player_covers_the_same_ground_per_world_hour_at_any_day_length, "66")
+	_run(_check_a_mans_body_shows_the_work_his_step_declares, "67")
+	_run(_check_a_stalled_frame_buys_more_ticks_never_a_bigger_one, "68")
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -4071,6 +4087,20 @@ func _check_a_stalled_frame_buys_more_ticks_never_a_bigger_one() -> void:
 
 	world.queue_free()
 
+# One check, run or skipped. The claim numbers are named at the CALL SITE rather
+# than read out of the function, because they are the only place in this file
+# that says which claim a given check is for — the numbers live inside the
+# function bodies as strings, where nothing can index them.
+func _run(check: Callable, claim_numbers: String) -> void:
+	if _only_these.is_empty():
+		check.call()
+		return
+	for number in claim_numbers.split(","):
+		if _only_these.has(number):
+			check.call()
+			return
+
+
 func _report() -> void:
 	print("")
 	print("probe — %d checks over %.0f simulated hours at %.2f-hour ticks" % [
@@ -4094,8 +4124,14 @@ func _report() -> void:
 		else:
 			print("PASS    %s" % claim)
 	print("")
-	if _first_failure.is_empty():
+	if not _only_these.is_empty():
+		print("PARTIAL RUN — only claims %s were asked for, %d ran." % [
+			" ".join(_only_these), _claims.size()])
+		print("THIS IS NOT A PASS. Run with no arguments before believing anything.")
+	if _first_failure.is_empty() and _only_these.is_empty():
 		print("all %d claims held." % _claims.size())
+	elif _first_failure.is_empty():
+		print("%d of %d asked-for claims held." % [_claims.size(), _claims.size()])
 	else:
 		print("%d of %d claims failed." % [_first_failure.size(), _claims.size()])
 	print("")

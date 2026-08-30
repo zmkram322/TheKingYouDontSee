@@ -929,9 +929,215 @@ cannot both be current.
 
 ---
 
+## W15 — The body's three fixes: a gesture happens once, a follower's pace comes off the gap, and the arc is a picture
+
+**Written 2026-08-30**, from six pieces of feedback after watching the scene.
+All three are in the same layer and none of them is a new mechanism — each one
+is a rule the body layer was already missing.
+
+### The taking clip, and the trap it walked straight into
+
+`Taking Item.fbx` was dropped into `assets/mixamo/` and Godot had already
+generated a `.import` for it **with defaults** — `importer="scene"`, no import
+script. That is the companion trap named in
+`body-and-animation-findings-2026-08-21.md`: it would have imported silently, as
+a plain scene, with its clip still called `mixamo_com`, and the merged library
+would have grown a stranger. `build_character.gd` says so by name, which is the
+only reason it was caught in one pass rather than by wondering why the animation
+did nothing. Rewired, entered in the CLIPS table as **`take_item`** (one-shot,
+holds position), library rebuilt to **34 clips**, and `take_bread.tscn` declares
+it. Giving already declared `hand_over`, which is the frisbee throw.
+
+### A gesture happens ONCE
+
+**The bug:** `_play` was documented as free to call every tick because "play() on
+a clip already playing is a no-op". That is true, and it is not the case that
+bites. A **LOOP_NONE** clip runs out; `current_animation` is cleared when it
+does; the next tick asks for it again and it starts over. So a 3.5-second give
+sawed the same throw through four times, and every gesture in the game did the
+same thing — the wave, the point, the bow. It read as "the giving animation
+loops", which is the one thing it was authored not to do.
+
+**The call: a one-shot that has run its course is spent, and asking for it again
+rests him instead.** Cleared the instant anything else is asked for, so nothing
+has to remember to clear it.
+
+**Written by the signal, not by a clock.** `AnimationPlayer.animation_finished`
+already knows, and only ever fires for a clip that does not loop — so nothing
+here asks which kind a clip is, and there is no second timer to race the first.
+That matters here specifically: **W11b retired one such timer already**, for
+being a second number racing the exchange's own length.
+
+### A follower's pace comes off the gap
+
+Two things were wrong and only one of them was code.
+
+**The workbench day was 60 seconds.** At `walk_speed = 115` units per world
+hour that makes an NPC's walk **46 m/s**. He crossed the scene in a frame,
+overshot, stopped, and strobed — and because `Person` asks whether a man is
+covering ground as a *fraction of his own stride*, a follower moving at a
+plausible-looking pace read as **standing still** and wore an idle while
+gliding. This is the author's own ruling of 2026-08-29 arriving in a second
+place: **real seconds are the basis.** The day is now **1260 s**, which puts an
+NPC's walk at 2.19 m/s against the player's 2.2.
+
+**And his pace now comes off how far behind he is** — a ramp from a standstill at
+`closes_to` to `hurries_up_to` (2.6x) once he has fallen `catches_up_over`
+further back. A pure function of the gap, asked fresh, remembering nothing.
+
+> **NOTHING SAYS "IF THE MAN RUNS, RUN", and that is the whole point.** The
+> feedback was literally *"if the player is walking then the npc is walking and
+> if the player is running the npc should be running."* Written as stated it is
+> a file reading another man's gait — one short step from a dictionary mapping a
+> state to a clip, which is the thing `game/` is forbidden to contain. Written as
+> a gap it falls out for free: you run, the gap opens, the gap sets the pace, the
+> pace pushes him past his own walk, and `Person._show_the_body` — which measures
+> ground covered and asks nothing else — puts him in a run. Walk away and the
+> same loop settles him back down.
+
+`Person` gained `running_clip` / `running_above` for that, and
+`running_above` is deliberately a fraction **greater than one**: nothing in the
+game could exceed its own walk until a summons could, which is why the slot sat
+empty. `person_with_exchange` had been the only file that knew about a run and
+now inherits it. `GoToStep.walk_toward_point` gained a `pace` multiplier
+defaulting to 1.0 — a multiple rather than a speed, so it stays dimensionless
+and a strong man hurries from his own faster walk. A second integrator anywhere
+else would have made that file's claim to be *"the only thing in the game that
+moves a body"* false.
+
+### The arc is a picture, not a ballot
+
+Bigger — radius 86 -> 122, spread 78 -> 104 degrees — and **it draws nothing over
+a man who is still hurrying to catch you up.** A follower spends his life a few
+metres behind your shoulder, so glancing back put a full arc on screen over a man
+mid-stride.
+
+**This is the first thing in the folder that is purely about whether a verb is
+worth LOOKING at, as opposed to whether it is legal.** Everything else on the arc
+is a gate. Stand still, he settles beside you, and the whole arc comes back —
+nothing he can do has been taken away, which is what keeps it a visibility rule.
+Asked of his own actions by duck type (`is_catching_up_to`), so the arc still
+names no verb and a second thing that puts somebody in your train is hidden the
+same way for free.
+
+### What the checks found
+
+**102 claims, all held**, and six deliberate breaks watched.
+
+> **The break that was worth running.** *"Further behind, he covers more ground
+> in the same tick"* stayed **green** when the pace multiplier was removed. It
+> was passing on the **overshoot clamp** — at that tick length the near man
+> simply arrived, so the two numbers differed for a reason that had nothing to do
+> with pace. A shorter tick, chosen so neither man can reach his target, makes
+> pace the only difference. **This is the same species as the vacuous assertion,
+> one step along: not a claim that asserts nothing, but a claim that is carried
+> by the wrong mechanism** — it would have gone on passing after the feature it
+> names was deleted.
+
+`person.gd`, `go_to_step.gd` and one clip table are the only `game/` files
+touched. Probe anchors unmoved — `21:14 / 05:52`, `22:10 / 8.00 h / 06:10`,
+strong man `04:47`, 14906 checks — with the one red still the pre-existing
+claim 4.
+
+---
+
+## W15a — The stick waits for the gesture
+
+**Written 2026-08-30.** Press a verb and **his own feet stop answering until his
+body has got through the clip that verb's step declares.** A take is a man
+reaching into a basket rather than a man sliding away from one mid-reach, and a
+greeting can no longer be walked out of halfway through the wave — which it
+could, because `_physics_process` runs whether or not `Population` is holding
+him.
+
+**A clip name, not a timer, and W11b is the precedent**: a countdown beside an
+animation is a second number racing the first, and one tuning slider makes them
+disagree. `Person.is_gesture_pending` asks the AnimationPlayer, which already
+knows.
+
+**Picked up in `choose_verb` and nowhere else.** That is already the one door a
+hand comes through (Decision 33 — the command is a bid), so the arc did not have
+to change and does not know this happens.
+
+**A man frozen for ever by a UI is the failure worth guarding**, and it is
+guarded by the hold being a question rather than a state. Three things end it,
+each on its own: the clip finishing, the chosen verb being dropped out from under
+him, and **a looping clip never being pending at all** — so telling a man to work
+the ground does not weld his feet to the floor.
+
+### What the check found, which was not what it was written to find
+
+`person_with_exchange.gd` overrides `_start_the_body` **entirely**, and the
+`animation_finished` wiring had been put inside it. So **the one body in the game
+that gives things away was the only body whose gestures still sawed** — the
+W15 fix had never applied to the player. It is now wired beside the call in
+`_ready`, where an override cannot drop it.
+
+Worth noting how it surfaced: the claim went red first for a *different* reason
+— the check emitted the signal on the NPC's AnimationPlayer while asserting about
+the player's brain. **Two people in a scene, two bodies, and a claim nearly made
+about the wrong man.** Fixing the check is what exposed the real bug underneath;
+had the check been written against the right body from the start it would have
+gone red immediately, and had it been written against the wrong body and *passed*
+it would have been another vacuous claim.
+
+**109 claims, all held.** Probe unmoved.
+
+---
+
+## W15b — The last order wins, and an errand is not an order you can be called off
+
+**Written 2026-08-30**, from watching it: *"when we give another action like
+'ask' we should break / remove follow as an action or something — it currently
+outbids the ask to work."*
+
+**The bug.** A summons pulls at 100 and an errand at 75, so a man who had agreed
+to follow you went on following you when you asked him to work the ground. The
+ask landed, was outbid by the order he was already under, and stayed outbid for
+ever.
+
+**The call: landing a new order discharges the standing one.** Not a number, a
+rule — and refusing to fix it with a number is the point. Moving 100 or 75 is
+**W9's trap exactly**: a hand-tuned fight to be re-fought every time a drive is
+added, on a score that is flat all day and can never lose by patience.
+**Superseding is not a scoring question at all.** He did not decline and he was
+not outbid; **he was never asked to choose**, because the old order stopped
+existing the moment the new one arrived.
+
+It lives in `ExchangeAction.land_on` — the one place an exchange leaves anything
+behind — and is asked of his own actions **by duck type**, so no file names a
+verb and nothing knows what a summons is.
+
+### The asymmetry is the design, not an omission
+
+**An action that can be called off answers `discharge`. An errand does not, and
+is left standing.** Being called to somebody is a thing you stop doing; a job you
+agreed to is not. So beckoning a working man takes him away and gives the job
+back when he is done, while asking a following man to work ends the following
+outright.
+
+For `come_along` the discharge is the same one line arrival already used —
+`summoner = null` — given a name and a second caller. W13's *"clearing the field
+IS the discharge"* still holds; there is still no "done" flag.
+
+### One guard is deliberately unassertable, and is kept anyway
+
+`_discharge_his_standing_orders` exempts the order **arriving**, so landing the
+same thing twice cannot cancel it. **That guard cannot be watched failing today**
+— removing it left every claim green — because `summon.settle` re-arms
+`summoner` immediately after `land_on`, so the self-cancel is repaired in the
+same breath. It is kept as insurance against an order that lands and does *not*
+re-arm, and recorded here rather than defended by a claim that would be vacuous.
+The claim written for it was **deleted and replaced** with the asymmetry above,
+which does turn red.
+
+**114 claims, all held.** Probe unmoved at 14906 checks.
+
+---
+
 ## When we fold this back
 
-Walk W1–W14 in order and rule on each. **W8 is already fixed and needs no ruling** — it was a bug, the fix is in `game/`, and the probe is unmoved at 64 claims / 14898 checks. W1 is the only one that genuinely
+Walk W1–W15b in order and rule on each. **W8 is already fixed and needs no ruling** — it was a bug, the fix is in `game/`, and the probe is unmoved at 64 claims / 14898 checks. W1 is the only one that genuinely
 contradicts a stated design bet, so it is the one that has to be argued rather
 than merged — and if it survives, the boss plan's "nobody has to build refusal"
 paragraph needs rewriting, not just supplementing.

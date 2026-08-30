@@ -41,6 +41,13 @@ const SECTION_HEADER_PATTERN := "^\\s*\\["
 const NODE_SECTION_HEADER_PATTERN := "^\\s*\\[node\\b"
 
 
+# An [ext_resource type="Script" ... path="..." id="..."] line. Only Scripts:
+# a node's `script = ExtResource("3_brain")` is the one reference here that has
+# to be followed back to a file, so the type is pinned rather than matched loose.
+const SCRIPT_RESOURCE_PATTERN := "^\\s*\\[ext_resource\\s+type=\"Script\".*path=\"([^\"]*)\".*id=\"([^\"]*)\""
+const EXT_RESOURCE_REFERENCE_PATTERN := "ExtResource\\(\\s*\"([^\"]*)\"\\s*\\)"
+
+
 # Every .tscn under root_dir, walked by hand rather than read off any project
 # index, so this works on a stripped checkout too. Skips generated directories
 # and anything called "addons" — third-party scenes are not ours to lint.
@@ -100,12 +107,23 @@ static func _collect_violations_in_file(scene_path: String, file_text: String, v
 	var section_header_regex := RegEx.create_from_string(SECTION_HEADER_PATTERN)
 	var node_section_header_regex := RegEx.create_from_string(NODE_SECTION_HEADER_PATTERN)
 
+	var script_resource_regex := RegEx.create_from_string(SCRIPT_RESOURCE_PATTERN)
+
 	var current_block := {}
 	var pending := {}
+	# id -> script path, for the one lookup _check_one_node_block needs. Built as
+	# the file is walked rather than in a pass of its own: ext_resource lines
+	# always precede the nodes that cite them, so by the time a block closes its
+	# script is already known.
+	var scripts_by_id := {}
 
 	for line: String in file_text.split("\n"):
 		if line.strip_edges().begins_with(";"):
 			continue
+
+		var script_resource := script_resource_regex.search(line)
+		if script_resource != null:
+			scripts_by_id[script_resource.get_string(2)] = script_resource.get_string(1)
 
 		var is_section_header := section_header_regex.search(line) != null
 		var property_match: RegExMatch = null if is_section_header else property_regex.search(line)
@@ -119,7 +137,7 @@ static func _collect_violations_in_file(scene_path: String, file_text: String, v
 
 		if is_section_header:
 			if not current_block.is_empty():
-				_check_one_node_block(scene_path, current_block, violations)
+				_check_one_node_block(scene_path, current_block, scripts_by_id, violations)
 			current_block = {}
 			# Only [node …] opens a block. [gd_scene …], [ext_resource …],
 			# [sub_resource …], [connection …] and [editable …] all close one
@@ -142,7 +160,7 @@ static func _collect_violations_in_file(scene_path: String, file_text: String, v
 		var trailing_assignments: Array[Dictionary] = current_block["assignments"]
 		trailing_assignments.append(pending)
 	if not current_block.is_empty():
-		_check_one_node_block(scene_path, current_block, violations)
+		_check_one_node_block(scene_path, current_block, scripts_by_id, violations)
 
 
 # A node block from its header line: a label good enough to find it by, and
@@ -174,7 +192,8 @@ static func _build_node_block(
 # Three rules, each checked independently so one node can report more than one
 # problem: a bare NodePath must be declared, an Array[NodePath] must not be,
 # and every declared name must actually be assigned something.
-static func _check_one_node_block(scene_path: String, block: Dictionary, violations: Array[String]) -> void:
+static func _check_one_node_block(scene_path: String, block: Dictionary,
+		scripts_by_id: Dictionary, violations: Array[String]) -> void:
 	var label: String = block["label"]
 	var declared_names: Array[String] = block["declared"]
 	var assignments: Array[Dictionary] = block["assignments"]
@@ -193,7 +212,8 @@ static func _check_one_node_block(scene_path: String, block: Dictionary, violati
 		if not is_array_form and not is_bare_form:
 			continue
 		var is_declared := declared_names.has(property_name)
-		if is_bare_form and not is_declared:
+		if is_bare_form and not is_declared and _needs_the_header(
+				property_name, assignments, scripts_by_id):
 			violations.append("%s: %s, \"%s\" is a bare NodePath but is not in node_paths — it loads as null" % [
 				scene_path, label, property_name])
 		elif is_array_form and is_declared:
@@ -204,3 +224,59 @@ static func _check_one_node_block(scene_path: String, block: Dictionary, violati
 		if not assigned_names.has(declared_name):
 			violations.append("%s: %s, \"%s\" is in node_paths but nothing assigns it — a renamed or removed property" % [
 				scene_path, label, declared_name])
+
+
+# DOES THIS PROPERTY ACTUALLY NEED THE HEADER? The rule this file was built on
+# was stated too widely, and the probe carried the false positive for over a
+# week: `node_paths` is what tells the loader to CONVERT a stored path into an
+# object, so it is needed only when the export's declared type is a NODE.
+#
+#   @export var clock: Clock         -> stored as a path, converted, NEEDS it
+#   @export var steered := NodePath("..")  -> a NodePath is already the value
+#
+# Both look identical in the .tscn — `x = NodePath("..")` — which is exactly why
+# text alone cannot answer this and why the check was wrong. The declared type
+# lives in the script, so the script is asked.
+#
+# STILL NOT A RUNTIME TEST. The header's own argument holds: at runtime a broken
+# wire and an empty optional are the same null. This reads a TYPE off a class,
+# which is as static as reading the .tscn was, and it sees scenes nothing has
+# loaded just the same.
+#
+# UNKNOWN MEANS STRICT. A node with no script line of its own — an instanced
+# scene carrying its script from somewhere else — falls through to true and is
+# judged by the old rule. A check that quietly excused everything it could not
+# identify would be worse than the false positive it replaced.
+static func _needs_the_header(property_name: String, assignments: Array[Dictionary],
+		scripts_by_id: Dictionary) -> bool:
+	var script_path := _find_script_path(assignments, scripts_by_id)
+	if script_path.is_empty():
+		return true
+	var script: Script = load(script_path) as Script
+	while script != null:
+		for property: Dictionary in script.get_script_property_list():
+			if property["name"] != property_name:
+				continue
+			# A NodePath-typed export is stored as itself and needs nothing.
+			# Anything else that a bare NodePath can be written for is an object
+			# reference, and does.
+			return int(property["type"]) != TYPE_NODE_PATH
+		script = script.get_base_script()
+	return true
+
+
+# The script this node block declares, or "" if it does not declare one. Read
+# off the assignments the block already collected rather than re-scanning the
+# line, so a script named across two lines is found the same way every other
+# multi-line value is.
+static func _find_script_path(assignments: Array[Dictionary], scripts_by_id: Dictionary) -> String:
+	var reference_regex := RegEx.create_from_string(EXT_RESOURCE_REFERENCE_PATTERN)
+	for assignment: Dictionary in assignments:
+		if assignment["name"] != "script":
+			continue
+		var value_text: String = assignment["value"]
+		var found := reference_regex.search(value_text)
+		if found == null:
+			return ""
+		return str(scripts_by_id.get(found.get_string(1), ""))
+	return ""

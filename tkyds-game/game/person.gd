@@ -180,6 +180,14 @@ var _gesture_spent: StringName = &""
 
 func _ready() -> void:
 	_apply_tint()
+	# WIRED HERE AND NOT IN _start_the_body, WHICH IS OVERRIDDEN. It was in there
+	# first and person_with_exchange.gd replaces that whole function, so the one
+	# body in the game that gives things away was the one body whose gestures
+	# still sawed. A subclass that wants to check different clips must not be
+	# able to lose the thing that makes a clip happen once — so the wiring sits
+	# beside the call rather than inside it.
+	if _animation != null:
+		_animation.animation_finished.connect(_remember_it_is_spent)
 	_start_the_body()
 	# Says so out loud rather than standing there quietly not living. Nothing
 	# here drives itself any more — a person dropped into a scene without a
@@ -428,7 +436,6 @@ func _start_the_body() -> void:
 	for clip_name in [resting_clip, walking_clip, running_clip]:
 		if not _animation.has_animation(clip_name):
 			push_warning("%s has no \"%s\" clip — his body cannot show it" % [person_name, clip_name])
-	_animation.animation_finished.connect(_remember_it_is_spent)
 	_play(resting_clip)
 
 
@@ -437,6 +444,30 @@ func _start_the_body() -> void:
 # which kind it was.
 func _remember_it_is_spent(clip_name: StringName) -> void:
 	_gesture_spent = clip_name
+
+
+# Is that gesture still to be MADE — a thing that happens once, on this body,
+# that he has not got through yet? The two halves are both load-bearing: a
+# looping clip is never pending because it has no end to reach, and a clip he
+# has already performed is not pending either.
+#
+# Asked by whatever wants to wait for him. It is deliberately a question about
+# the BODY and not about the verb: nothing here knows why he is doing it, and a
+# caller that wanted to know that would be asking the brain instead.
+func is_gesture_pending(clip_name: StringName) -> bool:
+	if _animation == null or clip_name.is_empty() or clip_name == _gesture_spent:
+		return false
+	var clip := _animation.get_animation(clip_name)
+	return clip != null and clip.loop_mode == Animation.LOOP_NONE
+
+
+# He is about to make a gesture AGAIN. A one-shot is spent the moment it runs
+# out and only starting something else clears the mark, so a man who reaches
+# into the same basket twice without moving in between would reach exactly once.
+# This is the one door for saying "again", and the only thing that should ever
+# knock on it is a fresh press.
+func start_gesture_again() -> void:
+	_gesture_spent = &""
 
 
 # Taken across the brain's tick, because that is where global_position moves —

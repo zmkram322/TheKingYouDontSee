@@ -184,7 +184,7 @@ stale and are the author's call to bump rather than a builder's: `project.godot`
 still declares `config/features=PackedStringArray("4.4", ...)`, and
 `game/probe.gd`'s own header still prints the 4.4 run lines.
 
-**The standing count, after the accumulator: 65 claims, 14906 checks, all green.**
+**The standing count: 65 claims, 14906 checks, all green.**
 The anchor every measurement is taken against, unmoved by Gate 0, by Gate 1, or
 by putting a real rig on every person:
 
@@ -226,6 +226,21 @@ GODOT="/z/Godot/Godot_v4.7.2-stable_mono_win64/Godot_v4.7.2-stable_mono_win64_co
 
 `ObjectDB instances were leaked at exit` and `resources still in use at exit`
 are normal editor-quit noise; ignore both.
+
+**A full probe run takes about 2m40s; one claim takes about 20s.** Almost all of
+that is standing up a fresh game scene per claim, and every scene now carries a
+rigged body. Pass claim numbers after a bare `--` to run only those:
+
+```bash
+"$GODOT" --headless --path . --script game/probe.gd -- 4 13
+```
+
+This exists for one reason: **a new claim is not finished until you have watched
+it fail**, and at three minutes a break that discipline is the thing that gets
+skipped. Claims 1–3 always run — they come off the opening pump, which
+everything else stands on. **A filtered run prints `PARTIAL RUN` and refuses to
+say "all N claims held"**, because a filter you have to remember to switch off
+is a filter that will one day report a clean town it never simulated.
 
 **A new claim is not finished until you have watched it fail.** Break the code
 deliberately, see it go red, put it back. Eight vacuous assertions have been

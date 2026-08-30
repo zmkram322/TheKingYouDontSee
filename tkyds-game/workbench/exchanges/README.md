@@ -14,7 +14,7 @@ probe loads.
 
 | | |
 |---|---|
-| WASD / arrows | move, relative to where the camera is looking |
+| WASD / arrows | move, relative to where the camera is looking — **dead while a gesture is playing** |
 | Shift | run |
 | Space | jump — one shove on the press; holding it does nothing |
 | Mouse | look; pitch clamped to −60°..30° |
@@ -30,6 +30,15 @@ probe loads.
 up to a man and greet him (+8 each way), give him the loaf (+15 to him, +2 to
 you) — and now that he regards you at 23, **follow appears**, which it could not
 before. Beckon needs only that you have met, and needs you to be standing back.
+
+**A day here is 21 minutes**, not the default 60 seconds, and that is a
+calibration and not a preference — see W15. At a 60-second day an NPC's walk
+works out at 46 m/s, so a follower crossed the scene in a frame and read as
+standing still while he did it. At 1260 s his walk is 2.19 m/s against your 2.2.
+
+**A man you have told to follow you gets no arc while he is still catching up.**
+Stand still, he settles at your shoulder, and every verb comes back. That is a
+visibility rule, not a gate: nothing you could do to him has been taken away.
 
 ## The three warnings on startup are correct
 
@@ -102,6 +111,9 @@ stops doing.
 ## Known, and not worth fixing yet
 
 `jump`, `jump_down` and `run_jump` import as `LOOP_NONE` (see
-`assets/mixamo/mixamo_import.gd`), so a long fall plays its clip once and holds
-the last pose. Note it while watching; do not build a blend tree until a fall
-is long enough for it to look wrong.
+`assets/mixamo/mixamo_import.gd`), so a long fall runs out of clip. Since
+2026-08-30 it no longer holds the last pose — `Person._play` rests a one-shot
+that has run its course — so a long enough fall shows him **idling in mid-air**
+instead of frozen mid-jump. Both are wrong and the new one is wrong more
+honestly. Do not build a blend tree until a fall is long enough for either to
+look wrong.

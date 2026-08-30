@@ -661,6 +661,198 @@ func _process(_delta: float) -> bool:
 			npc.global_position.distance_to(player.global_position)
 				<= keeping.closes_to + 0.01)
 
+		# --- HIS PACE COMES OFF THE GAP -------------------------------------
+		# The claim behind "he walks when you walk and runs when you run", which is
+		# not implemented anywhere and had better therefore be measured. Ground
+		# covered in ONE tick from two different distances back, everything else
+		# held identical — same man, same tick length, same target.
+		# Typed rather than inferred: `keeping` is annotated Action and neither of
+		# these lives on Action, so every read off it is a Variant and an inferred
+		# local fails the build under warnings-as-errors. CLAUDE.md's gotcha.
+		var stops_at: float = keeping.closes_to
+		var ramps_over: float = keeping.catches_up_over
+		var near := stops_at + ramps_over * 0.5
+		npc.global_position = player.global_position + Vector3(near, 0.0, 0.0)
+		# A SHORT TICK ON PURPOSE. At a longer one the near case is limited by the
+		# overshoot clamp — he simply arrives — and the claim below would pass on
+		# the clamp rather than on the pace, which is what the first break of it
+		# showed. Short enough that neither case can reach its target, so the only
+		# thing separating the two numbers is how hard he is hurrying.
+		var stood := npc.global_position
+		crowd.think_for_everyone(0.002)
+		var strolled := stood.distance_to(npc.global_position)
+
+		var far := stops_at + ramps_over * 6.0
+		npc.global_position = player.global_position + Vector3(far, 0.0, 0.0)
+		stood = npc.global_position
+		crowd.think_for_everyone(0.002)
+		var hurried := stood.distance_to(npc.global_position)
+
+		_held("further behind, he covers more ground in the same tick: %.2f m vs %.2f m"
+			% [hurried, strolled], hurried > strolled * 1.5)
+
+		# AND WHAT HIS LEGS MAKE OF IT. The pace is only worth having because
+		# Person._show_the_body reads the same fraction — so the claim is not
+		# "he moved further", it is "he crossed the line his own run clip sits on".
+		#
+		# BOTH SIDES ARE ASSERTED, and that is the half that stops this being
+		# vacuous: a follower who simply ran flat out at every distance would pass
+		# the first line and fail the second.
+		var one_tick: float = npc.get_travel_speed() * 0.002
+		_held("and it is a RUN by his own measure: %.2f x his walk, past %.2f"
+			% [hurried / one_tick, npc.running_above],
+			hurried / one_tick >= npc.running_above)
+		_held("while a man barely out of position is only walking: %.2f x"
+			% (strolled / one_tick), strolled / one_tick < npc.running_above)
+
+		# --- AND THE ARC LEAVES HIM ALONE WHILE HE DOES IT --------------------
+		# Asked of the ARC, not of the summons: the duck-typed lookup through his
+		# repertoire is the part that can go quietly wrong, and asking come_along
+		# directly would skip exactly that.
+		var the_arc: Node = _scene.get_node(^"ExchangeArc")
+		npc.global_position = player.global_position + Vector3(6.0, 0.0, 0.0)
+		_held("the arc goes quiet over a man still hurrying to catch you up",
+			the_arc._is_catching_me_up(npc))
+		npc.global_position = player.global_position + Vector3(stops_at * 0.5, 0.0, 0.0)
+		_held("and comes back the moment he settles at your shoulder",
+			not the_arc._is_catching_me_up(npc))
+		_held("a man who is in nobody's train keeps his arc wherever he stands",
+			not the_arc._is_catching_me_up(bystander))
+
+	# --- A GESTURE HAPPENS ONCE ---------------------------------------------
+	# A one-shot that has run out used to start over, so a three-second give sawed
+	# the same throw four times. The AnimationPlayer is the thing that knows a clip
+	# has ended and it is asked to say so here — the same event, at a moment this
+	# check can choose.
+	var legs: AnimationPlayer = npc.get_node(^"Body/AnimationPlayer") as AnimationPlayer
+	if legs == null:
+		_held("the man has a body to play clips on", false)
+	else:
+		npc._play(&"greet")
+		_held("a gesture starts when the step asks for it", legs.current_animation == "greet")
+		legs.animation_finished.emit(&"greet")
+		npc._play(&"greet")
+		_held("asked again after it has run out, he RESTS rather than starting over",
+			legs.current_animation == npc.resting_clip)
+		npc._play(npc.walking_clip)
+		_held("anything else at all still starts immediately",
+			legs.current_animation == npc.walking_clip)
+		npc._play(&"greet")
+		_held("and the gesture is his to make again, with nothing to clear",
+			legs.current_animation == "greet")
+
+	# --- TAKING HAS A HAND OF ITS OWN ---------------------------------------
+	var taking: Action = null
+	var giving: Action = null
+	for action in player.brain.get_known_actions():
+		if action.scene_file_path == "res://workbench/exchanges/take_bread.tscn":
+			taking = action
+		if action.scene_file_path == "res://workbench/exchanges/give.tscn":
+			giving = action
+	if taking == null or giving == null or legs == null:
+		_held("the player can take and can give", false)
+	else:
+		var reaching: StringName = taking.get_child(0).clip
+		var holding_out: StringName = giving.get_child(0).clip
+		_held("reaching into a basket is a clip the rig actually has: \"%s\""
+			% reaching, legs.has_animation(reaching))
+		# THE HALF THAT MATTERS. Both verbs wore hand_over until the taking clip
+		# arrived, and a check that only asked "is it playable" would have passed
+		# throughout — the whole point is that they are no longer the same gesture.
+		_held("and it is not the one he hands bread over with (\"%s\")"
+			% holding_out, reaching != holding_out)
+
+	# --- THE LAST ORDER WINS ------------------------------------------------
+	# The bug this was written for: a man who had agreed to follow went on
+	# following when he was asked to work the ground, because a summons pulls at
+	# 100 and an errand at 75. Watched end to end — he is genuinely following,
+	# then he is genuinely digging — rather than asserted on the flag alone.
+	var errand: Action = null
+	for action in player.brain.get_known_actions():
+		if action.scene_file_path == "res://workbench/exchanges/ask.tscn":
+			errand = action
+	if errand == null:
+		_held("the player can ask a man to do something", false)
+	else:
+		# NIGHT, AND RESTED. Not a convenience: W9's trap is that an errand scores
+		# FLAT at 75 while StayUp is 67.3 + 20 x sun, so at noon the errand loses
+		# to being up and about and this claim would be measuring daylight rather
+		# than the rule it is written for. The earlier "released at midnight he
+		# sets to work" claim dodges the same way and for the same reason.
+		clock.hours_elapsed = 1.0
+		npc.stats.set_stat(&"adenosine", 0.0)
+		npc.stats.set_stat(&"hunger", 0.0)
+		npc.stats.set_stat(&"social", 0.0)
+		npc.global_position = player.global_position + Vector3(2.0, 0.0, 0.0)
+		var trailing: Node = broker.offer(player, npc, follow)
+		broker.end(trailing)
+		var order: Action = follow.find_landed(follow.lands_on_recipient, npc)
+		crowd.think_for_everyone(0.02)
+		_held("under a summons he is doing as he was called: he is %s"
+			% npc.brain.describe_current_action(), npc.brain.current_action == order)
+
+		var asked: Node = broker.offer(player, npc, errand)
+		broker.end(asked)
+		_held("asked to do something else, the standing order is discharged",
+			order.summoner == null and not order.is_available_to(npc))
+		crowd.think_for_everyone(0.02)
+		# THE HALF THAT MATTERS. Discharged is only worth anything if the errand
+		# then actually wins — a summons left standing outbids it by 25 for ever,
+		# and this is the line that was red before the rule existed.
+		var job: Action = errand.find_landed(errand.lands_on_recipient, npc)
+		_held("so he gets on with what he was asked: he is %s"
+			% npc.brain.describe_current_action(),
+			job != null and npc.brain.current_action == job)
+
+		# AND NOT BY CANCELLING EVERYTHING — the asymmetry, which is the half that
+		# says this is a rule rather than a broom. Being called to somebody is a
+		# thing you stop doing; a job you agreed to is not. So calling him away
+		# from the errand must not END the errand: he comes, and afterwards it is
+		# still his to get back to.
+		var pulled: Node = broker.offer(player, npc, beckon)
+		broker.end(pulled)
+		_held("called away, he comes — and the job he agreed to is NOT called off",
+			errand.find_landed(errand.lands_on_recipient, npc) == job)
+		npc.global_position = player.global_position + Vector3(9.0, 0.0, 0.0)
+		for _tick in 200:
+			crowd.think_for_everyone(0.05)
+		_held("so when the errand is the last thing standing he goes back to it: he is %s"
+			% npc.brain.describe_current_action(), npc.brain.current_action == job)
+
+	# --- AND THE STICK WAITS FOR HIM ----------------------------------------
+	# Pressing a verb puts his own feet down until the gesture is through. Asked
+	# of the brain, because that is where a hand's press arrives.
+	if taking != null and legs != null:
+		var hands: Node = player.brain
+		# HIS OWN BODY, and not the one two claims up. `legs` is the NPC's
+		# AnimationPlayer, and emitting the signal on it marked the wrong man's
+		# gesture spent — the claim below went red for a reason that had nothing
+		# to do with the hold. Two people in a scene, two bodies, one of them
+		# nearly asserted about the other.
+		var his_legs: AnimationPlayer = player.get_node(^"Body/AnimationPlayer") as AnimationPlayer
+		var reach: StringName = taking.get_child(0).clip
+		hands.choose_verb(taking)
+		_held("pressing a verb takes the stick off him until the gesture is made",
+			hands._is_still_gesturing())
+		his_legs.animation_finished.emit(reach)
+		_held("and the clip running out hands it straight back",
+			not hands._is_still_gesturing())
+
+		# THE HOLD CANNOT STICK, asserted by both of the other two ways out.
+		hands.choose_verb(taking)
+		_held("pressed again, he is held again — a spent gesture is not an excuse",
+			hands._is_still_gesturing())
+		hands.stop_doing_anything()
+		_held("and a verb dropped out from under him releases his feet too",
+			not hands._is_still_gesturing())
+
+		# A CLIP THAT LOOPS IS NEVER PENDING, which is what stops "go work the
+		# ground" from welding a man to the spot for ever. Asked one layer down,
+		# of the body, because no verb the player knows declares a looping clip
+		# and a check that could not reach the branch would be asserting nothing.
+		_held("a gesture that happens once is pending; one that loops never is",
+			player.is_gesture_pending(reach) and not player.is_gesture_pending(&"work_field"))
+
 	print("")
 	print("seam check: all held." if _bad == 0 else "seam check: %d FAILED." % _bad)
 	quit(1 if _bad > 0 else 0)
