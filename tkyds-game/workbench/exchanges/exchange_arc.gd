@@ -35,8 +35,8 @@ const ExchangeAction := preload("res://workbench/exchanges/exchange_action.gd")
 
 # The arc itself, in screen pixels and degrees. Authored rather than derived,
 # because the only way numbers like these get picked is by looking at them.
-@export var radius := 86.0
-@export var spread_degrees := 78.0
+@export var radius := 122.0
+@export var spread_degrees := 104.0
 @export var lifts_above_head := 1.75
 
 # NO GESTURE TIMER LIVES HERE ANY MORE. There used to be a gesture_seconds in
@@ -73,6 +73,9 @@ func _process(_delta: float) -> void:
 	var head := target.global_position + Vector3.UP * lifts_above_head
 	# THE GUARD — see the header. Behind the camera, unproject mirrors.
 	if _eye.is_position_behind(head):
+		_clear()
+		return
+	if _is_catching_me_up(target):
 		_clear()
 		return
 	var open := _get_open_exchanges(target)
@@ -145,6 +148,31 @@ func _both_are_free_to_talk(target: Node3D) -> bool:
 	if man == null:
 		return true
 	return not broker.call(&"is_in_an_exchange", man)
+
+
+# A MAN IN YOUR OWN TRAIN GETS NO ARC WHILE HE IS STILL CATCHING UP. Everything
+# above is about whether a verb is legal; this is the one thing here that is
+# purely about whether it is worth LOOKING at. A follower spends most of his
+# life a few metres behind your shoulder, so glancing back put a full arc on
+# screen every time — over a man mid-stride, where pressing anything would only
+# interrupt the thing you just told him to do. Stand still and he settles beside
+# you and the whole arc comes back, which is what keeps this a visibility rule
+# and not a gate: nothing he can do has been taken away.
+#
+# ASKED OF HIS OWN ACTIONS, BY DUCK TYPE, so this file still names no verb. The
+# summons answers "am I hurrying to that man"; nothing here knows what a summons
+# is called or which scene it came from, and a second thing that puts somebody in
+# your train answers the same question and is hidden the same way for free.
+func _is_catching_me_up(target: Node3D) -> bool:
+	var man := target as Person
+	if man == null or man.brain == null:
+		return false
+	for action in man.brain.get_known_actions():
+		if not action.has_method(&"is_catching_up_to"):
+			continue
+		if action.call(&"is_catching_up_to", man, _actor):
+			return true
+	return false
 
 
 # Null is a real answer and means "nobody" — the arc draws nothing, which is

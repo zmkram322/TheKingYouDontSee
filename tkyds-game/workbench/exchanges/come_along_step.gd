@@ -64,7 +64,13 @@ func advance(person: Person, hours: float) -> bool:
 	toward.y = 0.0
 	var stop_at: Vector3 = who.global_position - toward / gap * closes_to
 	stop_at.y = person.global_position.y
-	if not walk_toward_point(person, stop_at, hours):
+
+	# HIS PACE COMES OFF THE GAP, and it is the summons that decides how — this
+	# step asks and does not work it out. So "he walks when you walk and runs when
+	# you run" is not implemented anywhere: it falls out of him being further
+	# behind a running man than a walking one. See come_along.get_pace.
+	var pace: float = summons.get_pace(gap)
+	if not walk_toward_point(person, stop_at, hours, pace):
 		return false
 	return _arrive(summons)
 

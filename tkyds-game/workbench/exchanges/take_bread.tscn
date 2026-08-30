@@ -14,4 +14,4 @@ takes_count = 1
 
 [node name="Reach in" type="Node" parent="."]
 script = ExtResource("2_step")
-clip = &"hand_over"
+clip = &"take_item"

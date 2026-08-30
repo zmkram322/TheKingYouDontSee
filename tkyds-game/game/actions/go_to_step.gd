@@ -96,10 +96,18 @@ func walk_toward(person: Person, place: Place, hours: float) -> bool:
 # DEPARTURE WRITES NULL, and it is not bookkeeping — see walk_toward's header.
 # It belongs here rather than up there because it is true of any journey: the
 # moment he is on the road he is at no place, whether or not he is headed for one.
-func walk_toward_point(person: Person, point: Vector3, hours: float) -> bool:
+# `pace` is a MULTIPLE OF HIS OWN WALK, and it defaults to 1.0 so every caller
+# that has one speed keeps it and reads exactly as it did. It exists because a
+# man can be made to hurry — a summons is the first thing that does it — and the
+# alternative was a second integrator somewhere else, which would have made this
+# file's own claim to be "the only thing in the game that moves a body" false.
+# A multiple rather than a speed so it stays dimensionless: a strong man hurries
+# from his own faster walk, and Person._show_the_body reads the same fraction to
+# decide whether his legs are walking or running.
+func walk_toward_point(person: Person, point: Vector3, hours: float, pace := 1.0) -> bool:
 	var to_there := point - person.global_position
 	var gap := to_there.length()
-	var step := person.get_travel_speed() * hours
+	var step := person.get_travel_speed() * pace * hours
 
 	# There, or would be past it by the end of this tick. Snapped onto the spot
 	# rather than left a hair short, so "am I at the fields" is answered by a

@@ -65,6 +65,12 @@ const CLIPS := {
 	"Quick Formal Bow.fbx": ["bow", false, true],
 	"Shaking Hands 2.fbx": ["handshake", false, true],
 	"Shake Fist.fbx": ["shake_fist", false, true],
+	# --- Added 2026-08-30 for the exchanges workbench. Reaching into a
+	# container and coming away with what was in it. Holds position for the
+	# same reason every gesture above does: he performs it standing still,
+	# and any Hips travel in the download would drag him off the body the
+	# brain is steering.
+	"Taking Item.fbx": ["take_item", false, true],
 }
 
 

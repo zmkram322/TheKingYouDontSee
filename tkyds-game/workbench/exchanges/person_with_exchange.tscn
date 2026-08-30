@@ -12,7 +12,6 @@
 
 [node name="PersonWithExchange" instance=ExtResource("1_person")]
 script = ExtResource("2_body")
-running_clip = &"run"
 rising_clip = &"jump"
 falling_clip = &"jump"
 running_jump_clip = &"run_jump"

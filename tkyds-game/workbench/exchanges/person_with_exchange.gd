@@ -25,11 +25,14 @@ extends Person
 # and still show a man walking to his bed, and velocity would do that too —
 # IF anything in game/ set velocity. Nothing does; Decision 4 is why.
 
-# The four locomotion clips person.gd has no slot for. `resting_clip` and
-# `walking_clip` are inherited and still mean exactly what they meant. All six
-# are clip names and none is a verb — nothing here asks WHY he is moving, the
-# same rule that keeps a dictionary from action to animation out of game/.
-@export var running_clip := &"run"
+# The three AIRBORNE clips person.gd has no slot for. `resting_clip`,
+# `walking_clip` and — as of 2026-08-30 — `running_clip` are all inherited and
+# still mean exactly what they meant; a summons was the first thing in game/
+# that could push a man past his own walk, so the run finally earned a home one
+# storey down and this file stopped being the only place that knew about it.
+# All six are clip names and none is a verb — nothing here asks WHY he is
+# moving, the same rule that keeps a dictionary from action to animation out
+# of game/.
 @export var rising_clip := &"jump"
 @export var falling_clip := &"jump"#&"jump_down"
 @export var running_jump_clip := &"run_jump"

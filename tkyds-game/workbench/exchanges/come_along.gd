@@ -41,6 +41,28 @@ extends Action
 # comes when you call unless he genuinely cannot.
 @export var pull := 100.0
 
+# HOW HARD HE HURRIES, as a multiple of his own walk. He does not have one
+# speed and a decision about when to use it: his pace comes off HOW FAR BEHIND
+# HE IS, ramping from a standstill at `closes_to` to this cap once he has fallen
+# `catches_up_over` metres further back than that.
+#
+# THAT IS WHY NOTHING HERE SAYS "IF THE MAN RUNS, RUN." A leader who breaks into
+# a run opens the gap, the gap sets the pace, the pace pushes him past his own
+# walk, and Person._show_the_body — reading nothing but how much ground he
+# covered — puts him in a run clip. Walk away and the same loop settles him back
+# into a walk. One number, no state, and no file asking what anybody is doing.
+#
+# 2.6 IS CHOSEN AGAINST THE PLAYER'S SPRINT, not picked for feel: exchange_brain
+# runs him at 5.5 m/s against a walk of 2.2, so a follower capped below 2.5x
+# could never close on a sprinting man and would trail further and further back
+# for ever. Above it, he settles at a fixed distance and holds it.
+@export var hurries_up_to := 2.6
+
+# Over how many metres past `closes_to` he goes from a standstill to that cap.
+# Short on purpose. A long ramp is a man creeping the last stretch at a pace too
+# slow to read as walking — gliding, which is what this whole pair replaced.
+@export var catches_up_over := 0.8
+
 # Who called. Set by the exchange that landed this, read through
 # is_instance_valid everywhere — a summoner who was freed must end the summons,
 # not error the next thing that reads him.
@@ -57,3 +79,29 @@ func is_available_to(person: Person) -> bool:
 
 func get_utility_score(_person: Person) -> float:
 	return pull
+
+
+# How fast he should be moving, given how far back he is — see `hurries_up_to`.
+# A pure function of the gap, asked fresh every tick, remembering nothing: this
+# is the whole of "he keeps up", and it is why he neither stutters at the edge
+# of a threshold nor needs to be told what the man in front of him is doing.
+func get_pace(gap: float) -> float:
+	if catches_up_over <= 0.0:
+		return hurries_up_to
+	return clampf((gap - closes_to) / catches_up_over, 0.0, hurries_up_to)
+
+
+# Is he out of position on THIS man's account — following him, and not yet back
+# at his shoulder? Asked by the arc, which draws nothing over a man who is
+# hurrying to catch you up: an overlay bobbing along behind your own back is
+# clutter, and there is nothing you could usefully press at him mid-stride
+# anyway. Stand still, he settles beside you, and his verbs come back.
+#
+# BOTH HALVES MATTER. A man hurrying to somebody ELSE is still somebody you can
+# address, so this asks who called him and not merely whether he is moving.
+func is_catching_up_to(person: Person, leader: Person) -> bool:
+	if not is_instance_valid(summoner) or summoner != leader:
+		return false
+	var toward := summoner.global_position - person.global_position
+	toward.y = 0.0
+	return toward.length() > closes_to

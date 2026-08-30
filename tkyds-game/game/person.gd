@@ -40,6 +40,20 @@ extends CharacterBody3D
 @export var walking_clip := &"walk"
 @export var walking_above := 0.1
 
+# And what he does when he is covering ground FASTER THAN HE WALKS. Same
+# shape and same units as the pair above, and deliberately a fraction GREATER
+# THAN ONE: `_speed / get_travel_speed()` is "what fraction of his own full
+# stride is he covering", so 1.0 is a man walking at his own pace and anything
+# past it is a man being made to hurry.
+#
+# NOTHING IN THE GAME CAN EXCEED 1.0 BY ITSELF, which is why this slot sat
+# empty until now: GoToStep moves everybody at exactly get_travel_speed().
+# A summons is the first thing that pushes a man past his own walk (see
+# come_along.gd), and the moment something could, his legs had nothing to
+# show for it — he glided at a sprint wearing a walk cycle.
+@export var running_clip := &"run"
+@export var running_above := 1.8
+
 # Where he IS — a discrete fact he carries, not a distance to anything. Authored
 # per instance at birth, and after that ONE thing writes it. Null is a real
 # state and means "on the way".
@@ -150,6 +164,18 @@ var clock: Clock
 # and his legs should not stutter to prove it.
 var _speed := 0.0
 var _heading := 0.0
+
+# The one-shot he has already performed. A gesture — a wave, a bow, a loaf held
+# out — is authored LOOP_NONE and means to happen ONCE; play() on a clip that
+# has run out starts it again, so a three-second give sawed the same throw over
+# and over for as long as the step declared it.
+#
+# WRITTEN BY THE SIGNAL, NOT BY A TIMER. AnimationPlayer already knows when a
+# clip has ended and says so, and it clears current_animation when it does — so
+# there is nothing to compare against afterwards and no second clock to keep in
+# step with the first. It is cleared the moment anything else is asked for,
+# which is what lets him wave again next time somebody is worth waving at.
+var _gesture_spent: StringName = &""
 
 
 func _ready() -> void:
@@ -399,10 +425,18 @@ func _start_the_body() -> void:
 	if _animation == null:
 		push_warning("%s has no AnimationPlayer under his Body — he will stand in his bind pose" % person_name)
 		return
-	for clip_name in [resting_clip, walking_clip]:
+	for clip_name in [resting_clip, walking_clip, running_clip]:
 		if not _animation.has_animation(clip_name):
 			push_warning("%s has no \"%s\" clip — his body cannot show it" % [person_name, clip_name])
+	_animation.animation_finished.connect(_remember_it_is_spent)
 	_play(resting_clip)
+
+
+# A clip that ran all the way to its end has been performed. Only a LOOP_NONE
+# clip ever gets here — a looping one never finishes — so nothing has to ask
+# which kind it was.
+func _remember_it_is_spent(clip_name: StringName) -> void:
+	_gesture_spent = clip_name
 
 
 # Taken across the brain's tick, because that is where global_position moves —
@@ -442,12 +476,17 @@ func _measure_how_he_moved(displacement: Vector3, hours: float) -> void:
 func _show_the_body() -> void:
 	if _animation == null or _body == null:
 		return
-	if _speed >= get_travel_speed() * walking_above:
+	# What fraction of his own full stride he is covering. Dimensionless on
+	# purpose — both halves are units per world hour — so a strong man who covers
+	# more ground in an hour still starts walking and starts running at the same
+	# point in his own gait, and dragging day_length_seconds cannot change either.
+	var stride := _speed / maxf(get_travel_speed(), 0.0001)
+	if stride >= walking_above:
 		# Turn the BODY, never the man. global_position is what every gate and
 		# every distance in this game reads; his own rotation means nothing at
 		# all, and it should keep meaning nothing.
 		_body.rotation.y = _heading
-		_play(walking_clip)
+		_play(running_clip if stride >= running_above else walking_clip)
 		return
 	var doing: StringName = brain.get_clip() if brain != null else &""
 	_play(resting_clip if doing.is_empty() else doing)
@@ -457,9 +496,22 @@ func _show_the_body() -> void:
 # nothing and nothing has to remember what his body was doing. The guard is
 # for a clip that does not exist — already warned about in _start_the_body,
 # and silent here so one wiring fault is not also a flood.
+#
+# THE ONE THING IT DOES REMEMBER is a gesture that has already run its course:
+# asked for that same clip again he RESTS instead, so a one-shot happens once
+# and he stands there for the rest of a step that goes on declaring it. Asked
+# for anything else at all, the memory is dropped in the same breath as the new
+# clip starts — there is no state to clear and nobody to clear it.
 func _play(clip_name: StringName) -> void:
-	if _animation == null or not _animation.has_animation(clip_name):
+	if _animation == null:
 		return
+	if clip_name == _gesture_spent:
+		if _animation.has_animation(resting_clip):
+			_animation.play(resting_clip)
+		return
+	if not _animation.has_animation(clip_name):
+		return
+	_gesture_spent = &""
 	_animation.play(clip_name)
 
 
