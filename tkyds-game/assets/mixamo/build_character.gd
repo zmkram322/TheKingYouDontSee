@@ -14,6 +14,11 @@ const SCENE_PATH := "res://assets/mixamo/y_bot.tscn"
 # once, here, and look_at() works everywhere downstream.
 const IMPORT_SCRIPT := "res://assets/mixamo/mixamo_import.gd"
 const RIG_UID := "uid://btd14bwx3pseq"
+# The SCENE's own uid, distinct from the rig's. Written back on every
+# rebuild because game/person.tscn references y_bot.tscn BY uid — omit it
+# and every reimport prints "invalid UID ... using text path instead" and
+# quietly demotes a resolved reference to a string match.
+const SCENE_UID := "uid://can6b81y2aedd"
 
 
 func _init() -> void:
@@ -49,7 +54,7 @@ func _init() -> void:
 # every rebuild. An inherited scene referencing the .fbx is a few hundred bytes
 # and stays correct when the import is redone.
 func _write_character_scene() -> void:
-	var text := """[gd_scene load_steps=3 format=3]
+	var text := """[gd_scene load_steps=3 format=3 uid="%s"]
 
 [ext_resource type="PackedScene" uid="%s" path="%s" id="1_rig"]
 [ext_resource type="AnimationLibrary" path="%s" id="2_anims"]
@@ -61,7 +66,7 @@ transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0)
 libraries = {
 "": ExtResource("2_anims")
 }
-""" % [RIG_UID, RIG, LIBRARY_PATH]
+""" % [SCENE_UID, RIG_UID, RIG, LIBRARY_PATH]
 	var handle := FileAccess.open(SCENE_PATH, FileAccess.WRITE)
 	if handle == null:
 		print("FAILED opening %s" % SCENE_PATH)

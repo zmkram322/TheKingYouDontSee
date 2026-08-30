@@ -51,6 +51,20 @@ const CLIPS := {
 	"Jumping.fbx": ["jump", false, true],
 	"Jumping Down.fbx": ["jump_down", false, true],
 	"Running Jump.fbx": ["run_jump", false, true],
+	# --- Added 2026-08-21 for the exchanges workbench. These are not
+	# locomotion: they are the vocabulary of an ASK and an ANSWER — assent,
+	# refusal, and the gestures that point one person at another. All seven
+	# hold position because every one of them is performed standing still.
+	"Head Nod Yes.fbx": ["nod", false, true],
+	"Hard Head Nod.fbx": ["nod_hard", false, true],
+	"Shaking Head No.fbx": ["shake_head", false, true],
+	"Annoyed Head Shake.fbx": ["shake_head_annoyed", false, true],
+	"Pointing.fbx": ["point", false, true],
+	"Clapping.fbx": ["clap", true, true],
+	"Cheering.fbx": ["cheer", true, true],
+	"Quick Formal Bow.fbx": ["bow", false, true],
+	"Shaking Hands 2.fbx": ["handshake", false, true],
+	"Shake Fist.fbx": ["shake_fist", false, true],
 }
 
 
