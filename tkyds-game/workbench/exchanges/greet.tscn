@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/greet.gd" id="1_greet"]
+[ext_resource type="Script" path="res://workbench/exchanges/greet_step.gd" id="2_greet_step"]
+
+[node name="Greet" type="Node"]
+script = ExtResource("1_greet")
+label = "greet"
+swatch = Color(0.62, 0.79, 0.55, 1)
+shortcut = "E"
+
+[node name="Raise a hand" type="Node" parent="."]
+script = ExtResource("2_greet_step")
+clip = &"greet"

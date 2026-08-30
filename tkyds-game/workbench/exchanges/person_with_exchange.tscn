@@ -1,0 +1,14 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="1_person"]
+[ext_resource type="Script" path="res://workbench/exchanges/person_with_exchange.gd" id="2_body"]
+[ext_resource type="Script" path="res://workbench/exchanges/exchange_brain.gd" id="3_brain"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/greet.tscn" id="4_greet"]
+
+[node name="PersonWithExchange" instance=ExtResource("1_person")]
+script = ExtResource("2_body")
+
+[node name="Brain" parent="." index="2"]
+script = ExtResource("3_brain")
+
+[node name="Greet" parent="Brain" index="6" instance=ExtResource("4_greet")]

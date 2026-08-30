@@ -1,0 +1,443 @@
+# Exchanges — workbench decisions
+
+**Started 2026-08-21.** This is a **scratch decisions file for an experiment**,
+deliberately NOT `_bmad-output/proving-scene-decisions.md`. Nothing in here is
+authoritative over anything in `game/`, and nothing in here should be cited as
+settled. It exists so that when the experiment ends we can walk this list and
+decide, one by one, what gets promoted into the real decisions file, what gets
+rewritten, and what gets deleted with the folder.
+
+Numbered **W1, W2…** on purpose, so a workbench call can never be mistaken for
+a project Decision (which are numbered 1–39 and counting).
+
+> **Read this first if you are wondering why the code breaks the rules.**
+> Several things here contradict `CLAUDE.md` and the boss ladder outright. The
+> contradictions are intentional, they are argued below, and they are confined
+> to `workbench/exchanges/`.
+
+---
+
+## W1 — Exchanges do NOT ride the live utility ballot
+
+**The rule this overrides**, from `boss-scene-build-plan.md`, stated there as
+the design's central bet:
+
+> *"A command is not an override; **it is a bid.** Tell an exhausted man to work
+> and he goes to bed, and the decision graph already draws you exactly why.
+> **Nobody has to build refusal.** Somebody has to author the bid."*
+
+**The call (author, 2026-08-21): exchanges are scored independently of the
+ballot.** Verbatim reasoning:
+
+> *"there's already really thin margins on utilities winning out and we want the
+> boss interactions to have a certain amount of certainty… i know this creates
+> parallels but it's going to be needed for fun gameplay."*
+
+Two options were offered and both refused for the same reason: holding the NPC
+only *after* he accepts (so the ask is a live bid), and scoring him once while
+frozen. Both leave acceptance at the mercy of margins that are already thin.
+
+**What this costs, recorded now so it is not discovered later.** The plan's
+elegance was that a refusal names the drive that beat you *because that is where
+the string lives* — Sleep says "I'm dead on my feet," Eat says "let me eat
+first" — so **a new drive arrives with its own excuse and every command ever
+written inherits it for free.** Independent scoring gives that up: refusal
+reasons now get authored somewhere specific, once, and every future drive has to
+be *remembered* rather than inherited. That is a real maintenance tax and it is
+the price of certainty.
+
+**Left open, and it is the important one:** if "whatever outbid you" is no
+longer what refuses, *what does?* Standing, mood, fear, a prior grievance, an
+existing obligation — unanswered. See W2.
+
+## W2 — Acceptance always succeeds, for now
+
+The channel is built with the answer hardcoded to yes. **The "no" path is not
+written**, deliberately, rather than written against a guess about W1's open
+question.
+
+**Watch for this going stale.** A branch that never runs is a branch nobody has
+checked, and the longer the yes-path is the only path, the more the eventual no
+will find the shape of the code wrong. This is the first thing to revisit.
+
+## W3 — An exchange is brokered, not owned by either participant
+
+**Rejected: hanging the exchange off the player.** The author's reason kills it
+cleanly:
+
+> *"i intend for exchanges to be possible between NPCs, especially driving the
+> interaction of the lord based hierarchy — essentially becoming the way we
+> inject goals / obligations / errands onto people."*
+
+There is no player in most of those. So an exchange has an **initiator and a
+recipient, both plain `Person`, neither special** — the same discipline that
+makes `player.tscn` an inherited scene nothing downstream can distinguish from
+an NPC.
+
+**Shape: a broker node, on the model of `Population`.** `population.gd` earns
+its existence by being a CALL SITE — *"everything later installs here and
+nowhere else… The engine must never have called a Brain directly."* The broker
+is the same shape for a different question: **who is talking to whom.**
+
+**And it buys back a rule we had broken.** The first cut stored a `_held` array
+on the Population — suspended state, the one thing this substrate refuses to
+keep anywhere. Under a broker, **"held" stops being stored and becomes
+derived**: a man is held *if and only if* he is in a live exchange. That is back
+inside "store nothing you can work out again," and it means an exchange ending
+cannot leave somebody frozen for ever through a missed release.
+
+## W4 — The first exchange is goods/services, not pleasantries
+
+Three types are envisioned: **information**, **goods/services** (work my field,
+trade goods), and **pleasantries/threats**. The author's first instinct was
+pleasantries.
+
+**Switched to goods/services**, because the three produce different *shapes* of
+result — information → something known; goods/services → an obligation or
+errand; pleasantries → standing — and only goods/services lands on machinery
+that already exists. Starting with pleasantries would mean the first thing built
+does not exercise the result seam at all, and standing does not exist yet (it is
+Gate 2 of the ladder).
+
+**Not a judgement on pleasantries.** The author's correction stands and is
+recorded: *"pleasantries help reinforce social bonds / reputation — don't sleep
+on that."* Correct — reputation is the spine, not a garnish.
+
+## W5 — The exchange result is an `Obligation`, and it moves `weight`
+
+`obligation.gd` was already built for this and says so on the function in
+question:
+
+> *"When channels exist to set this dynamically — **a lord's writ**, a guild
+> rate, a season's bargain — the BODY of the function below changes and no
+> caller anywhere moves."*
+
+So an exchange result is an `Obligation` installed at runtime by a different
+hand. "Elevated value in the utility scoring" means **raising `weight`**, never
+adding a bonus term beside the score: Decisions 19–27 are firm that every want
+is a gap and that lenses touch weight and rate. A bolted-on additive score is
+precisely what they exist to prevent, and it would be a second, quieter
+override than W1 rather than the same one.
+
+## W6 — The interrupt installs by overriding `Population.think_for_everyone`
+
+> **SUPERSEDED IN PART BY W8 (2026-08-28), and left standing rather than
+> rewritten.** Two sentences below are now false. **`game/` IS edited** — W8 made
+> `Brain.run_upkeep` public and added `Person.run_upkeep`, because the fix could
+> not be made from this folder without reaching through a private door. And the
+> measurement "held he stays at 5.00" was real but was **proof of a bug**: it
+> meant time stopped for a man in a conversation. He now accrues while held, at
+> the same rate as a free man. Everything else here — the inherited seam, the
+> serial loop, the derived hold — stands untouched.
+
+No file in `game/` is edited. The seam is inherited, which is what
+`population.gd`'s own header nominates it for. The serial loop is preserved —
+skipping a man is safe; an `await`, a thread or a `call_deferred` here would
+break the no-locking contention guarantee that loop is built on.
+
+**Proven, not assumed** (`_seam_check.gd`, 2026-08-21): unheld he accrues
+adenosine 0.00 → 5.00; held he stays at 5.00; the player beside him keeps
+accruing; released he resumes 5.00 → 10.00. So it is an interrupt on one man,
+not a pause on the world.
+
+## W7 — The steered body moved onto the physics tick
+
+From the earlier half of this workbench. `PlayerBrain` integrates position by
+hand in WORLD HOURS and Decision 4 forbids `move_and_slide`; that trade
+guarantees dragging `day_length_seconds` cannot change the player's speed
+relative to NPCs. `exchange_brain.gd` takes the other side — real delta,
+gravity, sprint, jump — and `person_with_exchange.gd` picks clips off physics
+`velocity` rather than `_speed`, which is measured in `Person.think_and_act` and
+is `0.0` whenever nothing ticks him.
+
+**Before either moves back into `game/`,** answer what happens to **probe claim
+66**, which pins player movement by driving real frame deltas through
+`Clock.get_hours_elapsed` at two different day lengths. It measures exactly the
+thing `_physics_process` stops doing.
+
+## W8 — Upkeep was never part of the hold, and the seam check said otherwise
+
+**Settled and FIXED 2026-08-28.** The only entry in this file that records a bug
+rather than a call.
+
+**What was wrong.** `exchange_population.gd` skipped a held man with a bare
+`continue`. Upkeep is the tail of `Brain.think_and_act` and the movement
+measurement is the tail of `Person.think_and_act`, so skipping the man skipped
+both:
+
+1. **Time stopped for him.** No hunger, no adenosine, no loneliness, for as long
+   as the conversation lasted. A long enough exchange was a free night's rest
+   nobody authored, and standing still listening was cheaper than sleeping.
+2. **His clip froze.** `_speed` is only ever written by `_measure_how_he_moved`,
+   so a man held mid-stride stood perfectly still playing a walk cycle.
+
+W6 called this proven — *"held he stays at 5.00"* — and it was proven. It was the
+wrong thing to prove.
+
+**Why it is a bug and not the interrupt.** `Brain`'s own header says upkeep is
+what happens to him **whether he decides it or not**, and `CLAUDE.md` is explicit
+that putting upkeep anywhere else gives you *"a farmhand who works forever and
+never sleeps."* The interrupt this workbench exists to test is on his
+**deciding**. His body was never supposed to be in it.
+
+**The fix, and it crosses this folder's own boundary deliberately.** The README
+says nothing in `game/` is edited by anything here. This edits `game/`, because
+the alternative was reaching through a private door from the workbench:
+
+- `Brain._update_body` became **`Brain.run_upkeep`**, public. Same body, same
+  call order, renamed because making it public is a real change in meaning — it
+  is now the one door time comes through, for anybody held out of the loop for
+  any reason.
+- **`Person.run_upkeep(hours)`** is new: the body runs, the ballot never opens,
+  and `_measure_how_he_moved` is handed a real `Vector3.ZERO` so he genuinely
+  stops walking. It deliberately does NOT clear `current_action` — he is
+  interrupted, not reset.
+- `exchange_population.gd` calls it in the `is_held` branch.
+
+**Evidence, both directions.** The probe is unmoved: **64 claims, 14898 checks,
+cold start 21:14 / 05:52, settled 22:10 / 8.00 h / 06:10, strong man 04:47.** The
+seam check now reads `HELD, his body still runs: 5.00 -> 10.00` and `at the same
+rate: 5.00 free vs 5.00 held`. Reverting the one line turns exactly those two
+claims red and nothing else. Watched, restored, green.
+
+**The seam check had to be rewritten, and that is the lesson.** Adenosine can no
+longer witness the hold, because it now rises in both states — that is the entire
+point of the fix. The hold is witnessed by `current_action` surviving a tick
+instead. **The first draft of that used `get_known_actions()[0]` as the sentinel
+and failed**, correctly: an action he can legitimately CHOOSE makes "it still
+holds the sentinel" ambiguous between *the ballot never ran* and *the ballot ran
+and picked that one*. The sentinel is now an orphan `Action.new()`, in nobody's
+repertoire, so surviving a tick means one thing only.
+
+**Left open: what a held man LOOKS like.** He wears the clip of whatever he was
+doing, so a man stopped on his way to bed looks like he is sleeping on his feet.
+That belongs to whatever holds him — an exchange should say what he looks like —
+not to the hold.
+
+## W9 — Where an errand lands, and why the obvious answer is closed
+
+**Argued 2026-08-28. NOT settled, and nothing is built.** It records the shape of
+the problem so the next session does not rediscover it.
+
+**The question the author asked:** an exchange succeeds — he agrees — but the
+resulting errand is not the top bid. What remembers that he agreed, and how does
+the errand ever get done?
+
+**The memory is real and it already exists.** `obligation.gd` names itself
+**STORED INTENT (FR101)**: *"no amount of looking at the world tells you who this
+man agreed to work for, so it has to be remembered somewhere, and it is
+remembered here."* An agreed-but-not-yet-acted errand is an `Obligation` node
+under him, and `Person.get_obligations()` already walks for them. **This is the
+one place the "store nothing you can work out again" rule has a standing
+carve-out, and it was written for exactly this case.**
+
+**WHAT IS CLOSED, AND IT CLOSES THE OBVIOUS ANSWER.** `WorkForHire` scores
+`obligation.get_weight_at_scoring_time() + daylight_pull * sun` against a
+**binary** gap — employed today or not (Decision 31, deliberately, because a gap
+work closes continuously would fight itself all day).
+
+**So work's want is flat all day and never gets quieter.** In an ordinary gap
+system an errand wins by patience: work satisfies itself, its want falls, the
+errand's does not, and the errand takes over on the merits. That road does not
+exist here. An errand must beat `73 + daylight` **outright and permanently**, or
+it never fires at all — which means hand-tuning every errand against work's
+number for ever, and re-tuning all of them whenever a drive is added. **That is
+the same thin-margins problem W1 already refused once, waiting at the result
+instead of at the ask.**
+
+**And W5 is only half a want.** W5 says the errand raises `weight`. But
+`want = weight x gap^bite`, and an errand has no gap. Every gap in the game today
+is physiological (hunger, adenosine, social) or stock (the larder). **None is
+relational — none exists because somebody asked.**
+
+**Four candidate landings, ranked.**
+
+- **A — author the errand louder than work.** What W5 implies today. Fragile,
+  degrades with every drive added. This is the trap, not the answer.
+- **B — a tier above the score** (RimWorld's ThinkTree, where a player-forced job
+  sits in a node above the work node and never has to out-score anything).
+  Guaranteed landing, zero tuning. **Costs the single number line** — and with it
+  the property that a refusal can name whatever beat you, since a tiered loss is
+  not a score comparison and has no loser to point at.
+- **C — the errand suppresses the other drives, through a `Condition`.**
+  Decision 22 licenses the shape and Decision 36 now specifies it. Work stays on
+  the ballot ("outbid, never barred"), the errand wins on the merits, and
+  `stat_graph` shows work's line dip the moment the errand lands. Composes: two
+  errands, two conditions. Degrades honestly — a man carrying five errands has
+  everything else suppressed, which reads as *overloaded*, which is a real state.
+- **D — the errand's gap grows toward a deadline.** `Obligation.expires_on_day`
+  already exists as a field; today it is binary (expired or not). Turning
+  days-remaining into a rising gap is new arithmetic in one existing function.
+  An errand ignorable on Monday is undeniable by Friday.
+
+**Recommended: C + D**, C as the mechanism and D as the pacing. **Costed
+honestly: D is nearly free; C is a real build, because `Condition` does not
+exist** — `lens` appears zero times in the codebase, and Decision 22 has never
+been code. An earlier draft of this section claimed both were primitives already
+in hand. That was wrong; it was one for two.
+
+**Ordering: you need memory, you probably want order, you do not need a queue.**
+Completion is derivable, the way `is_discharged()` is derived rather than
+stamped. Order is worth having — *"I promised the miller before I promised the
+baker"* is characterisation, not bookkeeping — but it wants **one field, when he
+agreed**, with the order SORTED from it, exactly as `claimed_on_day` and
+`received_on_day` already answer their questions at read time. RimWorld's
+JobQueue stores position because it has no number to sort by at that layer. This
+substrate does.
+
+**And `Sequence` is not a port, it is an `ActionStep`.** The author's correction,
+confirmed against git (`40c53e1`): the retired `Sequence` was
+`class_name Sequence extends Step`, holding child steps and delegating to the
+first unsatisfied one — and `Step`'s interface maps one-to-one onto today's
+`ActionStep` (`is_satisfied` -> `is_done`). So "take this to the miller" (walk
+there, hand over) is one subclass of about twenty-five lines. **The only
+genuinely new content is that the old `Step` had no `clip` and no `exertion`: a
+`Sequence` must forward both to whichever child is live, or a man plays one
+animation through a walk AND a hand-over.**
+
+## W10 — An exchange takes world hours, and one number owns both the hold and the animation
+
+**Argued 2026-08-29. NOT built.** Read with **project Decision 39**, which
+settles that the simulation never runs at coarse ticks — half of what is below
+was worked out against the opposite assumption and is recorded as retired rather
+than deleted.
+
+### The question
+
+Exchanges want **real timings for legibility** — you should see two people talk,
+and see one of them think before answering. But an NPC's decision happens in a
+single tick. So what is the two seconds of visible deliberation?
+
+### It is a REVEAL, not a deliberation, and that is allowed
+
+The answer exists before it is shown. Decision 18 already licenses this — *the
+sim owns duration, the animation illustrates it* — and it is exactly how RimWorld
+handles social interaction: an `InteractionWorker` resolves instantly, applies
+its thoughts and opinion changes, and everything visible (the two colonists
+standing together, the speech motes, the social log line) is presentation layered
+on top. **Nobody is ever mid-conversation in RimWorld's simulation.**
+
+**Do NOT copy the other half of RimWorld's model.** Its *work* has genuine
+duration with stored progress — `JobDriver` holding `ticksLeftThisToil`, work-left
+counters, a job queue. That is the thing this substrate refuses, and it is why
+RimWorld's interruptions are expensive and this one's are free. Duration here is
+expressed as **a world fact that changes** — position for a walk, accumulated
+grain for work — never as a counter.
+
+**THE ONE LINE A REVEAL MAY NOT CROSS: it must not be interactive.** The moment
+the player can do something during the animation that changes the outcome, the
+answer was not decided at the ask, and the exchange is no longer a single
+resolvable event.
+
+### `await` belongs to the animation, never to the decision
+
+`population.gd` is emphatic: *"Put a `call_deferred` in here, or a thread, or an
+`await`, and that stops being true — silently, and only under contention, which
+is the hardest kind of bug this project could have."*
+
+So the split is the one that already exists: **presentation may await, the tick
+may not.** Clip choice already runs in `_process` rather than `think_and_act` for
+this reason.
+
+**And no awaiting `ActionStep` is needed** — the hold already IS the wait. A man
+mid-reveal is a held man: skipped in the loop, ballot never opened, body still
+running (W8). The broker owns the waiting. An awaiting step would put that same
+wait back inside the tick loop, which is the one place it cannot go.
+
+### The shape: duration in world hours, start as a STAMP
+
+```gdscript
+@export var takes_hours := 0.2   # authored, shared
+var began_at_hour := 0.0         # Clock.hours_elapsed at begin()
+```
+
+**`began_at_hour` is a stamp, not a timer** — the identical pattern
+`Workstation.claimed_on_day` and `Obligation.received_on_day` already use.
+"Is it over?" is one comparison against `Clock.hours_elapsed` at read time.
+Nothing counts down, nothing sweeps, and there is no progress to restore, so
+`Exchange`'s standing claim that it *"holds no progress"* survives intact.
+
+`Clock.hours_elapsed` is public and monotonic — *"World hours since this world
+started running. The only stored fact here."*
+
+### ONE NUMBER READ TWICE, NOT TWO NUMBERS KEPT EQUAL
+
+The hold reads `takes_hours` to know when to end. **The animation is FIT to it** —
+stretched or compressed to fill the budget — rather than carrying a duration of
+its own that somebody keeps matched.
+
+Two numbers is a desync waiting to happen: a clip is whatever length Mixamo
+exported, so an animation-driven exchange varies in length by which clip plays,
+and two separate fields eventually get edited one at a time. The failure reads as
+a man held after he has visibly stopped talking, which presents as a physics bug
+and traces back to presentation an hour later.
+
+### What this buys
+
+- **Deliberation stretches with `day_length_seconds`.** At 60 s/day, 0.2 world
+  hours is half a real second; at 600 s/day it is five. So dragging the tuning
+  slider to watch something makes the deliberation watchable too — the same
+  reason Decision 13 reads the rung-3 Moment at a shortened day.
+- **The cost is denominated in the one unit that survives everything.** 0.2 hours
+  of a man's life, whether it is stepped while somebody watches or while nobody
+  does.
+
+### RETIRED — an hours-subtraction that solved a problem that does not exist
+
+An earlier cut of this section required that a coarse-ticked region subtract
+exchange hours from the tick (`think_and_act(hours - hours_spent_talking)`),
+because a 0.2-hour conversation inside a 4-hour tick costs its participants **no
+decisions at all** — they only got one ballot for the whole tick anyway. So
+talking would be free wherever nobody was watching.
+
+**Decision 39 removes the premise: there are no coarse ticks.** The hold spans
+the same number of ticks everywhere, so the asymmetry never arises and the
+subtraction is unnecessary. Recorded because the reasoning is correct *if the
+tick size ever varies*, and this is the file that would be read before making it.
+
+### Also retired: "resolvable in one call"
+
+Same premise, same withdrawal — see Decision 39's own section on it. **A greeting
+rung ladder where each exchange warms a man up is permitted**, as is any
+multi-stage negotiation, and W1's eventual refusal model is not constrained by
+it.
+
+### What is still open
+
+- **What `takes_hours` should be**, and whether it is one number for all
+  exchanges or authored per kind. 0.2 is a placeholder chosen to make the maths
+  in this section concrete.
+- **Whether the hold should begin at the ask or at arrival.** Today `begin()`
+  does both at once because the player is already standing there.
+- **What a held man LOOKS like** — W8's open item. He currently wears the clip of
+  whatever he was doing, so a man stopped on his way to bed looks asleep on his
+  feet. A reveal with a real duration makes this more visible, not less.
+
+---
+
+## Two engineering traps found the hard way
+
+Neither is a design call; both cost real time today and both will recur.
+
+**A headless `--editor --quit` re-saves open scenes and silently drops any
+property whose stored value no longer matches its export type.** Changing an
+export from `NodePath` to `Camera3D`, then running the import pass, **deleted
+six wires out of `exchanges.tscn` with no error of any kind.** It presents
+exactly as "the `node_paths` mechanism doesn't work," which sent two debugging
+passes in the wrong direction. Same mechanism as the warning already in the
+Gate 1 findings about an editor being open on the project.
+
+**Probe claim 4 has a blind spot.** It catches a bare `NodePath` assignment
+*missing* from `node_paths` — the documented gotcha — but not the inverse, a
+`NodePath`-typed property that *is* listed in `node_paths`. Same silent null,
+same broken wire, and claim 4 stayed green throughout. Worth closing in the real
+probe whether or not any of this workbench survives.
+
+---
+
+## When we fold this back
+
+Walk W1–W10 in order and rule on each. **W8 is already fixed and needs no ruling** — it was a bug, the fix is in `game/`, and the probe is unmoved at 64 claims / 14898 checks. W1 is the only one that genuinely
+contradicts a stated design bet, so it is the one that has to be argued rather
+than merged — and if it survives, the boss plan's "nobody has to build refusal"
+paragraph needs rewriting, not just supplementing.

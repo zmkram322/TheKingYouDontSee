@@ -1,0 +1,109 @@
+[gd_scene load_steps=17 format=3 uid="uid://dmxnvvmxjpnbt"]
+
+[ext_resource type="PackedScene" path="res://workbench/exchanges/person_with_exchange.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/follow_camera.tscn" id="2_camera"]
+[ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
+[ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="4_clock"]
+[ext_resource type="Script" uid="uid://c0r2y56224pe2" path="res://game/town.gd" id="5_town"]
+[ext_resource type="Script" uid="uid://ckoklsm6ki0wj" path="res://workbench/exchanges/exchange_population.gd" id="6_population"]
+[ext_resource type="Script" uid="uid://bnqntrh3o2vg7" path="res://workbench/exchanges/looking_at.gd" id="7_looking_at"]
+[ext_resource type="Script" uid="uid://bf16cmf107lgh" path="res://workbench/exchanges/exchange_arc.gd" id="8_arc"]
+[ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_readout"]
+[ext_resource type="Script" path="res://workbench/exchanges/exchange_broker.gd" id="10_broker"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_ground"]
+sky_horizon_color = Color(0.64, 0.68, 0.72, 1)
+ground_horizon_color = Color(0.64, 0.68, 0.72, 1)
+
+[sub_resource type="Sky" id="Sky_ground"]
+sky_material = SubResource("SkyMaterial_ground")
+
+[sub_resource type="Environment" id="Environment_ground"]
+background_mode = 2
+sky = SubResource("Sky_ground")
+tonemap_mode = 2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(60, 60)
+
+[sub_resource type="StandardMaterial3D" id="Material_ground"]
+albedo_color = Color(0.36, 0.42, 0.3, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(60, 1, 60)
+
+[node name="Exchanges" type="Node3D"]
+
+[node name="Sky" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_ground")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("Material_ground")
+
+[node name="Floor" type="StaticBody3D" parent="Ground"]
+
+[node name="Collision" type="CollisionShape3D" parent="Ground/Floor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_ground")
+
+[node name="Clock" type="Node" parent="."]
+script = ExtResource("4_clock")
+
+[node name="Town" type="Node3D" parent="." node_paths=PackedStringArray("population")]
+script = ExtResource("5_town")
+population = NodePath("../Population")
+
+[node name="ExchangeBroker" type="Node" parent="."]
+script = ExtResource("10_broker")
+
+[node name="LookingAt" type="Node" parent="." node_paths=PackedStringArray("eye", "looker", "crowd")]
+script = ExtResource("7_looking_at")
+eye = NodePath("../Population/Player/FollowCamera/PitchPivot/Camera3D")
+looker = NodePath("../Population/Player")
+crowd = NodePath("../Population")
+
+[node name="ExchangeArc" type="CanvasLayer" parent="." node_paths=PackedStringArray("watching", "eye", "actor", "broker")]
+script = ExtResource("8_arc")
+watching = NodePath("../LookingAt")
+eye = NodePath("../Population/Player/FollowCamera/PitchPivot/Camera3D")
+actor = NodePath("../Population/Player")
+broker = NodePath("../ExchangeBroker")
+
+[node name="Screen" type="CanvasLayer" parent="."]
+
+[node name="PersonReadout" parent="Screen" node_paths=PackedStringArray("person", "clock") instance=ExtResource("9_readout")]
+person = NodePath("../../Population/Somebody")
+clock = NodePath("../../Clock")
+
+[node name="Population" type="Node" parent="." node_paths=PackedStringArray("broker", "clock", "town")]
+script = ExtResource("6_population")
+broker = NodePath("../ExchangeBroker")
+clock = NodePath("../Clock")
+town = NodePath("../Town")
+
+[node name="Player" parent="Population" instance=ExtResource("1_player")]
+running_clip = &"run"
+rising_clip = &"jump"
+falling_clip = &"jump_down"
+running_jump_clip = &"run_jump"
+walks_above = 0.15
+runs_above = 3.2
+person_name = "You"
+tint = Color(0.94, 0.91, 0.76, 1)
+
+[node name="FollowCamera" parent="Population/Player" instance=ExtResource("2_camera")]
+
+[node name="Somebody" parent="Population" instance=ExtResource("3_person")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -5)
+person_name = "Somebody"
+tint = Color(0.72, 0.66, 0.6, 1)
+
+[node name="Another" parent="Population" instance=ExtResource("3_person")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -6)
+person_name = "Another"
+tint = Color(0.6, 0.62, 0.72, 1)

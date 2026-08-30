@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/follow_camera.gd" id="1_camera"]
+
+[node name="FollowCamera" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+script = ExtResource("1_camera")
+
+[node name="PitchPivot" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="PitchPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 4)
+fov = 60.0
