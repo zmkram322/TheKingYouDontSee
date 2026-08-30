@@ -184,7 +184,7 @@ stale and are the author's call to bump rather than a builder's: `project.godot`
 still declares `config/features=PackedStringArray("4.4", ...)`, and
 `game/probe.gd`'s own header still prints the 4.4 run lines.
 
-**The standing count, after the body swap: 64 claims, 14898 checks, all green.**
+**The standing count, after the accumulator: 65 claims, 14906 checks, all green.**
 The anchor every measurement is taken against, unmoved by Gate 0, by Gate 1, or
 by putting a real rig on every person:
 

@@ -83,9 +83,88 @@ func _ready() -> void:
 		push_warning("Population has no Clock — nobody will ever think")
 
 
+# --- The step loop ---------------------------------------------------------------
+
+# HOW BIG ONE TICK IS, in real seconds, before the day-length slider is applied.
+# 1/60th, so a normal frame at 60fps is exactly one tick and the common case
+# does no extra work at all.
+#
+# It is REAL SECONDS rather than world hours on purpose. day_length_seconds is
+# the author's statement of how much world time a real second buys, and at the
+# 1-second floor he is deliberately asking for enormous jumps so a whole day can
+# be watched in a blink. A quantum denominated in hours would fight that — it
+# would keep throwing away the very time the slider was dragged to produce. In
+# real seconds the slider goes on meaning exactly what it says, and the quantum
+# only ever bounds how much simulation happens between two decisions.
+const TICK_SECONDS := 1.0 / 60.0
+
+# The ceiling on how many ticks one frame may buy. Past this, real time is
+# DROPPED rather than simulated.
+#
+# It is what stops the spiral: a five-second stall at 60 ticks a second is 300
+# ticks, and if running them takes longer than the frame they were owed to, the
+# next frame owes even more and the game never catches up again. Better to lose
+# a moment of world honestly than to freeze.
+#
+# 8 is two frames' worth at 30fps and is a guess. It wants measuring against a
+# real stall rather than defending in the abstract.
+const MAX_TICKS_PER_FRAME := 8
+
+# Real seconds owed but not yet worth a whole tick, carried to the next frame.
+#
+# THE ONE PIECE OF STORED PROGRESS IN THIS FILE, and it earns it: without a
+# carry, every frame would round its leftover down to nothing and the world
+# would run measurably slow — a 1/90th-second frame against a 1/60th tick would
+# buy zero ticks, for ever. It is bounded below one tick by construction.
+var _seconds_owed := 0.0
+
+
 func _process(delta: float) -> void:
-	if clock != null:
-		think_for_everyone(clock.get_hours_elapsed(delta))
+	step_real_time(delta)
+
+
+# Turn real seconds into whole ticks, and run them.
+#
+# A SEPARATE FUNCTION FROM _process SO IT CAN BE MEASURED. The probe runs
+# everything PROCESS_MODE_DISABLED and pumps think_for_everyone by hand, so
+# nothing it does would ever reach a _process body — and an accumulator nobody
+# can hand a five-second stall to is an accumulator nobody has checked. This is
+# the door a claim knocks on.
+#
+# WHY A FIXED QUANTUM AT ALL, restated because it is the whole point: the ballot
+# opens ONCE per tick. Hand a man two hours in one step and he gets one decision
+# to cover them — he does not wake, eat and walk to the field, he skips through
+# all three. The arithmetic would survive it (every rate here is per hour, so
+# one big step and many small ones integrate the same), but the DECIDING does
+# not. So a slow frame buys MORE ticks, never a bigger one — which is what
+# Decision 39 says, said in code rather than in prose.
+func step_real_time(real_seconds: float) -> void:
+	if clock == null:
+		return
+	# Negative or non-finite deltas are not a thing Godot should hand us, and a
+	# NaN here would poison hours_elapsed permanently — one stored fact, no way
+	# back. Cheaper to refuse it than to find it three days later.
+	if not is_finite(real_seconds) or real_seconds <= 0.0:
+		return
+	_seconds_owed += real_seconds
+	var ticks := 0
+	while _seconds_owed >= TICK_SECONDS and ticks < MAX_TICKS_PER_FRAME:
+		_seconds_owed -= TICK_SECONDS
+		var hours := clock.get_hours_elapsed(TICK_SECONDS)
+		# THE CLOCK MOVES FIRST, then the people, and both by the SAME number.
+		# Advancing it anywhere else is how the sun and the body drifted apart
+		# once already; advancing it by a different number would be the same bug
+		# wearing a fixed step.
+		clock.advance(hours)
+		think_for_everyone(hours)
+		ticks += 1
+	# Past the ceiling, the debt is forgiven rather than carried. Carried, a
+	# machine that cannot keep up accrues an ever-growing backlog it will never
+	# work off, and the game falls further behind every frame until it stops
+	# responding. Dropped, it simply runs slow while the stall lasts and is
+	# correct again the moment it ends.
+	if _seconds_owed >= TICK_SECONDS:
+		_seconds_owed = 0.0
 
 
 # One slice of living for everybody, in world HOURS — the same slice for each

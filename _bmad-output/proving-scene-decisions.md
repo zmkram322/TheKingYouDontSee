@@ -5246,11 +5246,25 @@ constrained by this.
 - **What the hitch budget is.** "It takes how long it takes" is the ruling; how
   long is too long before a region must be allowed to fall behind is unmeasured,
   and should be measured rather than guessed.
-- **Whether a tick should be BOUNDED, and at what.** Nothing clamps
-  `get_hours_elapsed` today, so a frame hitch or a debugger pause hands the whole
-  town one enormous tick — which is precisely the coarse step this section
-  forbids, arriving by accident rather than by design. A `maxf` in `Clock` is the
-  obvious guard and is deliberately not specified here; it wants measuring.
+- ~~**Whether a tick should be BOUNDED, and at what.**~~ **ANSWERED AND BUILT,
+  2026-08-30, and it is the reason this section stopped being prose.** Nothing
+  bounded `get_hours_elapsed`, so a stall or a breakpoint handed the whole town
+  one enormous tick — *precisely the coarse step this section forbids, arriving
+  by accident.* The fix is not a clamp. **`Population` now owns an accumulator**:
+  it banks real seconds, spends them on whole fixed-size ticks
+  (`TICK_SECONDS = 1/60`), advances the `Clock` and thinks for everybody once per
+  tick, and stops at `MAX_TICKS_PER_FRAME = 8`. A slow frame buys MORE ticks, not
+  a bigger one — this section, in code.
+  **`Clock` lost its own `_process`** and no longer drives itself: it used to
+  advance off its own delta while `Population` converted the same delta
+  separately, two conversions agreeing only because both were unbounded. Now one
+  loop advances both by the same number.
+  **Probe claim 68** pins it, and the non-vacuous part is the quantum test — "the
+  total was bounded" alone would pass for a loop that ran ONE step of the bounded
+  size, which is the bug wearing a ceiling. Watched failing three ways: one big
+  step instead of many, the carry dropped, the ceiling removed.
+  **`MAX_TICKS_PER_FRAME = 8` is still a guess** and still wants measuring
+  against a real stall.
 - **What tick size is RIGHT.** 0.01 is what the probe measures at and ~0.0067 is
   what 60 fps produces. Nothing here argues either is correct — only that no
   region gets a deliberately larger one than another.
@@ -5259,5 +5273,6 @@ constrained by this.
 
 | Where | Edit | Applied |
 |---|---|---|
-| — | Nothing to build. The code already behaves this way; this section forbids the optimisation that would change it. | **not applied** |
+| `population.gd`, `clock.gd` | The accumulator, per the bounded-tick item above — `Population` owns the step loop, `Clock` stops driving itself. | **applied 2026-08-30** |
+| `probe.gd` | Claim 68 — a stalled frame buys more ticks, never a bigger one. Standing count 64 → 65 claims, 14898 → 14906 checks; all three anchors unmoved. | **applied 2026-08-30** |
 | `population.gd` header | Its "collapsing it again" line reads as though coarse stepping were the intent. It is the one place a future builder would look for permission to do it, and should say instead that collapsing means *unbounded by the frame rate*, never *bigger hours*. | **not applied** |

@@ -184,6 +184,7 @@ func _process(_delta: float) -> bool:
 	_check_the_players_place_is_a_band_and_does_not_flicker_on_a_boundary()
 	_check_the_player_covers_the_same_ground_per_world_hour_at_any_day_length()
 	_check_a_mans_body_shows_the_work_his_step_declares()
+	_check_a_stalled_frame_buys_more_ticks_never_a_bigger_one()
 	_report()
 	quit(0 if _first_failure.is_empty() else 1)
 	return true
@@ -3963,6 +3964,112 @@ func _walk_one_world_hour_at(day_length_seconds: float, claim: String) -> float:
 	world.queue_free()
 	return distance
 
+
+
+# 68 — THE ONE PATH THE PROBE NEVER WALKED. Everything else in this file pumps
+# think_for_everyone(hours) by hand, and claim 66 drives the real conversion but
+# only ever with a well-behaved 1/60th of a second. Neither touches what happens
+# when a frame takes far longer than a frame should — an alt-tab, a stall, a
+# breakpoint — which before the accumulator handed the entire town one enormous
+# tick and one decision to cover it.
+#
+# WHAT MAKES THIS NON-VACUOUS is the quantum test in the middle. "The total was
+# bounded" alone would pass for a step loop that ran ONE step of the bounded
+# size, which is exactly the bug — a big tick wearing a ceiling. So the total is
+# checked to be a whole multiple of one tick's worth, which no single oversized
+# step could produce.
+func _check_a_stalled_frame_buys_more_ticks_never_a_bigger_one() -> void:
+	var claim := "68 — a stalled frame buys more ticks, never a bigger one"
+
+	var world := _add_a_disabled_game_scene()
+	if world == null:
+		_require(false, claim, "the game scene would not load")
+		return
+	var clock := world.get_node_or_null("Clock") as Clock
+	var population := world.get_node_or_null("Population") as Population
+	var zoogs := world.get_node_or_null("Population/Zoogs") as Person
+	if clock == null or population == null or zoogs == null:
+		_require(false, claim, "the world came up without a Clock, a Population or Zoogs")
+		world.queue_free()
+		return
+
+	var quantum: float = clock.get_hours_elapsed(Population.TICK_SECONDS)
+
+	# --- a normal frame is left alone -------------------------------------------
+	# Asserted FIRST and separately, because a bound that also caught ordinary
+	# frames would silently slow the whole game down and every other claim here
+	# would still pass. This is the direction that costs you if nobody looks.
+	var before_normal: float = clock.hours_elapsed
+	population.step_real_time(Population.TICK_SECONDS)
+	var normal_step: float = clock.hours_elapsed - before_normal
+	_require(is_equal_approx(normal_step, quantum), claim,
+		"one 60fps frame should advance exactly one tick (%.6f h) and advanced %.6f h" % [
+			quantum, normal_step])
+
+	# --- the stall is bounded ----------------------------------------------------
+	var unbounded: float = clock.get_hours_elapsed(5.0)
+	var ceiling: float = quantum * float(Population.MAX_TICKS_PER_FRAME)
+
+	# THE REACHABILITY CHECK. A ceiling set above anything a real stall could
+	# produce would make every assertion below pass while bounding nothing — the
+	# fake-guard shape this file has caught eight times. So the stall must
+	# genuinely exceed the ceiling, or the rest of this claim proves only that
+	# five seconds is a small number.
+	_require(unbounded > ceiling * 2.0, claim,
+		"a 5-second stall converts to %.4f h and the ceiling is %.4f h — the ceiling is not being exercised, so nothing below is a test" % [
+			unbounded, ceiling])
+
+	var before_stall: float = clock.hours_elapsed
+	population.step_real_time(5.0)
+	var stalled_step: float = clock.hours_elapsed - before_stall
+
+	_require(stalled_step <= ceiling + 0.000001, claim,
+		"a 5-second stall advanced the world %.4f h; unbounded it would have been %.4f h and the ceiling is %.4f h" % [
+			stalled_step, unbounded, ceiling])
+
+	# THE CLAIM THAT ACTUALLY SAYS "MORE TICKS, NOT BIGGER ONES." A single
+	# oversized step would land on an arbitrary total; whole ticks cannot.
+	var ticks_run := stalled_step / quantum
+	_require(absf(ticks_run - roundf(ticks_run)) < 0.001, claim,
+		"the stall advanced %.6f h, which is %.4f ticks of %.6f h — a whole number is the only thing a loop of fixed steps can produce, so some step was not one tick" % [
+			stalled_step, ticks_run, quantum])
+	_require(int(roundf(ticks_run)) == Population.MAX_TICKS_PER_FRAME, claim,
+		"a stall past the ceiling should run exactly %d ticks and ran %d" % [
+			Population.MAX_TICKS_PER_FRAME, int(roundf(ticks_run))])
+
+	# --- the sun and the body were handed the same number ------------------------
+	# The drift this whole design guards against, measured rather than trusted.
+	# Zoogs' adenosine is the witness because it moves every tick regardless of
+	# what anybody chose, and it is driven by the SAME hours the clock was.
+	var rate: float = zoogs.brain.get_adenosine_accumulation()
+	var before_body: float = zoogs.stats.get_stat(&"adenosine")
+	var before_sun: float = clock.hours_elapsed
+	population.step_real_time(Population.TICK_SECONDS)
+	var sun_moved: float = clock.hours_elapsed - before_sun
+	var body_moved: float = zoogs.stats.get_stat(&"adenosine") - before_body
+	if zoogs.brain.is_awake():
+		_require(is_equal_approx(body_moved, rate * sun_moved), claim,
+			"the sun moved %.6f h and his body was paid for %.6f h of it — the clock and the people are being handed different numbers" % [
+				sun_moved, body_moved / rate if rate > 0.0 else -1.0])
+
+	# --- the carry, without which the world runs slow for ever -------------------
+	# Two half-ticks must buy exactly one tick. Round each frame's leftover down
+	# instead and a machine running at any rate that is not a clean multiple of
+	# the quantum loses time on EVERY frame, permanently, and it presents as
+	# "the day is somehow longer than the slider says".
+	var before_halves: float = clock.hours_elapsed
+	population.step_real_time(Population.TICK_SECONDS * 0.5)
+	var after_first_half: float = clock.hours_elapsed
+	population.step_real_time(Population.TICK_SECONDS * 0.5)
+	var two_halves: float = clock.hours_elapsed - before_halves
+	_require(is_equal_approx(after_first_half, before_halves), claim,
+		"half a tick advanced the world %.6f h — a partial tick must buy nothing yet" % [
+			after_first_half - before_halves])
+	_require(is_equal_approx(two_halves, quantum), claim,
+		"two half-ticks bought %.6f h and one whole tick is %.6f h — the leftover is not being carried" % [
+			two_halves, quantum])
+
+	world.queue_free()
 
 func _report() -> void:
 	print("")

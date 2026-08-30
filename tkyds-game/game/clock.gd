@@ -50,8 +50,19 @@ func advance(hours: float) -> void:
 	hours_elapsed += hours
 
 
-func _process(delta: float) -> void:
-	advance(get_hours_elapsed(delta))
+# NO _process. THE CLOCK DOES NOT DRIVE ITSELF, and that is deliberate as of
+# the accumulator (Decision 39).
+#
+# It used to advance itself here off its own frame delta while Population
+# separately converted the SAME delta for the people. Two conversions, agreeing
+# only because both were unclamped and both used the function above — and the
+# instant either one gained a bound or a fixed step, the sun and the body would
+# have drifted apart. That is the precise failure the comment on
+# get_hours_elapsed already warns about, and it was one edit away the whole time.
+#
+# Now Population owns the loop: it decides how many whole ticks a frame is worth
+# and advances this clock once per tick, in the same breath as it thinks for
+# everybody. One driver, one step, and the sun cannot get ahead of the people.
 
 
 # How far through the current day, in [0, 1). 0.0 is midnight, 0.5 is midday.
