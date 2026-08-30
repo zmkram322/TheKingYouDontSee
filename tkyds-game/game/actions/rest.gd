@@ -25,7 +25,7 @@ extends ActionStep
 # man is lying in. See probe claim 46.
 #
 # LYING ITSELF DOES NOTHING FURTHER. The body's own recovery is Brain's job
-# (Brain._update_body, driven by is_awake() / counts_as_asleep_for, never by
+# (Brain.run_upkeep, driven by is_awake() / counts_as_asleep_for, never by
 # anything in this file) — the same split this file's very first version
 # already explained, just now sitting behind one more layer of "am I actually
 # there".

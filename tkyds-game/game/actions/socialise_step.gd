@@ -105,7 +105,7 @@ func advance(person: Person, hours: float) -> bool:
 
 	# TWO RATES, NEVER BOTH: real company when somebody else is actually
 	# there, the thinner change-of-scene rate when he's alone at the venue.
-	# Upkeep keeps running underneath either way (Brain._update_body), so
+	# Upkeep keeps running underneath either way (Brain.run_upkeep), so
 	# both numbers are competing against the same rising tide, not against
 	# zero.
 	var lonely: float = person.stats.get_stat(&"social")

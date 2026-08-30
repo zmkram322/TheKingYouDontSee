@@ -72,7 +72,7 @@ extends Node
 
 # --- Hunger -------------------------------------------------------------------
 # The gap between what he's eaten and being fed. It rises the whole time he is
-# alive — awake or asleep, working or idle, per Brain._update_body's one
+# alive — awake or asleep, working or idle, per Brain.run_upkeep's one
 # unbranched line — because a body burns fuel regardless of what its owner is
 # up to. It falls only when he eats (see actions/eat_step.gd), which is the
 # one effect this stat is allowed to have written into it from outside upkeep.
@@ -95,7 +95,7 @@ extends Node
 # The gap between the company he wants and the company he has had (Decision
 # 19's table names it). Same shape as hunger above it, on purpose: it rises
 # the whole time he is alive — awake or asleep, working or idle, per
-# Brain._update_body's own unbranched line — because being apart from other
+# Brain.run_upkeep's own unbranched line — because being apart from other
 # people costs him the same regardless of what he is otherwise doing. It
 # falls only when he is in company (see actions/socialise_step.gd), the one
 # effect this stat is allowed to have written into it from outside upkeep —

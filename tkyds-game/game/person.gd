@@ -199,6 +199,33 @@ func think_and_act(hours: float) -> void:
 	_measure_how_he_moved(global_position - was_at, hours)
 
 
+# One slice of LIVING for a man who is not thinking — the body keeps running,
+# the ballot never opens, and he does not move.
+#
+# THE HALF OF think_and_act THAT NOBODY IS ALLOWED TO SKIP. Anything that holds
+# a man out of Population's loop — a conversation, a coarsely-stepped distant
+# village, whatever a later mechanism wants — calls this instead of simply
+# passing him over. Passing him over stops time for him: he stops hungering,
+# stops tiring and stops getting lonely while the man beside him does all
+# three, so a long enough hold is a free rest nobody authored.
+#
+# THE ZERO DISPLACEMENT IS NOT A FORMALITY. _speed is what decides whether the
+# travel layer wins over his declared clip, and it is only ever written here.
+# Skip this and it keeps the last value it had — so a man held mid-stride
+# stands perfectly still playing a walk cycle until he is released. Handing it
+# a real zero is what makes him stop.
+#
+# WHAT IT DELIBERATELY DOES NOT DO is clear current_action. He is interrupted,
+# not reset, and the thing he was doing is still what he means to be doing when
+# the hold ends — this substrate re-decides from scratch on the next real tick
+# anyway. The visible cost is that he wears the clip of whatever he was at, so
+# a man stopped on his way to bed looks like he is sleeping on his feet.
+# Whatever holds him is the thing that should say what he looks like instead.
+func run_upkeep(hours: float) -> void:
+	brain.run_upkeep(hours)
+	_measure_how_he_moved(Vector3.ZERO, hours)
+
+
 # Where he is standing, or null if he is between places. Asked in GATE, where
 # the answer has to be crisp: "am I at the tavern?" gets exactly one answer, and
 # a gate reading it can never flicker because nothing here is compared against a

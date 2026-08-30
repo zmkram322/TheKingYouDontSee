@@ -261,7 +261,7 @@ func _pump_the_opening_days() -> void:
 
 		# ASSERTION 2 — the body only ever moves the way what he's doing says.
 		#
-		# Loose comparison first, because _update_body clamps into
+		# Loose comparison first, because run_upkeep clamps into
 		# [0, ceiling] and a clamped value is allowed to stand still. Then the
 		# strict one, guarded by the clamp that would flatten it — pinned at
 		# the ceiling he cannot rise, and empty he cannot fall, and neither is
@@ -2065,7 +2065,7 @@ func _require(is_true: bool, claim: String, detail: String) -> void:
 #
 # AND IT MUST RISE WHILE HE IS ASLEEP TOO — the second half below, added
 # 2026-08-14, and it was added because the FIRST half could not fail on the
-# thing it was supposed to guard. `_update_body`'s hunger line is deliberately
+# thing it was supposed to guard. `run_upkeep`'s hunger line is deliberately
 # unbranched, and that no-branch is load-bearing: it is the whole reason a man
 # wakes up hungry. Break-testing rung 6d's identical social line by wrapping it
 # in `if is_awake()` reddened NOTHING, because an awake man's reading is the
@@ -3344,7 +3344,7 @@ func _check_the_day_keeps_its_shape() -> void:
 
 # 59 — NULL IS A REAL ANSWER, and stands for "standing there". A steered body
 # with nothing chosen still pays the same upkeep every other body pays —
-# Brain._update_body never asks who is steering, only what happened this
+# Brain.run_upkeep never asks who is steering, only what happened this
 # tick — so one hour of choosing nothing has to move all three drives by
 # exactly one hour's worth, the same AMOUNT-not-direction discipline claims 5,
 # 31 and 49 already use for the same reason: a rate applied per tick instead

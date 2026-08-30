@@ -172,7 +172,7 @@ func think_and_act(hours: float) -> void:
 	if current_action != null and current_action.step != null \
 			and current_action.step.is_doable(person):
 		current_action.step.advance(person, hours)
-	_update_body(hours)
+	run_upkeep(hours)
 
 
 # How THIS brain picks a winner from the open list. The gate half above is
@@ -228,7 +228,7 @@ func pick_from_the_ballot(open_actions: Array[Action]) -> Action:
 @export var adenosine_ceiling := 100.0
 
 # Unlike the pair above, hunger gets no awake/asleep split at all — see the
-# unbranched line in _update_body below for why.
+# unbranched line in run_upkeep below for why.
 @export var base_hunger_per_hour := 4.0
 @export var hunger_ceiling := 100.0
 
@@ -251,7 +251,23 @@ func pick_from_the_ballot(open_actions: Array[Action]) -> Action:
 @export var base_social_per_hour := 2.5
 @export var social_ceiling := 100.0
 
-func _update_body(hours: float) -> void:
+
+# PUBLIC, AND THAT IS THE POINT — this is the one door time comes through.
+#
+# It used to be `_update_body`, private, reachable only by finishing a whole
+# think_and_act. That made "he is not deciding" and "nothing happens to him"
+# the same event, which is wrong in exactly one direction and the direction
+# matters: a man held out of the loop for any reason stopped getting hungry,
+# stopped getting tired, and stopped getting lonely for as long as he was
+# held. Time stood still for him and ran for everybody else.
+#
+# The header above says upkeep is what happens to him WHETHER HE DECIDES IT
+# OR NOT. Private, that read as "whatever he decides"; public, it also covers
+# "whether or not he was allowed to decide at all" — a man mid-conversation,
+# a distant village stepped coarsely, anybody a later mechanism holds out of
+# the ballot. Every one of those still lives. Nothing may skip a person
+# without calling this, and Person.run_upkeep is the shape to call.
+func run_upkeep(hours: float) -> void:
 	var tired: float = person.stats.get_stat(&"adenosine")
 	if is_awake():
 		tired += get_adenosine_accumulation() * hours
