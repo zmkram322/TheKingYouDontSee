@@ -1,14 +1,34 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3 uid="uid://cw2jppe21uu50"]
 
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="1_person"]
-[ext_resource type="Script" path="res://workbench/exchanges/person_with_exchange.gd" id="2_body"]
-[ext_resource type="Script" path="res://workbench/exchanges/exchange_brain.gd" id="3_brain"]
+[ext_resource type="Script" uid="uid://bh2bv4qim2tje" path="res://workbench/exchanges/person_with_exchange.gd" id="2_body"]
+[ext_resource type="Script" uid="uid://rrxgdqkc4qk7" path="res://workbench/exchanges/exchange_brain.gd" id="3_brain"]
 [ext_resource type="PackedScene" path="res://workbench/exchanges/greet.tscn" id="4_greet"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/give.tscn" id="5_give"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/ask.tscn" id="6_ask"]
 
 [node name="PersonWithExchange" instance=ExtResource("1_person")]
 script = ExtResource("2_body")
+running_clip = &"run"
+rising_clip = &"jump"
+falling_clip = &"jump"
+running_jump_clip = &"run_jump"
+walks_above = 0.15
+runs_above = 3.2
 
 [node name="Brain" parent="." index="2"]
 script = ExtResource("3_brain")
+walk_speed = 2.2
+run_speed = 5.5
+jump_speed = 4.8
+gravity = 12.0
+braking = 24.0
+steered_by_camera = NodePath("../FollowCamera")
+enters_within = 3.0
+leaves_beyond = 4.5
 
 [node name="Greet" parent="Brain" index="6" instance=ExtResource("4_greet")]
+
+[node name="Give" parent="Brain" index="7" instance=ExtResource("5_give")]
+
+[node name="Ask" parent="Brain" index="8" instance=ExtResource("6_ask")]

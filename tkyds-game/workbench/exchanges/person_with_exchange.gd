@@ -31,7 +31,7 @@ extends Person
 # same rule that keeps a dictionary from action to animation out of game/.
 @export var running_clip := &"run"
 @export var rising_clip := &"jump"
-@export var falling_clip := &"jump_down"
+@export var falling_clip := &"jump"#&"jump_down"
 @export var running_jump_clip := &"run_jump"
 
 # METRES PER SECOND, unlike the inherited `walking_above`, which is a FRACTION

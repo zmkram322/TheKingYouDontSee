@@ -1,6 +1,6 @@
 [gd_scene load_steps=17 format=3 uid="uid://dmxnvvmxjpnbt"]
 
-[ext_resource type="PackedScene" path="res://workbench/exchanges/person_with_exchange.tscn" id="1_player"]
+[ext_resource type="PackedScene" uid="uid://cw2jppe21uu50" path="res://workbench/exchanges/person_with_exchange.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://workbench/exchanges/follow_camera.tscn" id="2_camera"]
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="3_person"]
 [ext_resource type="Script" uid="uid://bhkaimikwcagl" path="res://game/clock.gd" id="4_clock"]
@@ -9,7 +9,7 @@
 [ext_resource type="Script" uid="uid://bnqntrh3o2vg7" path="res://workbench/exchanges/looking_at.gd" id="7_looking_at"]
 [ext_resource type="Script" uid="uid://bf16cmf107lgh" path="res://workbench/exchanges/exchange_arc.gd" id="8_arc"]
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_readout"]
-[ext_resource type="Script" path="res://workbench/exchanges/exchange_broker.gd" id="10_broker"]
+[ext_resource type="Script" uid="uid://cvh8ctw3fdwcj" path="res://workbench/exchanges/exchange_broker.gd" id="10_broker"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_ground"]
 sky_horizon_color = Color(0.64, 0.68, 0.72, 1)
@@ -66,6 +66,7 @@ script = ExtResource("7_looking_at")
 eye = NodePath("../Population/Player/FollowCamera/PitchPivot/Camera3D")
 looker = NodePath("../Population/Player")
 crowd = NodePath("../Population")
+within_reach = 8.0
 
 [node name="ExchangeArc" type="CanvasLayer" parent="." node_paths=PackedStringArray("watching", "eye", "actor", "broker")]
 script = ExtResource("8_arc")
@@ -87,12 +88,6 @@ clock = NodePath("../Clock")
 town = NodePath("../Town")
 
 [node name="Player" parent="Population" instance=ExtResource("1_player")]
-running_clip = &"run"
-rising_clip = &"jump"
-falling_clip = &"jump_down"
-running_jump_clip = &"run_jump"
-walks_above = 0.15
-runs_above = 3.2
 person_name = "You"
 tint = Color(0.94, 0.91, 0.76, 1)
 

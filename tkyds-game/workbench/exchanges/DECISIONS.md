@@ -428,6 +428,316 @@ deterministic and identical everywhere, which is better than the alternative.
   whatever he was doing, so a man stopped on his way to bed looks asleep on his
   feet. A reveal with a real duration makes this more visible, not less.
 
+## W11 — A greeting is a whole exchange: face, wave, end, nothing left behind
+
+**Built 2026-08-30.** The first exchange you can actually WATCH. Deliberately
+stops where it stops: two men turn to each other, both play the wave, the
+exchange ends itself, and **no outcome is left on either of them.** Give and ask
+exist and are authored "only once talking", so during the wave they are the only
+other things on the table — and after it, nothing is. That is the point rather
+than a gap: deeper actions past the greeting get written next, against a
+greeting whose FEEL is already right.
+
+**Facing is a third body layer, and it was not there.** `_body.rotation.y` is
+written in exactly one place in each of `person.gd` and `person_with_exchange.gd`
+— **inside the moving branch.** Heading has only ever been a consequence of
+displacement, so nothing in this game could face anything while standing still.
+`Exchange.face_each_other()` is the third writer, and it needs no arbitration:
+"moving wins" already decides it, because a man who walks away has his own
+`_show_the_body` overwrite this the same frame.
+
+**One number owns the wave.** `ExchangeAction.takes_hours` (W10's shape),
+stamped onto the Exchange as `began_at_hour` at `begin()`, asked at read time by
+`has_lapsed`. **The arc's `gesture_seconds` was deleted, not kept in step** — a
+real-seconds timer of 1.6 racing a world-hours exchange, which at 60 s/day beat
+it by nearly a second, so the wave died while both men were still held.
+
+**TWO BUGS THE SEAM CHECK CAUGHT, and both were invisible from the outside.**
+
+1. **Neither man waved.** The greeter got his verb through
+   `PlayerBrain.choose_verb`, which records a **bid** (Decision 33) — and a bid
+   only becomes `current_action` when the ballot next runs, which for a man the
+   broker has just held is never. Underneath it, the real fault was **two doors
+   for one fact**: the greeter's performance came from the arc, the greeted
+   man's from the broker. An exchange between two NPCs has no arc anywhere near
+   it, so its initiator would have stood still. Both are now written in
+   `offer()`, for both men, which is what W3 meant by neither participant being
+   special.
+
+2. **`stop_doing_anything` does not clear `current_action`.** It clears
+   `_chosen`. Tearing down with it alone left the player waving for ever.
+
+**AND THE CLAIM THAT SHOULD HAVE CAUGHT THE SECOND ONE HAD BEEN PASSING.** Until
+the broker started performing for both men there was never anything in
+`current_action` to fail to clear, so "both are handed back what they were doing"
+was green while asserting nothing — the same species as this file's own W8, and
+as the seam check that spent a week asserting a held man's adenosine stood still.
+It only bit once the code around it got closer to right, which is the argument
+for writing the claim before you believe it.
+
+**Also vacuous until fixed:** "it took its length from the action" compared
+`runs_for_hours` (default 1.0) against `takes_hours` (default 1.0) and could not
+fail. `greet.tscn` now authors 0.8 so the comparison means something.
+
+**Left open, on purpose.**
+- **No outcome.** Nothing is written to either man. The next thing to build is
+  what a greeting LEAVES — and the author's own instinct is the right one: a
+  regard between two people, which would be the FIRST RELATIONAL NUMBER in the
+  codebase (W9 records that every gap today is physiological or stock, and that
+  the absence of a relational one is what blocks errands from ever winning).
+- **The wave has one flavour.** Neutral only. `greet_warm` is imported and
+  unused; picking between them off a regard stat is Decision 36's exact shape —
+  intensity is a stat, the clip is the translation — and must be AUTHORED rungs,
+  never a dictionary in code from a number to a clip name.
+- **The staging axis may be wrong.** `offered` gates give and ask on a live
+  conversation. If a greeting instead raises regard, they should gate on
+  "have we greeted" — a fact about the relationship, which survives walking
+  away, works NPC-to-NPC, and makes the greeting matter rather than be a
+  doorway. Not decided.
+- **WATCHED 2026-08-30, and it found something the claims could not.** Both men
+  waved on the same frame — green everywhere, wrong on screen. See W11a. This is
+  the standing argument for the Moment being a separate gate from the probe.
+
+
+## W11a — An exchange has two sides, and they differ in what AND when
+
+**Built 2026-08-30, straight off watching W11 run.** Both men waved on the same
+frame with the same clip, which does not read as a greeting — it reads as two
+strangers doing the same thing at the same time by coincidence.
+
+**The fix is a slot, not a stagger,** and the reason to spend a slot on it is
+that **THIS IS WHERE REFUSAL LIVES.** W1 and W2 leave "what does a no look like"
+unanswered, and the honest answer is that it looks like a different reply — a
+`shake_head` where a `greet_warm` would have gone. Staggering the same clip
+would have to be rebuilt the day refusal lands; a slot does not. It is also what
+`mixamo_import.gd` imported seven clips for in the first place: *"the vocabulary
+of an ASK and an ANSWER — assent, refusal, and the gestures that point one
+person at another."*
+
+- `ExchangeAction.answered_with` — a PackedScene, an Action with its own step, so
+  the reply's clip comes off a step like every other clip in the game and no file
+  maps a verb to an animation. `greet_answer.tscn` needs **no script of its own**
+  (`game/action.gd` + `game/action_step.gd`), which is the same genericity test
+  `ask.tscn` passes.
+- `ExchangeAction.answers_after` — the beat, in world hours. The broker warns
+  if it is not shorter than `takes_hours`, because otherwise nobody ever replies
+  and there is nothing to see that says why.
+- **Instanced under the Exchange, never learned.** Nobody CHOOSES to answer. An
+  answer on a man's ballot is a verb he could aim at somebody who never spoke to
+  him.
+
+**It closes W8's open item as a side effect.** Until the beat the answerer is
+CLEARED, not left wearing the clip he was stopped in — so a man stopped on his
+way to bed stands and listens instead of sleeping on his feet. A man listening
+is a man who has stopped.
+
+**A recursion this nearly shipped.** `end()` is called from inside
+`get_exchange_for`'s sweep, so a teardown that looked the exchange up again
+re-entered the sweep, found the same lapsed exchange, and called `end()` for
+ever. The exchange is passed in.
+
+**And a second vacuous claim, caught the same way as W11's.** "after the beat he
+answers" first asserted only that a reply node existed — which `begin_answering`
+creates whether or not anybody is handed it — so cutting the man out of his own
+reply left it green. It now asserts he is DOING it. Five of the six new claims
+went red on a deliberate break the first time; this one did not, and that is the
+only reason it was found.
+
+**Standing count: 35 claims, all green.**
+
+**Still open:** one flavour each way (`greet_warm` is the only reply authored, and
+nothing yet CHOOSES between replies — that choosing is refusal), and the greeter
+holds his last pose for the rest of the exchange because the clip is `LOOP_NONE`.
+
+
+## W11b — A gesture's length is REAL SECONDS, and W10's unit is retired
+
+**Author's call, 2026-08-30, straight off watching W11a.** The beat was too
+short, and chasing why found the real fault underneath it.
+
+**W10 authored an exchange's length in WORLD HOURS**, on the standing rule that
+every rate in `game/` is per world hour and real time is converted once, up in
+`Clock`, and never seen again below it. **That rule is right and this was never
+one of its cases.** `day_length_seconds` is a TUNING SLIDER: at the shipped
+60 s/day one world hour is 2.5 real seconds; at a plausible play speed of
+600 s/day it is twenty-five. So a greeting authored at 0.8 hours is a two-second
+wave while you are debugging and a twenty-second wave when you are playing —
+**off one number nobody edited.** W10 listed that stretching as a BENEFIT
+("dragging the tuning slider to watch something makes the deliberation watchable
+too"). It is a benefit for a *deliberation whose cost is a slice of a life*. It
+is a bug for *a hand going up*.
+
+**The distinction, which W10 collapsed into one number:**
+
+| | unit | why |
+|---|---|---|
+| how long you WATCH it | real seconds | a fact about the gesture. A greeting takes as long as it takes to raise a hand, and that does not change because the sun sped up. |
+| what it COSTS him | world hours | a fact about the simulation. Same slice of a life whether anybody is watching. |
+
+**Today an exchange has only the first, because a greeting COSTS NOTHING** — no
+outcome, no stat, nothing left behind. The day an exchange has a real price, the
+price is **its own number in world hours** and `takes_seconds` stays what it is.
+W10's "one number owns both the hold and the animation" survives intact; only
+its UNIT is retired.
+
+**This is not a violation of "nothing outside Clock interprets a real delta" —
+it is the other half of a split the project already makes.** Clip choice already
+runs in `_process` rather than `think_and_act`, because presentation answers to
+how often it is LOOKED AT. An exchange's visible length is on that side of the
+line. `ExchangeBroker.seconds_running` is the frame clock's twin of
+`Clock.hours_elapsed`: one monotonic number, converted once in one file, never
+interpreted again below it — and it advances only while the node processes, so a
+paused game does not run a wave on without you (which is why it is not
+`Time.get_ticks_msec()`).
+
+**What moved.** `takes_hours` -> `takes_seconds` (4.5), `answers_after` ->
+`answers_after_seconds` (1.6, the longer beat the author asked for). The broker
+no longer holds a `Clock` at all and the wire is gone from `exchanges.tscn`.
+
+**Standing count: 36 claims, all green,** and the one that pins this decision is
+new: *a whole day of world time passes and the wave is unmoved (0 h -> 24 h).*
+**The first break written for it was vacuous** — it stopped the exchange expiring
+at all, which passes for the wrong reason. The break that means something puts
+the length back on the sun (`is_over(clock.hours_elapsed)`), and that one goes
+red. Worth knowing: for a claim of the form *X does not depend on Y*, the only
+honest break is **making it depend on Y**, never disabling X.
+
+
+## W12 — Regard: the first relational number, and what gates a gift
+
+**Built 2026-08-30.** Give works. What made it possible is not give.
+
+**The blocker.** Give and ask were authored `offered = "only once talking"`, which
+was fine while an exchange stood open indefinitely and stopped working the moment
+W11 made a greeting a thing that ENDS: they flashed for four and a half seconds
+and vanished. **The gate had to move off "is a conversation live right now" and
+onto "have we met."**
+
+**And that is the greeting's missing outcome**, so the two problems answer each
+other. A greeting now leaves a record, and the record is what a gift needs.
+
+**`acquaintance.gd` — a node under the person doing the thinking, naming the
+person thought about.** Exactly `Obligation`'s shape, under exactly its carve-out
+(FR101 stored intent): nothing about where a man stands, what he carries, or what
+the town has done says whether he has met you.
+
+- **ONE NODE PER SIDE, NOT ONE PER PAIR, and that is the whole design.** Two
+  people do not have to agree about each other. A shared edge would make regard
+  symmetric by construction and quietly delete *illegible authorship* pointed at
+  one other person.
+- **Not a central graph**, for the reason `Town.find_people_at` loops people
+  rather than Places keeping occupancy lists: one copy of the truth cannot
+  contradict another. The graph is DERIVED by walking people.
+- **`have_met` is held apart from `warmth`.** A stranger has no node and reads
+  0.0; a man who has been greeted and thinks nothing much of you also reads 0.0.
+  Those are different facts and one number cannot carry both, so there are two
+  gates (`needs_to_have_met`, `needs_regard_above`) and 0 never means both.
+- **A change of ZERO still makes the record.** Meeting somebody is a fact even
+  when it leaves you cold.
+
+**THIS IS THE FIRST RELATIONAL NUMBER IN THE CODEBASE.** W9 names the absence as
+the thing blocking an errand from ever winning a ballot on its merits — *"every
+gap today is physiological or stock; none is relational, none exists because
+somebody asked."* **It does not solve W9 and nothing scores on warmth yet.** What
+changed is that the number an eventual relational gap would be measured against
+now exists.
+
+**Two regard numbers per exchange, not one**, named for whose book the change is
+written in. **An exchange is not symmetric:** a greeting is (both men now know
+each other, +8/+8), a gift emphatically is not (+2 to the giver, +15 to the
+receiver). One shared number would make every exchange in the game reciprocal by
+construction.
+
+**Give itself is small, because the substrate was already there.** The transfer is
+`Inventory.hand_over` — the ONE transfer path — called from `settle()`, never from
+the step: the step is what the giver's body looks like, and a transfer in a step
+runs every tick he wears the clip, which is a man emptying his pockets for as long
+as he holds a wave. A failed transfer returns before `super()`, so **no bread means
+no gratitude either**.
+
+**Standing count: 48 claims, all green.** Seven new ones, each watched go red, and
+two of them are worth keeping for how cleanly they separate:
+
+- transfer that MOVES NOTHING -> only "the loaf changed hands" fails (9 -> 9)
+- transfer that CREATES instead of moving -> only conservation fails (9 -> 10)
+
+That is the whole argument for `add` creates / `take` destroys / `hand_over` moves
+being three doors instead of one, restated as a measurement.
+
+**AND THE OPEN EDITOR ATE A SCENE BLOCK AGAIN.** The player's six loaves,
+hand-written into `exchanges.tscn`, were silently gone — the trap already recorded
+at the end of this file, second occurrence this session. The check now **stocks the
+inventory it is about to measure** rather than reading it off the scene, because a
+conservation claim that quietly measures 0 -> 0 and calls itself satisfied is worse
+than no claim.
+
+**Still open:** ask is authored and gated the same way but its outcome
+(`work_the_ground`) runs straight into W9 — a flat score with no gap, which is
+W9's Option A, the trap. And nothing yet reads `warmth` for anything: the obvious
+first reader is the greeting's own reply, picking `greet_warm` over `greet` above
+some threshold, which is Decision 36's shape exactly (intensity is a stat, the
+clip is the translation).
+
+## W12a — A reveal offers nothing, and `offered` is deleted
+
+**Author's observation, 2026-08-30, from watching it:** *"ask is already shown as
+an option while the greeting is still taking place and not after?"*
+
+Half of that was a stale build — ask was still authored `offered = "only once
+talking"`, which W12 had just replaced. But the other half is real and survives
+the fix: **verbs were on the arc while the wave was still playing.**
+
+**W10 draws one hard line under the reveal** and this crosses it:
+
+> *"THE ONE LINE A REVEAL MAY NOT CROSS: it must not be interactive. The moment
+> the player can do something during the animation that changes the outcome, the
+> answer was not decided at the ask."*
+
+`settle()` runs at the ask, so regard lands the instant you press E — by design,
+and W10's whole reveal argument depends on it. What must not follow is an arc
+full of pressable rows over a man mid-wave.
+
+**So nothing is offered at all while an exchange stands**, asked of the broker
+rather than worked out in the UI, so `offer()` and the arc give one answer to one
+question. **`offer()` no longer reuses a standing exchange either** — one exchange
+is one action, opened and run to its end.
+
+**AND THAT DELETES `offered`.** Its three cases collapse: with nothing offerable
+during an exchange, "only to open" and "either" say the same thing, and "only once
+talking" is unreachable. It died twice — first when W11 made a greeting a thing
+that ENDS, then this. `is_available_toward` lost its `exchange` argument with it,
+which had become a parameter that could only ever be null.
+
+**When a conversation can PERSIST** rather than always running its course, the
+distinction that matters will be *mid-reveal* (nothing offered) versus *standing,
+awaiting your move* (verbs offered). That is not what the enum said, so it is
+deleted rather than kept warm for a case it does not fit.
+
+**Standing count: 56 claims, all green.** Four rounds of breaking were needed to
+get there, and three of the failures are the interesting part:
+
+- **`greet.gd`'s call to the base gate was unassertable.** It overrides
+  `is_available_toward`, which replaces the base entirely — so that one line is
+  all that stands between "a greeting requires nothing" and "a greeting ignores
+  whatever it is authored to require". Greeting authors no requirement, so nothing
+  in normal play could witness it. This is CLAUDE.md's standing trap verbatim: *a
+  claim about a rule with no branch must be asserted in the state the missing
+  branch would have changed.* The check now puts the requirement on, asserts the
+  refusal, and takes it straight back off.
+- **Half of `_both_are_free_to_talk` was unassertable too**, for a different
+  reason: every existing state had BOTH men in the same exchange, where the
+  actor's half alone passes it. Witnessing the target's half needed a state the
+  workbench had never produced — the player free and the man he is looking at busy
+  with somebody else. **Which made it the first NPC-to-NPC exchange in this
+  folder**, and W3 says that is most of what exchanges are for.
+- **The broker's refusal needed its own claim.** An arc that declines to draw a
+  row while `offer()` would still have honoured it is two answers to one question,
+  and the day something other than the arc calls the broker it gets the other one.
+
+**Third time the open editor ate the player's six loaves out of
+`exchanges.tscn`.** See the traps below. It is now a standing cost of leaving the
+4.4 editor open on this project while hand-editing scenes.
+
 ---
 
 ## Two engineering traps found the hard way
@@ -452,7 +762,7 @@ probe whether or not any of this workbench survives.
 
 ## When we fold this back
 
-Walk W1–W10 in order and rule on each. **W8 is already fixed and needs no ruling** — it was a bug, the fix is in `game/`, and the probe is unmoved at 64 claims / 14898 checks. W1 is the only one that genuinely
+Walk W1–W12a in order and rule on each. **W8 is already fixed and needs no ruling** — it was a bug, the fix is in `game/`, and the probe is unmoved at 64 claims / 14898 checks. W1 is the only one that genuinely
 contradicts a stated design bet, so it is the one that has to be argued rather
 than merged — and if it survives, the boss plan's "nobody has to build refusal"
 paragraph needs rewriting, not just supplementing.

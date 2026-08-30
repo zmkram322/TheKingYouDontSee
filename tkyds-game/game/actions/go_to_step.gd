@@ -72,7 +72,32 @@ func walk_toward(person: Person, place: Place, hours: float) -> bool:
 		push_warning("%s was told to walk to nowhere" % person.person_name)
 		return false
 
-	var to_there := place.global_position - person.global_position
+	if not walk_toward_point(person, place.global_position, hours):
+		return false
+	person.current_place = place
+	return true
+
+
+# The movement on its own, with no opinion about WHY he is going there. Split out
+# of walk_toward above so that walking toward something that is not a Place — a
+# man, a cart, a spot in a field — does not need a second copy of the one piece
+# of code that moves a body. walk_toward is this plus the place bookkeeping, and
+# behaves exactly as it did before the split.
+#
+# ARRIVAL IS AN OVERSHOOT CLAMP AND NEVER A RADIUS. The question asked is "would
+# this tick's step take me there or past it?" — and if it would, he is put ON the
+# point exactly. There is no "within N metres" constant here, so there is nothing
+# to tune and nothing that lands differently at a different tick rate. A radius
+# would flicker at its own edge and would make arrival depend on the frame rate;
+# that model was tried and reverted on 2026-08-08 (Decision 10). A caller that
+# wants to stop SHORT of something asks for a point that is short of it, which
+# keeps the clamp doing the work and introduces no threshold.
+#
+# DEPARTURE WRITES NULL, and it is not bookkeeping — see walk_toward's header.
+# It belongs here rather than up there because it is true of any journey: the
+# moment he is on the road he is at no place, whether or not he is headed for one.
+func walk_toward_point(person: Person, point: Vector3, hours: float) -> bool:
+	var to_there := point - person.global_position
 	var gap := to_there.length()
 	var step := person.get_travel_speed() * hours
 
@@ -82,8 +107,7 @@ func walk_toward(person: Person, place: Place, hours: float) -> bool:
 	# the zero-gap case: a man already on the spot arrives without dividing by
 	# nothing.
 	if step >= gap:
-		person.global_position = place.global_position
-		person.current_place = place
+		person.global_position = point
 		return true
 
 	# Still on the road, and therefore at no place.

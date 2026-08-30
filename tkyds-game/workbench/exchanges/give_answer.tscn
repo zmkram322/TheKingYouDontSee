@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" uid="uid://dhmf5sva5x8l7" path="res://game/action.gd" id="1_action"]
+[ext_resource type="Script" uid="uid://bf3x1qphjslch" path="res://game/action_step.gd" id="2_step"]
+
+[node name="GiveAnswer" type="Node"]
+script = ExtResource("1_action")
+label = "takes it"
+
+[node name="Take it" type="Node" parent="."]
+script = ExtResource("2_step")
+clip = &"nod"

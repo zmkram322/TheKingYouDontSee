@@ -1,13 +1,19 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://workbench/exchanges/greet.gd" id="1_greet"]
 [ext_resource type="Script" path="res://workbench/exchanges/greet_step.gd" id="2_greet_step"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/greet_answer.tscn" id="3_answer"]
 
 [node name="Greet" type="Node"]
 script = ExtResource("1_greet")
 label = "greet"
 swatch = Color(0.62, 0.79, 0.55, 1)
 shortcut = "E"
+takes_seconds = 4.5
+answered_with = ExtResource("3_answer")
+answers_after_seconds = 1.6
+initiator_regard_change = 8.0
+recipient_regard_change = 8.0
 
 [node name="Raise a hand" type="Node" parent="."]
 script = ExtResource("2_greet_step")

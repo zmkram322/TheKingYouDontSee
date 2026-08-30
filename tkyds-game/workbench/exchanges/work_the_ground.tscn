@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/work_the_ground.gd" id="1_errand"]
+[ext_resource type="Script" uid="uid://bf3x1qphjslch" path="res://game/action_step.gd" id="2_step"]
+
+[node name="WorkTheGround" type="Node"]
+script = ExtResource("1_errand")
+label = "work the ground"
+pull = 75.0
+
+[node name="Bend to it" type="Node" parent="."]
+script = ExtResource("2_step")
+exertion = 1.6
+clip = &"work_field"

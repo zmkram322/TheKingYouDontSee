@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/give.gd" id="1_give"]
+[ext_resource type="Script" uid="uid://bf3x1qphjslch" path="res://game/action_step.gd" id="2_step"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/give_answer.tscn" id="3_answer"]
+
+[node name="Give" type="Node"]
+script = ExtResource("1_give")
+label = "give"
+swatch = Color(0.85, 0.72, 0.44, 1)
+shortcut = "G"
+takes_seconds = 3.5
+answered_with = ExtResource("3_answer")
+answers_after_seconds = 1.1
+needs_to_have_met = true
+initiator_regard_change = 2.0
+recipient_regard_change = 15.0
+gives_item = &"bread"
+gives_count = 1
+
+[node name="Hold it out" type="Node" parent="."]
+script = ExtResource("2_step")
+clip = &"hand_over"

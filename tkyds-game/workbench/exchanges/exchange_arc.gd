@@ -38,16 +38,18 @@ const ExchangeAction := preload("res://workbench/exchanges/exchange_action.gd")
 @export var spread_degrees := 78.0
 @export var lifts_above_head := 1.75
 
-# How long the greeter holds his gesture before dropping back to idle. Seconds,
-# REAL ones — this is presentation, and presentation runs on the frame clock.
-@export var gesture_seconds := 1.6
+# NO GESTURE TIMER LIVES HERE ANY MORE. There used to be a gesture_seconds in
+# REAL seconds that dropped the greeter back to idle, and it was a second number
+# racing the exchange's own length — at 60 s/day the 1.6 s timer beat a 1 world
+# hour exchange by nearly a second, so the wave died while both men were still
+# held. The exchange owns how long it runs and hands both of them back when it
+# ends (see exchange_broker.end). One number, read twice.
 
 var _eye: Camera3D
 var _actor: Person
 var _watching: Node
 var _rows: Array[Control] = []
 var _shown: Array = []
-var _gesture_left := 0.0
 
 
 func _ready() -> void:
@@ -62,8 +64,7 @@ func _ready() -> void:
 		push_warning("the exchange arc has no actor — there are no verbs to draw")
 
 
-func _process(delta: float) -> void:
-	_run_down_the_gesture(delta)
+func _process(_delta: float) -> void:
 	var target := _get_target()
 	if target == null or _eye == null or _actor == null:
 		_clear()
@@ -83,9 +84,24 @@ func _process(delta: float) -> void:
 # is_available_to is the shared one every author in the game already writes;
 # is_available_toward is the target half exchanges adds. Neither is skipped and
 # neither is folded into the other.
+#
+# AN EXCHANGE ALREADY UNDER WAY OFFERS NOTHING, AND THAT IS W10's ONE HARD LINE.
+# The reveal — the wave, the beat, the reply — is presentation over an answer that
+# was decided at the ask, and W10 is explicit about what may not happen during it:
+# *"it must not be interactive. The moment the player can do something during the
+# animation that changes the outcome, the answer was not decided at the ask."* An
+# arc full of pressable verbs over a man mid-wave is exactly that, and it is what
+# it looked like: greet him and his other verbs appeared before he had finished
+# waving back.
+#
+# ASKED OF THE BROKER, NOT WORKED OUT HERE. "Is he free to be spoken to" is the
+# same question begin() already refuses on, so there is one answer in one place
+# and the arc cannot offer a row that pressing would silently decline.
 func _get_open_exchanges(target: Person) -> Array:
 	var open: Array = []
 	if _actor.brain == null:
+		return open
+	if not _both_are_free_to_talk(target):
 		return open
 	for action in _actor.brain.get_known_actions():
 		var exchange := action as ExchangeAction
@@ -97,6 +113,17 @@ func _get_open_exchanges(target: Person) -> Array:
 			continue
 		open.append(exchange)
 	return open
+
+
+# Neither of them mid-anything. BOTH, not just the target: a man already talking
+# to somebody else cannot start a second conversation either, and drawing him an
+# arc while he is halfway through his own wave is the same lie pointed the other
+# way.
+func _both_are_free_to_talk(target: Person) -> bool:
+	if broker == null:
+		return false
+	return not broker.call(&"is_in_an_exchange", _actor) \
+		and not broker.call(&"is_in_an_exchange", target)
 
 
 # Null is a real answer and means "nobody" — the arc draws nothing, which is
@@ -217,36 +244,24 @@ func _begin(exchange: ExchangeAction, target: Person) -> void:
 	var brain: Node = _actor.brain
 	if brain != null and brain.has_method(&"choose_verb"):
 		brain.call(&"choose_verb", exchange)
-		_gesture_left = gesture_seconds
 
-	# THE INTERRUPT. Note what this file does NOT do: it does not hold anybody,
-	# and it does not know that being in an exchange stops a man thinking. It
-	# asks the broker to start a conversation; the pause is a CONSEQUENCE of
-	# that conversation existing, decided in exchange_population.gd. A UI that
-	# could freeze a brain directly would be a second way to suspend somebody,
-	# and a second way is a second place for a man to get stuck.
+	# THE INTERRUPT, AND THE RESULT, THROUGH ONE DOOR. Note what this file does
+	# NOT do: it does not hold anybody, it does not know that being in an exchange
+	# stops a man thinking, and — since the result seam landed — it does not settle
+	# anything either. It offers; the broker opens the conversation if one is not
+	# already standing and settles the action inside it.
+	#
+	# A UI that could freeze a brain directly would be a second way to suspend
+	# somebody, and a second way is a second place for a man to get stuck. A UI
+	# that could settle directly would be the same mistake pointed at the world
+	# instead of at the man.
 	if broker == null:
 		push_warning("the exchange arc has no broker — nothing can be started")
 		return
-	var started: Variant = broker.call(&"begin", _actor, target)
-	if started == null:
-		# Refused, and legitimately: he is already talking to somebody.
+	var standing: Variant = broker.call(&"offer", _actor, target, exchange)
+	if standing == null:
+		# Refused, and legitimately: one of them is already talking to somebody.
 		print("EXCHANGE — %s is already engaged" % target.person_name)
 		return
-	print("EXCHANGE — %s opened %s with %s" % [
+	print("EXCHANGE — %s %s with %s" % [
 		_actor.person_name, exchange.label, target.person_name])
-
-
-# Drops the gesture so he returns to idle rather than holding the last pose of
-# a LOOP_NONE clip for ever. The verb is a bid that expires, not a state.
-func _run_down_the_gesture(delta: float) -> void:
-	if _gesture_left <= 0.0:
-		return
-	_gesture_left -= delta
-	if _gesture_left > 0.0:
-		return
-	var brain: Node = null
-	if _actor != null:
-		brain = _actor.brain
-	if brain != null and brain.has_method(&"stop_doing_anything"):
-		brain.call(&"stop_doing_anything")

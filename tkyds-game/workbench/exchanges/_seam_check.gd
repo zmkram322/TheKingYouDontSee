@@ -26,6 +26,8 @@ extends SceneTree
 #      ticks itself. Otherwise Population._process advances everybody behind
 #      the measurement and the numbers below mean nothing.
 
+const Acquaintance := preload("res://workbench/exchanges/acquaintance.gd")
+
 var _bad := 0
 var _done := false
 var _scene: Node
@@ -72,6 +74,22 @@ func _process(_delta: float) -> bool:
 		if action.has_method(&"is_available_toward"):
 			exchanges += 1
 	_held("the player knows at least one exchange (found %d)" % exchanges, exchanges > 0)
+
+	# THE SCENE ITSELF, ASKED BEFORE THIS FILE TOUCHES ANYTHING. Give is gated on
+	# the giver having something to give, so a player authored with an empty sack
+	# means the verb never appears — and it appears nowhere, says nothing, and
+	# looks exactly like a broken gate.
+	#
+	# IT HAS HAPPENED FIVE TIMES. exchanges.tscn authors him six loaves, and an
+	# open Godot editor re-saves the scene from its own stale copy and drops the
+	# block every time (see the engineering traps at the end of DECISIONS.md).
+	# Every other claim in this file stocks what it measures, so not one of them
+	# could see it. This one deliberately does not.
+	var starts_with := 0
+	for item_name in player.get_inventory().get_item_names():
+		starts_with += player.get_inventory().get_count(item_name)
+	_held("the scene authors the player something to give (%d items) — if this is red, the editor ate it again"
+		% starts_with, starts_with > 0)
 
 	var before: float = npc.stats.get_stat("adenosine")
 	crowd.think_for_everyone(2.0)
@@ -198,6 +216,286 @@ func _process(_delta: float) -> bool:
 			npc.brain.current_action != guard)
 		npc.brain.current_action = null
 		guard.free()
+
+	# --- THE GREETING ITSELF: it turns them, it shows on both, it ends ----------
+	#
+	# Everything above proves the HOLD. None of it proves the exchange is a thing
+	# you can watch. These four are the wave.
+
+	var greet: Action = null
+	var give: Action = null
+	for action in player.brain.get_known_actions():
+		if action.scene_file_path == "res://workbench/exchanges/greet.tscn":
+			greet = action
+		if action.scene_file_path == "res://workbench/exchanges/give.tscn":
+			give = action
+	_held("the player carries a greeting", greet != null)
+	_held("and something to give", give != null)
+
+	# THE GATE, SHUT — asserted BEFORE anybody greets anybody, which is the only
+	# point in this file where these two are still strangers. Everything above
+	# opened exchanges through broker.begin, which does not settle, so no regard
+	# has ever been recorded.
+	if give != null:
+		_held("they have not met", not Acquaintance.have_met(player, npc))
+		_held("so give is shut on a stranger, even standing right in front of him",
+			not give.is_available_toward(player, npc))
+
+		# AND GREETING HONOURS THE SAME GATE, asserted in a state that does not
+		# otherwise exist. greet.gd OVERRIDES is_available_toward, which replaces
+		# the base entirely, so its call to is_regarded_enough is the one line
+		# standing between "a greeting requires nothing" and "a greeting ignores
+		# whatever it was authored to require". Greeting authors no requirement,
+		# so nothing in normal play could ever witness that line — CLAIM ABOUT A
+		# RULE WITH NO BRANCH, ASSERTED IN THE STATE THE MISSING BRANCH WOULD HAVE
+		# CHANGED. The requirement is put on and taken straight back off.
+		var greeting: Object = greet
+		greeting.set(&"needs_to_have_met", true)
+		_held("greeting re-asks the base gate rather than replacing it",
+			not greet.is_available_toward(player, npc))
+		greeting.set(&"needs_to_have_met", false)
+		_held("and is open again once the requirement is lifted",
+			greet.is_available_toward(player, npc))
+
+	if greet != null and clock != null:
+		# Stood apart and pointed anywhere, so "they face each other" cannot pass
+		# by having started that way. Both are turned to a third direction first.
+		npc.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
+		var npc_body: Node3D = npc.get_node(^"Body")
+		var player_body: Node3D = player.get_node(^"Body")
+		npc_body.rotation.y = 0.0
+		player_body.rotation.y = 0.0
+
+		# DRIVEN IN REAL SECONDS, by hand. broker.seconds_running is the frame
+		# clock's twin of Clock.hours_elapsed and is public for exactly this: an
+		# exchange's length is presentation, so waiting for it would mean actually
+		# waiting. The sun is deliberately NOT advanced anywhere below — that is
+		# the claim, that a wave does not care what the day length is.
+		var opened_at: float = broker.seconds_running
+		var wave: Node = broker.offer(player, npc, greet)
+		_held("the greeting opened an exchange", wave != null)
+		_held("it took its length from the action: %.2f s" % wave.runs_for_seconds,
+			is_equal_approx(wave.runs_for_seconds, greet.takes_seconds))
+
+		# TWO SIDES, AND THE SECOND ONE HAS NOT ARRIVED YET. The greeter waves; the
+		# greeted man STANDS. Asserted as "cleared" rather than "not the greeting",
+		# because the failure this replaced was him wearing the clip he was
+		# stopped in, which is also not the greeting.
+		_held("the greeter waves and the greeted man stands and listens",
+			player.brain.current_action == greet and npc.brain.current_action == null)
+		_held("nobody has answered on the opening frame", wave.answering == null)
+
+		# THE REVEAL IS NOT INTERACTIVE — W10's one hard line. Give's own gate is
+		# open by now (settle ran at the ask, so they have met), and it must STILL
+		# not be on the arc, because he is mid-wave. Asserted against the ARC
+		# rather than against the gate for exactly that reason: the gate says yes
+		# and the right answer is still nothing.
+		_held("mid-wave the gate itself is open", give.is_available_toward(player, npc))
+		_held("but the arc offers nothing at all while the wave is playing",
+			arc._get_open_exchanges(npc).is_empty())
+
+		# THE ACTOR'S OWN HALF, which the line above cannot witness — the man he
+		# is waving at is busy either way, so a check that asked only about the
+		# TARGET would pass it. Pointed at a third man who is standing idle, the
+		# arc must still draw nothing, because the GREETER is the one mid-wave.
+		_held("nor over a bystander, because the greeter himself is mid-wave",
+			arc._get_open_exchanges(bystander).is_empty())
+
+		# AND THE DOOR ITSELF REFUSES, not merely the drawing of it. An arc that
+		# declined to draw a row while offer() would still have honoured it is two
+		# answers to one question, and the day something other than this arc calls
+		# the broker — an NPC lord dispatching a steward — it would get the other
+		# one.
+		_held("and the broker refuses a second action inside a standing exchange",
+			broker.offer(player, npc, give) == null)
+
+		# He is to the player's +X, so the player turns toward +X (atan2(1,0) =
+		# +PI/2) and he turns back toward -X. Asserted as real angles rather than
+		# "it changed", because both started at 0.0 and either one drifting would
+		# otherwise read as success.
+		wave.face_each_other()
+		_held("they turn to face each other: greeter %.2f rad, greeted %.2f rad"
+			% [player_body.rotation.y, npc_body.rotation.y],
+			is_equal_approx(player_body.rotation.y, PI * 0.5)
+			and is_equal_approx(npc_body.rotation.y, -PI * 0.5))
+
+		# THE BEAT. Not yet at half of answers_after, and landed by the time the
+		# exchange is half over — both directions, because a reply that had simply
+		# always been there would pass the second on its own.
+		broker._process(greet.answers_after_seconds * 0.5)
+		_held("before the beat, still no answer", wave.answering == null)
+
+		broker._process(greet.answers_after_seconds)
+		# HE IS DOING IT, not merely that a reply node was made. The first cut
+		# asserted only `answering != null`, which begin_answering sets whether or
+		# not anybody was ever handed it — so cutting the man out of his own reply
+		# left this green. Vacuous in the usual way: no state in which it could
+		# have gone the other way.
+		_held("after the beat he answers",
+			wave.answering != null and npc.brain.current_action == wave.answering)
+		_held("and he answers in his own gesture, not the one he was greeted with",
+			wave.answering != null and npc.brain.current_action == wave.answering
+			and wave.answering.step.get_clip_for(npc) != greet.step.get_clip_for(player))
+		_held("half way through, they are still at it", crowd.is_held(npc))
+
+		# AND THE SUN IS IRRELEVANT TO ALL OF IT. A whole world day passes here and
+		# the wave neither ends nor hurries — which is the entire point of moving
+		# these two numbers off world hours. Put them back on hours and this is the
+		# line that goes red.
+		var sun_before: float = clock.hours_elapsed
+		clock.advance(24.0)
+		_held("a whole day of world time passes and the wave is unmoved: %.0f h -> %.0f h"
+			% [sun_before, clock.hours_elapsed], crowd.is_held(npc))
+
+		broker._process(greet.takes_seconds)
+		_held("the wave runs its course and the exchange ends itself after %.2f s"
+			% (broker.seconds_running - opened_at), not crowd.is_held(npc))
+		_held("and both are handed back what they were doing, which is nothing",
+			player.brain.current_action == null and npc.brain.current_action == null)
+
+	# --- WHAT THE GREETING LEFT BEHIND, AND WHAT IT UNLOCKS --------------------
+	#
+	# The first relational number in the codebase. Asserted on BOTH SIDES
+	# separately, because one node per side is the whole design — two people do
+	# not have to agree about each other, and a shared edge would make that
+	# impossible by construction rather than merely untrue today.
+
+	if greet != null and give != null:
+		_held("the greeting left a record on the greeter: %.1f"
+			% Acquaintance.get_warmth(player, npc),
+			is_equal_approx(Acquaintance.get_warmth(player, npc), greet.initiator_regard_change))
+		_held("and its own record on the greeted man: %.1f"
+			% Acquaintance.get_warmth(npc, player),
+			is_equal_approx(Acquaintance.get_warmth(npc, player), greet.recipient_regard_change))
+		_held("a bystander is a stranger to both of them still",
+			not Acquaintance.have_met(player, bystander)
+			and not Acquaintance.have_met(npc, bystander))
+
+		# THE TARGET'S OWN HALF, and the only state in this file that can witness
+		# it: the player FREE and the man he is looking at busy with somebody
+		# else. Every other check has both of them in the same exchange, where the
+		# actor half alone would pass it — so without these two lines, half of
+		# _both_are_free_to_talk is unasserted.
+		#
+		# IT IS ALSO THE FIRST NPC-TO-NPC EXCHANGE IN THE WORKBENCH. No player
+		# anywhere in it, which W3 says is most of what exchanges are for.
+		var elsewhere: Node = broker.begin(npc, bystander)
+		_held("two NPCs hold a conversation with no player in it", elsewhere != null)
+		_held("and you cannot cut into it — nothing is offered over a man already talking",
+			arc._get_open_exchanges(npc).is_empty())
+		broker.end(elsewhere)
+
+		# THE GATE, OPEN. Same call, same two men, same standing — the ONLY thing
+		# that changed is that they have now met.
+		_held("having met, give is on the table", give.is_available_toward(player, npc))
+
+		# --- AND THE GOODS ACTUALLY MOVE ---------------------------------------
+		#
+		# CONSERVATION, not just "he got one". add creates and take destroys; only
+		# hand_over moves, and the whole reason that is the one transfer path is
+		# so a check like this means something. A world total that changed here
+		# would mean a second door had been cut.
+		# STOCKED HERE RATHER THAN READ OFF THE SCENE, and that is not laziness.
+		# exchanges.tscn authors the player six loaves, and an open Godot editor
+		# has silently eaten that block out of the file once already (see the
+		# engineering traps at the end of DECISIONS.md). A transfer check that
+		# quietly measures 0 -> 0 and calls conservation satisfied is worse than
+		# no check, so the quantity under test is put there by the test.
+		var loaf: StringName = give.gives_item
+		player.get_inventory().add(loaf, 3)
+		var giver_before: int = player.get_inventory().get_count(loaf)
+		var taker_before: int = npc.get_inventory().get_count(loaf)
+		var handed: Node = broker.offer(player, npc, give)
+		_held("the gift opened an exchange", handed != null)
+
+		var giver_after: int = player.get_inventory().get_count(loaf)
+		var taker_after: int = npc.get_inventory().get_count(loaf)
+		_held("the loaf changed hands: giver %d -> %d, taker %d -> %d"
+			% [giver_before, giver_after, taker_before, taker_after],
+			giver_after == giver_before - give.gives_count
+			and taker_after == taker_before + give.gives_count)
+		_held("and the world is neither richer nor poorer for it: %d -> %d"
+			% [giver_before + taker_before, giver_after + taker_after],
+			giver_after + taker_after == giver_before + taker_before)
+
+		# THE GIFT IS NOT SYMMETRIC, which is why there are two numbers and not
+		# one. Being handed bread moves the receiver a great deal more than it
+		# moves the giver.
+		_held("it moved them by different amounts: giver %.1f, receiver %.1f"
+			% [Acquaintance.get_warmth(player, npc), Acquaintance.get_warmth(npc, player)],
+			not is_equal_approx(Acquaintance.get_warmth(player, npc),
+				Acquaintance.get_warmth(npc, player)))
+
+		broker.end(handed)
+
+		# AND A MAN WITH AN EMPTY SACK CANNOT GIVE. The giver's own half of the
+		# gate, which is is_available_to and not the regard half — asserted by
+		# emptying him rather than by reading the code, because the two gates fail
+		# for different reasons and only one of them is about the other man.
+		player.get_inventory().take(loaf, player.get_inventory().get_count(loaf))
+		_held("emptied out, he has nothing to give though he still knows the man",
+			not give.is_available_to(player) and Acquaintance.have_met(player, npc))
+
+		# --- ASK, ALL THE WAY THROUGH TO HIM DOING IT --------------------------
+		#
+		# The whole path in one go, because the pieces passing separately is what
+		# let "he never actually works the ground" hide: the verb appears, the
+		# errand lands, AND he is seen doing it are three different claims and
+		# only the third is what anybody watching cares about.
+		var ask: Action = null
+		for action in player.brain.get_known_actions():
+			if action.scene_file_path == "res://workbench/exchanges/ask.tscn":
+				ask = action
+		_held("the player carries an ask", ask != null)
+
+		if ask != null:
+			var errand_scene: PackedScene = ask.lands_on_recipient
+			_held("having met, ask is drawn on the arc",
+				arc._get_open_exchanges(npc).has(ask))
+			_held("and he does not already know the errand",
+				ask.find_landed(errand_scene, npc) == null)
+
+			var asked: Node = broker.offer(player, npc, ask)
+			_held("the ask opened an exchange", asked != null)
+			var errand: Action = ask.find_landed(errand_scene, npc)
+			_held("the errand landed in his repertoire", errand != null)
+
+			# ASKED TWICE, LANDED ONCE. An Action holds no per-instance progress,
+			# so a second copy is indistinguishable from the first and does
+			# nothing but lengthen the ballot.
+			broker.end(asked)
+			broker.offer(player, npc, ask)
+			var copies := 0
+			for action in npc.brain.get_known_actions():
+				if action.scene_file_path == errand_scene.resource_path:
+					copies += 1
+			_held("asked twice, it landed once (found %d)" % copies, copies == 1)
+			broker.end_for(npc)
+
+			# AND NOW THE ONE THAT MATTERS. Released, does he actually do it?
+			#
+			# THE SUN IS SET DELIBERATELY, and that is not the check cheating — it
+			# is the check being honest about W9. work_the_ground scores a FLAT 75
+			# with no gap (W9's Option A, the trap), against StayUp's
+			# 67.3 + 20 x sun. So he works at night and stands about at noon, and
+			# which one you saw depends on what time it was when you pressed R.
+			# Both are asserted, because the failure mode nobody would notice is the
+			# errand never winning at all.
+			clock.hours_elapsed = 0.0
+			npc.stats.set_stat(&"adenosine", 0.0)
+			npc.stats.set_stat(&"hunger", 0.0)
+			npc.stats.set_stat(&"social", 0.0)
+			crowd.think_for_everyone(0.01)
+			_held("released at midnight he sets to work: he is %s"
+				% npc.brain.describe_current_action(),
+				npc.brain.current_action == errand)
+
+			clock.hours_elapsed = 12.0
+			crowd.think_for_everyone(0.01)
+			_held("and at noon being up outbids it — outbid, never barred: he is %s"
+				% npc.brain.describe_current_action(),
+				npc.brain.current_action != errand
+				and npc.brain.get_open_actions().has(errand))
 
 	print("")
 	print("seam check: all held." if _bad == 0 else "seam check: %d FAILED." % _bad)

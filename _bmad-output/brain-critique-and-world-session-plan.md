@@ -1,4 +1,4 @@
-# Session Plan — Critique the Brain, then Build a World
+n# Session Plan — Critique the Brain, then Build a World
 
 > **CLOSED 2026-08-03. This file is history — do not work from it.**
 >

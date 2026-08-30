@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" uid="uid://01hghccvnq2w" path="res://workbench/exchanges/exchange_action.gd" id="1_exchange"]
+[ext_resource type="Script" uid="uid://bf3x1qphjslch" path="res://game/action_step.gd" id="2_step"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/work_the_ground.tscn" id="3_errand"]
+
+[node name="Ask" type="Node"]
+script = ExtResource("1_exchange")
+label = "ask"
+swatch = Color(0.55, 0.66, 0.85, 1)
+shortcut = "R"
+takes_seconds = 3.5
+answers_after_seconds = 1.1
+needs_to_have_met = true
+lands_on_recipient = ExtResource("3_errand")
+
+[node name="Point at it" type="Node" parent="."]
+script = ExtResource("2_step")
+clip = &"point"
