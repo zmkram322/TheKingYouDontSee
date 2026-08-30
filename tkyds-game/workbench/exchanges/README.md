@@ -19,6 +19,17 @@ probe loads.
 | Space | jump — one shove on the press; holding it does nothing |
 | Mouse | look; pitch clamped to −60°..30° |
 | Escape | release the cursor. Click anywhere to take it back |
+| **T** | **take a loaf** — look at the bread basket and stand next to it |
+| **E** | **greet** — up to 14 m. The way in: everything else needs the record it leaves |
+| **G** | **give** a loaf — up to 2.8 m, and only to somebody you have greeted |
+| **R** | **ask** him to work the ground — up to 4 m |
+| **B** | **beckon** — 6 m to 30 m. NOT offered up close; it is for calling across a field |
+| **F** | **come with me** — up to 14 m, and only if HE thinks well of YOU (over 20) |
+
+**The ladder, in the order you will meet it:** take a loaf from the basket, walk
+up to a man and greet him (+8 each way), give him the loaf (+15 to him, +2 to
+you) — and now that he regards you at 23, **follow appears**, which it could not
+before. Beckon needs only that you have met, and needs you to be standing back.
 
 ## The three warnings on startup are correct
 

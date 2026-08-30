@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/take_from.gd" id="1_take"]
+[ext_resource type="Script" uid="uid://bf3x1qphjslch" path="res://game/action_step.gd" id="2_step"]
+
+[node name="TakeBread" type="Node"]
+script = ExtResource("1_take")
+label = "take a loaf"
+swatch = Color(0.9, 0.83, 0.55, 1)
+shortcut = "T"
+reaches_within = 2.6
+takes_item = &"bread"
+takes_count = 1
+
+[node name="Reach in" type="Node" parent="."]
+script = ExtResource("2_step")
+clip = &"hand_over"

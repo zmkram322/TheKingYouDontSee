@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/bread_basket.gd" id="1_basket"]
+[ext_resource type="Script" uid="uid://4xapbervxfk4" path="res://game/inventory.gd" id="2_inventory"]
+
+[sub_resource type="CylinderMesh" id="Mesh_basket"]
+top_radius = 0.42
+bottom_radius = 0.28
+height = 0.36
+
+[sub_resource type="StandardMaterial3D" id="Material_basket"]
+albedo_color = Color(0.66, 0.47, 0.24, 1)
+
+[node name="BreadBasket" type="Node3D"]
+script = ExtResource("1_basket")
+
+[node name="Weave" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+mesh = SubResource("Mesh_basket")
+surface_material_override/0 = SubResource("Material_basket")
+
+[node name="Inventory" type="Node" parent="."]
+script = ExtResource("2_inventory")
+items = {
+&"bread": 24
+}

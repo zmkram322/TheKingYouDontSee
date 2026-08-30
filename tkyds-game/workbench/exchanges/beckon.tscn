@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/summon.gd" id="1_summon"]
+[ext_resource type="Script" uid="uid://bf3x1qphjslch" path="res://game/action_step.gd" id="2_step"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/come_here.tscn" id="3_lands"]
+
+[node name="Beckon" type="Node"]
+script = ExtResource("1_summon")
+label = "beckon"
+swatch = Color(0.8, 0.62, 0.72, 1)
+shortcut = "B"
+reaches_within = 30.0
+reaches_beyond = 6.0
+takes_seconds = 2.5
+answers_after_seconds = 0.9
+needs_to_have_met = true
+initiator_regard_change = 0.0
+recipient_regard_change = 0.0
+lands_on_recipient = ExtResource("3_lands")
+
+[node name="Wave him over" type="Node" parent="."]
+script = ExtResource("2_step")
+clip = &"beckon"

@@ -9,6 +9,7 @@ script = ExtResource("1_exchange")
 label = "ask"
 swatch = Color(0.55, 0.66, 0.85, 1)
 shortcut = "R"
+reaches_within = 4.0
 takes_seconds = 3.5
 answers_after_seconds = 1.1
 needs_to_have_met = true

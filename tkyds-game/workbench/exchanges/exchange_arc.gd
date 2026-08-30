@@ -25,6 +25,7 @@ extends CanvasLayer
 # resolve at parse time. Casting each candidate through it is also what
 # separates an exchange from an ordinary verb — a plain Action casts to null
 # and falls out, with nothing asking what any of them are called.
+const AimedAction := preload("res://workbench/exchanges/aimed_action.gd")
 const ExchangeAction := preload("res://workbench/exchanges/exchange_action.gd")
 
 @export var watching: Node              # the LookingAt node
@@ -97,21 +98,34 @@ func _process(_delta: float) -> void:
 # ASKED OF THE BROKER, NOT WORKED OUT HERE. "Is he free to be spoken to" is the
 # same question begin() already refuses on, so there is one answer in one place
 # and the arc cannot offer a row that pressing would silently decline.
-func _get_open_exchanges(target: Person) -> Array:
+func _get_open_exchanges(target: Node3D) -> Array:
 	var open: Array = []
 	if _actor.brain == null:
 		return open
 	if not _both_are_free_to_talk(target):
 		return open
 	for action in _actor.brain.get_known_actions():
-		var exchange := action as ExchangeAction
-		if exchange == null:
+		# AimedAction, NOT ExchangeAction, and that one word is the whole
+		# generalisation: the arc draws what can be aimed at whatever you are
+		# looking at, and an exchange is one KIND of that. A verb aimed at a
+		# basket and a verb aimed at a man now sit on the same arc with no branch
+		# anywhere in this file — and each one carries its own reach band, which
+		# is what lets hailing reach across a field while handing bread over does
+		# not.
+		var aimed := action as AimedAction
+		if aimed == null:
 			continue
-		if not exchange.is_available_to(_actor):
+		if not aimed.is_available_to(_actor):
 			continue
-		if not exchange.is_available_toward(_actor, target):
+		if not aimed.is_available_toward(_actor, target):
 			continue
-		open.append(exchange)
+		# The one wire an exchange cannot get for itself: an Action instanced
+		# under a Brain has no path to a scene-level node. Set here, every frame,
+		# rather than in _ready — the arc is the only thing that knows both.
+		var exchange := aimed as ExchangeAction
+		if exchange != null:
+			exchange.broker = broker
+		open.append(aimed)
 	return open
 
 
@@ -119,20 +133,27 @@ func _get_open_exchanges(target: Person) -> Array:
 # to somebody else cannot start a second conversation either, and drawing him an
 # arc while he is halfway through his own wave is the same lie pointed the other
 # way.
-func _both_are_free_to_talk(target: Person) -> bool:
+func _both_are_free_to_talk(target: Node3D) -> bool:
 	if broker == null:
 		return false
-	return not broker.call(&"is_in_an_exchange", _actor) \
-		and not broker.call(&"is_in_an_exchange", target)
+	if broker.call(&"is_in_an_exchange", _actor):
+		return false
+	# Only a PERSON can be mid-conversation. A basket is never busy, and asking
+	# the broker about one would be asking a question with no meaning rather than
+	# one with a false answer.
+	var man := target as Person
+	if man == null:
+		return true
+	return not broker.call(&"is_in_an_exchange", man)
 
 
 # Null is a real answer and means "nobody" — the arc draws nothing, which is
 # the honest picture rather than a stale target left up from last frame.
-func _get_target() -> Person:
+func _get_target() -> Node3D:
 	if _watching == null or not _watching.has_method(&"get_looked_at"):
 		return null
 	var found: Variant = _watching.call(&"get_looked_at")
-	return found as Person
+	return found as Node3D
 
 
 func _rebuild(open: Array) -> void:
@@ -145,7 +166,7 @@ func _rebuild(open: Array) -> void:
 # One row, built entirely out of what the Action carries. The icon is used if
 # somebody authored one, and a coloured disc stands in until somebody does —
 # neither branch asks what the verb is.
-func _draw_one(exchange: ExchangeAction) -> Control:
+func _draw_one(exchange: AimedAction) -> Control:
 	var disc := Panel.new()
 	disc.custom_minimum_size = Vector2(46, 46)
 	disc.size = Vector2(46, 46)
@@ -215,10 +236,10 @@ func _clear() -> void:
 	_shown = []
 
 
-# THE INTERRUPT IS FIRED HERE. Two things happen and they are deliberately
-# separate: the greeter is handed a verb through PlayerBrain's ordinary
-# choose_verb — a BID, exactly as Decision 33 says, never an override — and the
-# man being addressed is held. Nothing else in the game knows an exchange began.
+# PRESSING ONE. The arc reaches the verb only through perform() — it does not
+# know what an exchange is, what a basket is, or which of the two it just fired.
+# That is the payoff of the AimedAction split: adding a verb aimed at a door, a
+# cart or a barrel is a scene, not a change to this file.
 func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
@@ -226,42 +247,37 @@ func _unhandled_input(event: InputEvent) -> void:
 	var target := _get_target()
 	if target == null:
 		return
-	for exchange in _shown:
-		var typed := exchange as ExchangeAction
-		if typed == null or typed.shortcut.is_empty():
+	for row in _shown:
+		var aimed := row as AimedAction
+		if aimed == null or aimed.shortcut.is_empty():
 			continue
-		if key.keycode != OS.find_keycode_from_string(typed.shortcut):
+		if key.keycode != OS.find_keycode_from_string(aimed.shortcut):
 			continue
-		_begin(typed, target)
+		_fire(aimed, target)
 		get_viewport().set_input_as_handled()
 		return
 
 
-func _begin(exchange: ExchangeAction, target: Person) -> void:
-	# Called rather than invoked directly: choose_verb lives on PlayerBrain and
-	# _actor.brain is typed Brain, so a static call would not resolve. call()
-	# keeps this file honest that it is talking to a fork.
+func _fire(aimed: AimedAction, target: Node3D) -> void:
+	# The bid first. Decision 33: a command is a bid, never an override —
+	# choose_verb hands a candidate to the ballot and nothing more. When an
+	# exchange opens, the broker overwrites current_action for both men a moment
+	# later (_start_performing); for a take there is no exchange and the bid is all
+	# there is, which is exactly what makes him reach out for the loaf.
 	var brain: Node = _actor.brain
 	if brain != null and brain.has_method(&"choose_verb"):
-		brain.call(&"choose_verb", exchange)
+		brain.call(&"choose_verb", aimed)
 
-	# THE INTERRUPT, AND THE RESULT, THROUGH ONE DOOR. Note what this file does
-	# NOT do: it does not hold anybody, it does not know that being in an exchange
-	# stops a man thinking, and — since the result seam landed — it does not settle
-	# anything either. It offers; the broker opens the conversation if one is not
-	# already standing and settles the action inside it.
-	#
-	# A UI that could freeze a brain directly would be a second way to suspend
-	# somebody, and a second way is a second place for a man to get stuck. A UI
-	# that could settle directly would be the same mistake pointed at the world
-	# instead of at the man.
-	if broker == null:
-		push_warning("the exchange arc has no broker — nothing can be started")
+	# WHAT THIS FILE STILL DOES NOT DO: it does not hold anybody, it does not know
+	# that being in an exchange stops a man thinking, and it does not move a single
+	# loaf. A UI that could freeze a brain directly would be a second way to
+	# suspend somebody, and a second way is a second place for a man to get stuck.
+	if not aimed.perform(_actor, target):
+		# Refused, and legitimately — one of them is already talking, or the basket
+		# emptied between the frame that drew the row and the key going down.
+		print("REFUSED — %s could not %s toward %s" % [
+			_actor.person_name, aimed.label, target.name])
+		if brain != null and brain.has_method(&"stop_doing_anything"):
+			brain.call(&"stop_doing_anything")
 		return
-	var standing: Variant = broker.call(&"offer", _actor, target, exchange)
-	if standing == null:
-		# Refused, and legitimately: one of them is already talking to somebody.
-		print("EXCHANGE — %s is already engaged" % target.person_name)
-		return
-	print("EXCHANGE — %s %s with %s" % [
-		_actor.person_name, exchange.label, target.person_name])
+	print("DID — %s: %s toward %s" % [_actor.person_name, aimed.label, target.name])

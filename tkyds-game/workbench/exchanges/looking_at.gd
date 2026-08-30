@@ -35,6 +35,20 @@ extends Node
 # that knows who is alive.
 @export var crowd: Population
 
+# AND EVERYTHING ELSE WORTH LOOKING AT. A basket, a barrel, a cart — anything
+# with a body in the world that a verb might be aimed at.
+#
+# Array[NodePath] AND NOT Array[Node3D], and that is not a style choice:
+# CLAUDE.md records that `@export var x: Array[Node]` does not resolve its paths
+# at all, even with node_paths, and loads as a list of nulls in silence. The
+# documented answer is NodePath plus get_node_or_null, which is what _ready does.
+#
+# LISTED RATHER THAN SCANNED. A group or a "find everything with an inventory"
+# sweep would make what is addressable depend on what happens to exist, which is
+# how a scene grows a target nobody meant to add. This is a workbench; naming the
+# three things in it is honest and takes a line each.
+@export var things: Array[NodePath] = []
+
 # The GATE. Generous on purpose — see the header. Half-angle, in degrees.
 @export var within_degrees := 35.0
 
@@ -52,7 +66,8 @@ extends Node
 var _eye: Camera3D
 var _looker: Person
 var _crowd: Population
-var _looked_at: Person
+var _things: Array[Node3D] = []
+var _looked_at: Node3D
 
 
 func _ready() -> void:
@@ -65,6 +80,12 @@ func _ready() -> void:
 		push_warning("LookingAt has no looker — he will be able to address himself")
 	if _crowd == null:
 		push_warning("LookingAt has no Population — there is nobody to look at")
+	for path in things:
+		var thing := get_node_or_null(path) as Node3D
+		if thing == null:
+			push_warning("LookingAt was given a path to nothing: %s" % path)
+			continue
+		_things.append(thing)
 
 
 func _process(_delta: float) -> void:
@@ -73,23 +94,40 @@ func _process(_delta: float) -> void:
 
 # Null is a real answer and means "nobody" — the arc draws nothing, which is
 # the honest picture rather than a stale target left up from last frame.
-func get_looked_at() -> Person:
+func get_looked_at() -> Node3D:
 	if not is_instance_valid(_looked_at):
 		_looked_at = null
 	return _looked_at
 
 
-func _find_who_is_looked_at() -> Person:
-	if _eye == null or _crowd == null:
+# PEOPLE AND THINGS RANKED TOGETHER, ON ONE COST. A basket standing in front of a
+# man wins the arc, and stepping past it hands the arc back to him — which is the
+# behaviour you would want and the behaviour you get for free, because both go
+# through the same comparison. Two separate searches with a tie-break between
+# them would need a rule about which kind wins, and there is no honest one.
+func _find_who_is_looked_at() -> Node3D:
+	if _eye == null:
 		return null
 	var from := _eye.global_position
 	var facing := -_eye.global_transform.basis.z
-	var best: Person = null
+	var best: Node3D = null
 	var best_cost := INF
-	for person in _crowd.get_people():
-		if person == _looker or not is_instance_valid(person):
+
+	var candidates: Array[Node3D] = []
+	if _crowd != null:
+		for person in _crowd.get_people():
+			candidates.append(person)
+	candidates.append_array(_things)
+
+	for thing in candidates:
+		if thing == _looker or not is_instance_valid(thing):
 			continue
-		var toward := person.global_position + Vector3.UP * head_height - from
+		# Aimed at faces for a man, and at the middle of the thing for a basket —
+		# which is what head_height already is, applied to a thing that is not as
+		# tall. Close enough for a workbench, and the alternative is a per-target
+		# height nobody would tune.
+		var lift := head_height if thing is Person else 0.0
+		var toward := thing.global_position + Vector3.UP * lift - from
 		var reach := toward.length()
 		if reach > within_reach or reach <= 0.0:
 			continue
@@ -99,5 +137,5 @@ func _find_who_is_looked_at() -> Person:
 		var cost := off_centre + reach * distance_costs
 		if cost < best_cost:
 			best_cost = cost
-			best = person
+			best = thing
 	return best

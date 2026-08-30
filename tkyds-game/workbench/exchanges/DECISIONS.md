@@ -738,6 +738,146 @@ get there, and three of the failures are the interesting part:
 `exchanges.tscn`.** See the traps below. It is now a standing cost of leaving the
 4.4 editor open on this project while hand-editing scenes.
 
+## W13 — Beckon and follow, and the other book
+
+**Built 2026-08-30.** The first outcome you can watch from across a field: you
+call a man and he walks over.
+
+**ONE ACTION, AUTHORED TWICE.** `come_along.gd` is what both verbs land, and the
+only difference is `stays_with_him` — "come here" and "stay with me" are the same
+behaviour with different stopping conditions, so they are one file authored twice
+rather than two files kept in step.
+
+**THE SUMMONER IS BOTH THE STORED INTENT AND THE DISCHARGE.** `summoner` holds
+who called (the FR101 carve-out again — nothing in the world tells you). When a
+beckon is answered, **the field is CLEARED rather than a separate `done` flag
+being set**: the gate is "is somebody calling me", so forgetting who called is
+exactly what finished means. One field, one job, nothing to keep in step. A
+follow never clears it, and that is the whole of the difference.
+
+**A `game/` EDIT, AND IT IS THE SECOND ONE THIS WORKBENCH HAS MADE** (W8 was the
+first). `GoToStep.walk_toward` takes a `Place`, snaps onto it, and writes
+`current_place` — none of which is right for walking to a man. Rather than copy
+the hand integration (that file calls itself *"the only thing in the game that
+moves a body"*, and a second copy makes that false), **`walk_toward_point` was
+split out**: the movement with no opinion about why, with the place bookkeeping
+left in the caller that has a place. `walk_toward` is now that plus two lines and
+behaves identically.
+
+**HE STOPS BESIDE THE MAN, AND THAT IS NOT A RADIUS.** The target is a point
+`closes_to` short of the summoner, and the inherited overshoot clamp lands him
+exactly on it. Decision 10 forbids arrival BY THRESHOLD — which flickers at its
+own edge and lands differently at different tick rates — and asking for a point
+that is short of something keeps the clamp doing the work instead. Measured: he
+stops at **1.80 m**, every time.
+
+**`pull = 100` IS A DESIGN STATEMENT, NOT A FUDGE**, and it is chosen against two
+specific numbers. StayUp peaks at 87.3 at noon, so **a summons outranks going
+about your day at any hour** — being called is not a thing you get round to. Eat
+reaches 130 at real hunger and Sleep climbs past this on real exhaustion, so a
+starving or spent man still refuses, and refuses **by being outbid rather than by
+being barred**. Asserted at noon, StayUp at its loudest, and he still comes.
+
+### `needs_their_regard_above` — the first gate that reads the other book
+
+W12 built one Acquaintance node per SIDE and argued it on principle. **Follow is
+where that pays.** "Will he follow me around" does not turn on what I think of
+him at all — it turns on what HE thinks of ME, and a single shared number could
+not tell those apart.
+
+The claim is built so it cannot pass by luck: at that point he regards the player
+at **23** (greeted 8, given 15) and the player regards him at **10**, against
+follow's threshold of 20. **Reading the wrong book would shut the gate**, so
+passing means it read the right one.
+
+**Standing count: 73 claims, all green.**
+
+**Also landed: the trap now reports itself.** The player's six loaves have been
+overwritten out of `exchanges.tscn` by the open editor FIVE times, and give
+silently never appeared — every other claim in the file stocks what it measures,
+so none of them could see it. There is now one claim that deliberately does not:
+*"the scene authors the player something to give (N items) — if this is red, the
+editor ate it again."* It caught it on the first run at 0 items.
+
+## W14 — The arc aims at THINGS too, and goods come from somewhere
+
+**Built 2026-08-30**, from the author's call: *"you will have to create a bread
+basket… because inserting directly into his inventory to start the scene isn't
+working at all.. so let's solve it the right way."*
+
+**THE WORKAROUND AND THE RIGHT ANSWER TURNED OUT TO BE THE SAME THING.** Six
+loaves authored onto the player in `exchanges.tscn` were overwritten out of the
+file **five times** by an open editor re-saving from its own stale copy; give was
+gated shut, drew nothing, and said nothing. But a player who starts holding bread
+because a scene file says so **cannot answer where it came from**, and the moment
+anything else wants to hand out goods — a barn, a stall, a body — it needs its
+own answer. A basket is that answer, it is reusable, and its loaves live in its
+OWN scene file, which is not the one the editor is holding open.
+
+### `aimed_action.gd` — the split the basket forced
+
+The arc only drew over `Person`, because every verb was an `ExchangeAction` and
+an exchange is between two people (W3: both parties plain, neither special, the
+broker holds and runs upkeep for both). **You do not have a conversation with a
+basket.** But you do look at one, and the arc's job is *"what can I do to the
+thing I am looking at"*.
+
+So the aimed half is now its own base — what the arc draws, how far it reaches,
+and `perform()`, the one door pressing it comes through. `ExchangeAction` is that
+plus the between-two-people half. **The arc reaches a verb only through
+`perform()`** and does not know which kind it just fired: an exchange's perform
+opens a conversation at the broker, a take's moves goods, and neither is a branch
+in the UI. Adding a verb aimed at a door, a cart or a barrel is now a scene.
+
+**`take_from.gd` asks the THING, not a list of things.** Anything answering
+`get_inventory()` can be taken from — the same duck-typed reach `Person`, `Place`
+and `Workstation` already share by all answering it. No file names a basket.
+
+### Reach bands — the author's second call
+
+> *"for beckon and greet to feel right, the distance can and should be longer to
+> greet and then beckon is only for longer distances"*
+
+`reaches_within` / `reaches_beyond`, **per action**, because one number on the arc
+can only say how far you can address somebody at all — it cannot say that this
+verb belongs near and that one belongs far. `LookingAt.within_reach` went to 30 m
+and now only decides what you can point at; the verbs decide what survives at
+that range:
+
+| | band |
+|---|---|
+| take a loaf | ≤ 2.6 m |
+| give | ≤ 2.8 m |
+| ask | ≤ 4.0 m |
+| greet, follow | ≤ 14 m |
+| **beckon** | **6 m – 30 m** |
+
+**Beckon authors a MINIMUM**, which is the whole point of it: beckoning a man
+standing beside you is nonsense, so it simply is not offered up close.
+
+### `offered` is gone for good
+
+W12a killed its last case. The reach band and `needs_to_have_met` between them do
+everything it was reaching for, and they do it as two numbers rather than an enum.
+
+**Standing count: 92 claims, all green.**
+
+**Three break-pass findings worth keeping:**
+
+- **A claim that asked the arc directly could not see LookingAt at all.** "Taking
+  is on the arc" passed `basket` straight in, so removing things from the search
+  entirely left it green. The eye is now aimed at the basket and the real search
+  is run, which catches it.
+- **"You do not greet a basket" was DOUBLE-GUARDED and unbreakable.** `greet.gd`
+  overrides `is_available_toward` and casts for itself, and the base casts too —
+  so no single break could show it, and breaking both errored rather than failing.
+  The claim was moved onto **give**, which does not override, so the base's guard
+  is the only thing standing there and breaking it turns the claim red on its own.
+  *Defence in depth makes a claim harder to write, not easier.*
+- The two transfer breaks separate as cleanly as W12's: moving nothing fails only
+  "into his hands" (24 → 24), creating instead of moving fails only conservation
+  (24 → 25).
+
 ---
 
 ## Two engineering traps found the hard way
@@ -758,11 +898,40 @@ Gate 1 findings about an editor being open on the project.
 same broken wire, and claim 4 stayed green throughout. Worth closing in the real
 probe whether or not any of this workbench survives.
 
+**AND IT HAS A FALSE POSITIVE, WHICH IS WORSE — 2026-08-30.** Claim 4 is RED
+today, on `person_with_exchange.tscn`'s `steered_by_camera`, reporting *"is a
+bare NodePath but is not in node_paths — it loads as null"*. **It does not load
+as null.** Measured decisively: the .tscn was given
+`NodePath("../DecisiveTestValue")` — deliberately different from the script's
+default, so a dropped value could not hide behind it — and the instantiated Brain
+read it back intact and non-empty.
+
+`node_paths` exists for properties typed as a NODE, where the loader must turn a
+path into an object. A property typed `NodePath` stores a NodePath and is
+resolved by the script at runtime (`get_node_or_null`), which is the whole point
+of that type. **Claim 4 flags any `NodePath(...)` assignment missing from
+`node_paths`, and that is only a bug for the Node-typed case.**
+
+**THE EXPENSIVE PART IS WHAT THE FALSE POSITIVE TAUGHT THE CODEBASE.** On
+2026-08-21 somebody saw claim 4 go red, believed it, and wrote the conclusion
+into `exchange_brain.gd` as a fact — *"a BARE NodePath export needs node_paths on
+the .tscn node header too"* — explicitly overruling an earlier correct note. So a
+wrong claim did not merely fail; **it propagated into a source comment as
+documented knowledge, where the next person would have believed it too.** This
+project has a standing discipline for claims that pass while asserting nothing.
+This is the other species: a claim that FAILS for the wrong reason, and is
+believed. The comment is corrected; **claim 4 itself is left for the author,
+because it is the project's standing green and not a workbench call.**
+
+**It is also PRE-EXISTING, not a workbench regression** — the offending line is
+committed at HEAD, so the probe's recorded "65 claims, all green" and this red
+cannot both be current.
+
 ---
 
 ## When we fold this back
 
-Walk W1–W12a in order and rule on each. **W8 is already fixed and needs no ruling** — it was a bug, the fix is in `game/`, and the probe is unmoved at 64 claims / 14898 checks. W1 is the only one that genuinely
+Walk W1–W14 in order and rule on each. **W8 is already fixed and needs no ruling** — it was a bug, the fix is in `game/`, and the probe is unmoved at 64 claims / 14898 checks. W1 is the only one that genuinely
 contradicts a stated design bet, so it is the one that has to be argued rather
 than merged — and if it survives, the boss plan's "nobody has to build refusal"
 paragraph needs rewriting, not just supplementing.

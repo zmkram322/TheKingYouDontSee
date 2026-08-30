@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/come_along.gd" id="1_summons"]
+[ext_resource type="Script" path="res://workbench/exchanges/come_along_step.gd" id="2_step"]
+
+[node name="ComeHere" type="Node"]
+script = ExtResource("1_summons")
+label = "coming over"
+stays_with_him = false
+
+[node name="Walk over" type="Node" parent="."]
+script = ExtResource("2_step")

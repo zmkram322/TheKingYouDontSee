@@ -1,47 +1,31 @@
-extends Action
+extends "res://workbench/exchanges/aimed_action.gd"
 
 const Acquaintance := preload("res://workbench/exchanges/acquaintance.gd")
 
-# An Action aimed at somebody. The base Action answers "may he do this?"; this
-# adds "may he do this TO THAT MAN, GIVEN WHETHER THEY ARE ALREADY TALKING?",
-# carries what the arc needs to draw itself, and owns THE ONE DOOR AN EXCHANGE'S
-# RESULT COMES THROUGH.
+# AN AIMED ACTION WHOSE TARGET IS A PERSON, AND WHICH OPENS A CONVERSATION.
 #
-# THIS IS THE RULE EXCHANGES BREAKS, AND IT IS BROKEN IN ONE NAMED PLACE.
-# Decision 35: since freeness became a public register, NOT ONE gate in the
-# game reads where a man is standing, so no verb can be revealed by arriving
-# anywhere — a ballot turns on what he CARRIES and what the town has DONE. An
-# arc over somebody's head is the opposite claim: this verb exists because that
-# man is in front of you. The break is deliberate and it is confined to
-# is_available_toward below, which nothing in game/ calls and nothing in game/
-# knows about.
+# The aimed half — what the arc draws, how far it reaches, the one door pressing
+# it comes through — is aimed_action.gd, and it is shared with verbs pointed at
+# THINGS. This file is the part that only makes sense between two people: what he
+# already thinks of the man, what the exchange leaves behind, and the fact that
+# doing it means a conversation rather than an instant.
+#
+# THE SPLIT IS W3's DOING. An exchange has an initiator and a recipient, both a
+# plain Person, and the broker holds and runs upkeep for both. A bread basket is
+# not a person and there is no conversation to have with it — but you look at it,
+# and the arc's job is "what can I do to the thing I am looking at". So the
+# basket gets an aimed action and never comes near the broker.
 #
 # WHY THE TARGET IS AN ARGUMENT AND NOT A STORED FIELD. Handing the target in
 # means no exchange action ever holds a stale pointer to somebody who walked
 # off or was freed, and it keeps ActionStep's "hold no progress" rule intact:
-# ask again every frame, from whoever is being looked at right now. The live
-# exchange is handed in for exactly the same reason, and it is asked of the
-# broker afresh every frame rather than remembered here.
+# ask again every frame, from whoever is being looked at right now.
 
-# What the arc draws. All three are AUTHORED ON THE ACTION, never looked up
-# from a table keyed by name — the same reason the clip name lives on the
-# ActionStep instead of in a dictionary in game/. A UI that decides which
-# picture means "greet" is code naming a verb, which is a failed build on the
-# same footing as verb_list naming one. This file names nothing; it holds a
-# slot and whoever authors an action fills it.
-@export var icon: Texture2D
-
-# Stands in for the icon until there is art, and doubles as the colour coding.
-@export var swatch := Color(0.85, 0.85, 0.85)
-
-# The key that fires it. A single character, authored here, so the arc can show
-# a shortcut without owning a keymap or knowing what the verb is called.
-#
-# W, A, S and D are SPENT — they are the movement keys, and Shift, Space and
-# Escape are spent too (see the README's controls table). An exchange authored
-# onto one of those fires while you are walking, which reads as the game
-# talking to people by itself.
-@export var shortcut := ""
+# WHO PUTS THE CONVERSATION TOGETHER. Set once by the arc, because the broker is
+# a scene-level node and an Action instanced under a Brain cannot reach it — and
+# because W3 says every exchange installs at that one call site. An action with
+# no broker cannot be performed, and says so rather than doing half of it.
+var broker: Node
 
 # HOW LONG IT RUNS, IN REAL SECONDS — and the unit is the whole point.
 #
@@ -146,6 +130,18 @@ const Acquaintance := preload("res://workbench/exchanges/acquaintance.gd")
 # carry both.
 @export var needs_to_have_met := false
 
+# WHAT HE MUST THINK OF *ME* — the other book, and the first place W12's
+# one-node-per-side design actually pays for itself.
+#
+# `needs_regard_above` reads the ACTOR's regard for the TARGET, which is the
+# right question for a gift: am I willing to give this man bread. It is the WRONG
+# question for a summons. "Will he follow me around" does not turn on what I
+# think of him at all — it turns on what HE thinks of ME, and a single shared
+# number could not tell those apart. Two nodes, two books, two gates.
+#
+# -1 is "no requirement", same convention as above.
+@export var needs_their_regard_above := -1.0
+
 
 # May he do this to THIS man? Default: whatever he already thinks of him, and
 # nothing else. An exchange that cannot be refused on the target's own account
@@ -161,8 +157,19 @@ const Acquaintance := preload("res://workbench/exchanges/acquaintance.gd")
 # normally and is NOT replaced here: both have to say yes. That split is
 # deliberate — "am I able to greet at all" and "is he a man I can greet" are
 # different questions and blur into an unreadable single gate if merged.
-func is_available_toward(person: Person, target: Person) -> bool:
-	return is_regarded_enough(person, target)
+# THE REACH BAND IS RE-ASKED, NOT REPLACED. An override takes the base out
+# entirely, so forgetting this line would make every authored reaches_within and
+# reaches_beyond silently do nothing — and beckon, whose whole character is that
+# it is only offered at a distance, would appear over a man standing beside you.
+#
+# AND THE TARGET MUST BE A PERSON. An exchange is between two people (W3); the
+# cast failing is how a basket falls off this row of the arc without the arc
+# needing to know what a basket is.
+func is_available_toward(person: Person, target: Node3D) -> bool:
+	var man := target as Person
+	if man == null:
+		return false
+	return is_in_reach(person, target) and is_regarded_enough(person, man)
 
 
 # Does he think enough of that man for this to be offerable? Both halves, asked
@@ -171,7 +178,9 @@ func is_available_toward(person: Person, target: Person) -> bool:
 func is_regarded_enough(person: Person, target: Person) -> bool:
 	if needs_to_have_met and not Acquaintance.have_met(person, target):
 		return false
-	return Acquaintance.get_warmth(person, target) > needs_regard_above
+	if Acquaintance.get_warmth(person, target) <= needs_regard_above:
+		return false
+	return Acquaintance.get_warmth(target, person) > needs_their_regard_above
 
 
 # --- WHAT COMES OF IT ---------------------------------------------------------
@@ -261,3 +270,22 @@ func find_landed(what: PackedScene, person: Person) -> Action:
 		if action.scene_file_path == what.resource_path:
 			return action
 	return null
+
+
+# DOING IT MEANS HAVING A CONVERSATION. The arc calls perform and knows nothing
+# else; everything specific to an exchange — opening it, holding both men,
+# settling, the reveal — happens behind this one line at the broker, which is the
+# call site W3 built for exactly that.
+#
+# The cast is the same guard as the gate's: an exchange needs a Person on the
+# other end, and a target that is not one is refused here as well rather than
+# only in the drawing. The arc must never be the only thing standing between a
+# verb and something it cannot be done to.
+func perform(person: Person, target: Node3D) -> bool:
+	var man := target as Person
+	if man == null:
+		return false
+	if broker == null:
+		push_warning("\"%s\" has no broker — nothing can be started" % name)
+		return false
+	return broker.call(&"offer", person, man, self) != null

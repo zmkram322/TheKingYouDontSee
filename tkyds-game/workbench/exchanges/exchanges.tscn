@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://dmxnvvmxjpnbt"]
+[gd_scene load_steps=18 format=3 uid="uid://dmxnvvmxjpnbt"]
 
 [ext_resource type="PackedScene" uid="uid://cw2jppe21uu50" path="res://workbench/exchanges/person_with_exchange.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://workbench/exchanges/follow_camera.tscn" id="2_camera"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://bf16cmf107lgh" path="res://workbench/exchanges/exchange_arc.gd" id="8_arc"]
 [ext_resource type="PackedScene" path="res://game/ui/person_readout.tscn" id="9_readout"]
 [ext_resource type="Script" uid="uid://cvh8ctw3fdwcj" path="res://workbench/exchanges/exchange_broker.gd" id="10_broker"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/bread_basket.tscn" id="11_basket"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_ground"]
 sky_horizon_color = Color(0.64, 0.68, 0.72, 1)
@@ -51,6 +52,9 @@ surface_material_override/0 = SubResource("Material_ground")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 shape = SubResource("BoxShape3D_ground")
 
+[node name="BreadBasket" parent="." instance=ExtResource("11_basket")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -3)
+
 [node name="Clock" type="Node" parent="."]
 script = ExtResource("4_clock")
 
@@ -66,7 +70,8 @@ script = ExtResource("7_looking_at")
 eye = NodePath("../Population/Player/FollowCamera/PitchPivot/Camera3D")
 looker = NodePath("../Population/Player")
 crowd = NodePath("../Population")
-within_reach = 8.0
+things = Array[NodePath]([NodePath("../BreadBasket")])
+within_reach = 30.0
 
 [node name="ExchangeArc" type="CanvasLayer" parent="." node_paths=PackedStringArray("watching", "eye", "actor", "broker")]
 script = ExtResource("8_arc")

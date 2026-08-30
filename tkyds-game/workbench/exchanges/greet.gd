@@ -31,10 +31,18 @@ func is_available_to(person: Person) -> bool:
 # half, the half Decision 35 says nothing in game/ is allowed to ask, asked here
 # on purpose.
 #
-# THE BASE HALF IS RE-ASKED THROUGH is_regarded_enough RATHER THAN DROPPED.
-# Overriding is_available_toward replaces the base entirely, so an override that
-# forgot this line would silently ignore whatever regard the action authored.
-# Greeting requires none, so today it changes nothing — which is exactly when a
-# missing call is easiest to leave out and hardest to notice.
-func is_available_toward(person: Person, target: Person) -> bool:
-	return is_regarded_enough(person, target) and target.brain.is_awake()
+# THE BASE IS RE-ASKED THROUGH super() RATHER THAN DROPPED, and it now carries
+# two things rather than one: the regard gates AND the reach band. Overriding
+# is_available_toward replaces the base entirely, so an override that forgot this
+# call would silently ignore both — a greeting offered at any distance, ignoring
+# whatever the action was authored to require. Greeting requires no regard, so
+# that half changes nothing today, which is exactly when a missing call is
+# easiest to leave out and hardest to notice.
+#
+# THE CAST IS THE GUARD FOR THINGS. You do not greet a basket, and the arc no
+# longer only ever hands this a Person.
+func is_available_toward(person: Person, target: Node3D) -> bool:
+	var man := target as Person
+	if man == null:
+		return false
+	return super(person, target) and man.brain.is_awake()

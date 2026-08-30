@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://cw2jppe21uu50"]
+[gd_scene load_steps=10 format=3 uid="uid://cw2jppe21uu50"]
 
 [ext_resource type="PackedScene" uid="uid://cbxfrobp7ktlj" path="res://game/person.tscn" id="1_person"]
 [ext_resource type="Script" uid="uid://bh2bv4qim2tje" path="res://workbench/exchanges/person_with_exchange.gd" id="2_body"]
@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" path="res://workbench/exchanges/greet.tscn" id="4_greet"]
 [ext_resource type="PackedScene" path="res://workbench/exchanges/give.tscn" id="5_give"]
 [ext_resource type="PackedScene" path="res://workbench/exchanges/ask.tscn" id="6_ask"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/beckon.tscn" id="7_beckon"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/follow.tscn" id="8_follow"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/take_bread.tscn" id="9_take"]
 
 [node name="PersonWithExchange" instance=ExtResource("1_person")]
 script = ExtResource("2_body")
@@ -32,3 +35,9 @@ leaves_beyond = 4.5
 [node name="Give" parent="Brain" index="7" instance=ExtResource("5_give")]
 
 [node name="Ask" parent="Brain" index="8" instance=ExtResource("6_ask")]
+
+[node name="Beckon" parent="Brain" index="9" instance=ExtResource("7_beckon")]
+
+[node name="Follow" parent="Brain" index="10" instance=ExtResource("8_follow")]
+
+[node name="TakeBread" parent="Brain" index="11" instance=ExtResource("9_take")]

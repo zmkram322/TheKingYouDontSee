@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://workbench/exchanges/summon.gd" id="1_summon"]
+[ext_resource type="Script" uid="uid://bf3x1qphjslch" path="res://game/action_step.gd" id="2_step"]
+[ext_resource type="PackedScene" path="res://workbench/exchanges/stay_with_him.tscn" id="3_lands"]
+
+[node name="Follow" type="Node"]
+script = ExtResource("1_summon")
+label = "come with me"
+swatch = Color(0.55, 0.78, 0.78, 1)
+shortcut = "F"
+reaches_within = 14.0
+takes_seconds = 2.5
+answers_after_seconds = 0.9
+needs_to_have_met = true
+needs_their_regard_above = 20.0
+initiator_regard_change = 0.0
+recipient_regard_change = 0.0
+lands_on_recipient = ExtResource("3_lands")
+
+[node name="Ask him along" type="Node" parent="."]
+script = ExtResource("2_step")
+clip = &"beckon"

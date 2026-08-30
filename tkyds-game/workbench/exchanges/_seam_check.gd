@@ -75,21 +75,28 @@ func _process(_delta: float) -> bool:
 			exchanges += 1
 	_held("the player knows at least one exchange (found %d)" % exchanges, exchanges > 0)
 
-	# THE SCENE ITSELF, ASKED BEFORE THIS FILE TOUCHES ANYTHING. Give is gated on
-	# the giver having something to give, so a player authored with an empty sack
-	# means the verb never appears — and it appears nowhere, says nothing, and
-	# looks exactly like a broken gate.
+	# THE SCENE ITSELF, ASKED BEFORE THIS FILE TOUCHES ANYTHING.
 	#
-	# IT HAS HAPPENED FIVE TIMES. exchanges.tscn authors him six loaves, and an
-	# open Godot editor re-saves the scene from its own stale copy and drops the
-	# block every time (see the engineering traps at the end of DECISIONS.md).
-	# Every other claim in this file stocks what it measures, so not one of them
-	# could see it. This one deliberately does not.
-	var starts_with := 0
-	for item_name in player.get_inventory().get_item_names():
-		starts_with += player.get_inventory().get_count(item_name)
-	_held("the scene authors the player something to give (%d items) — if this is red, the editor ate it again"
-		% starts_with, starts_with > 0)
+	# THE PLAYER STARTS WITH NOTHING NOW, AND THAT IS THE FIX RATHER THAN THE BUG.
+	# exchanges.tscn used to author him six loaves and an open editor overwrote
+	# that block from its own stale copy FIVE times; give was gated shut, appeared
+	# nowhere, and said nothing. Goods now come from a basket he takes from —
+	# which is the honest version anyway (goods should come from somewhere) and
+	# which happens to survive, because the loaves live in the BASKET'S own scene
+	# file rather than in the one the editor is holding open.
+	#
+	# Every other claim in this file stocks what it measures. This one deliberately
+	# does not, because a transfer check that quietly measures 0 -> 0 and calls
+	# conservation satisfied is worse than no check at all.
+	var basket: Node3D = _scene.get_node_or_null(^"BreadBasket") as Node3D
+	_held("the scene has a basket to take from", basket != null)
+	var stocked := 0
+	if basket != null:
+		stocked = basket.get_inventory().get_count(&"bread")
+	_held("and it is stocked in its OWN scene file, out of the editor's reach (%d loaves)"
+		% stocked, stocked > 0)
+	_held("while the player starts empty-handed — goods come from somewhere",
+		player.get_inventory().get_count(&"bread") == 0)
 
 	var before: float = npc.stats.get_stat("adenosine")
 	crowd.think_for_everyone(2.0)
@@ -260,7 +267,10 @@ func _process(_delta: float) -> bool:
 	if greet != null and clock != null:
 		# Stood apart and pointed anywhere, so "they face each other" cannot pass
 		# by having started that way. Both are turned to a third direction first.
-		npc.global_position = player.global_position + Vector3(3.0, 0.0, 0.0)
+		# Inside GIVE's reach (2.8 m), which is the tightest band any verb
+		# authors — give is close work and greet is not. Standing them where only
+		# some verbs reach is how the reach claims further down mean anything.
+		npc.global_position = player.global_position + Vector3(2.0, 0.0, 0.0)
 		var npc_body: Node3D = npc.get_node(^"Body")
 		var player_body: Node3D = player.get_node(^"Body")
 		npc_body.rotation.y = 0.0
@@ -395,14 +405,75 @@ func _process(_delta: float) -> bool:
 		# hand_over moves, and the whole reason that is the one transfer path is
 		# so a check like this means something. A world total that changed here
 		# would mean a second door had been cut.
-		# STOCKED HERE RATHER THAN READ OFF THE SCENE, and that is not laziness.
-		# exchanges.tscn authors the player six loaves, and an open Godot editor
-		# has silently eaten that block out of the file once already (see the
-		# engineering traps at the end of DECISIONS.md). A transfer check that
-		# quietly measures 0 -> 0 and calls conservation satisfied is worse than
-		# no check, so the quantity under test is put there by the test.
+		# --- HE TAKES IT OUT OF THE BASKET, which is where his bread comes from --
+		#
+		# THE FIRST AIMED ACTION WHOSE TARGET IS NOT A PERSON, and the reason the
+		# arc was generalised. Nothing is stocked into him by this file: the
+		# transfer under test is the one that puts bread in his hands.
 		var loaf: StringName = give.gives_item
-		player.get_inventory().add(loaf, 3)
+		var take: Action = null
+		for action in player.brain.get_known_actions():
+			if action.scene_file_path == "res://workbench/exchanges/take_bread.tscn":
+				take = action
+		_held("the player can take from a container", take != null)
+
+		if take != null and basket != null:
+			# THE BASKET IS LOOKED AT THE SAME WAY A MAN IS — one search, one cost,
+			# people and things ranked together. If it were a second list with a
+			# tie-break, this would need a rule about which kind wins.
+			player.global_position = basket.global_position + Vector3(0.0, 0.0, 1.5)
+
+			# ACTUALLY LOOKED AT, through the real search. The claim below asks the
+			# arc about the basket directly, which would pass even if LookingAt
+			# could not FIND a basket at all — so the eye is pointed at it and the
+			# search is run for real. People and things go through one comparison
+			# on one cost, which is what makes a basket in front of a man win the
+			# arc and stepping past it hand the arc back.
+			var eye: Camera3D = watcher.eye
+			eye.global_position = player.global_position + Vector3.UP * 1.6
+			eye.look_at(basket.global_position + Vector3.UP * 0.2)
+			watcher._process(0.0)
+			_held("the eye finds the basket, not only people",
+				watcher.get_looked_at() == basket)
+
+			_held("standing at the basket, taking is on the arc",
+				arc._get_open_exchanges(basket).has(take))
+			# AND AN EXCHANGE IS NOT. Asked of GIVE rather than of greet on purpose:
+			# greet.gd overrides is_available_toward and casts for itself, so it is
+			# guarded twice and no single break can show the claim working — the
+			# base refuses and the override refuses. Give does not override, so the
+			# base's "an exchange needs a person" is the only thing standing there,
+			# and breaking it turns this red on its own.
+			_held("but an exchange is not — you do not hand bread to a basket",
+				not give.is_available_toward(player, basket))
+
+			var in_basket: int = basket.get_inventory().get_count(loaf)
+			var in_hand: int = player.get_inventory().get_count(loaf)
+			_held("he took a loaf", take.perform(player, basket))
+			_held("out of the basket and into his hands: basket %d -> %d, him %d -> %d"
+				% [in_basket, basket.get_inventory().get_count(loaf),
+					in_hand, player.get_inventory().get_count(loaf)],
+				basket.get_inventory().get_count(loaf) == in_basket - take.takes_count
+				and player.get_inventory().get_count(loaf) == in_hand + take.takes_count)
+			_held("and nothing was created on the way: %d -> %d"
+				% [in_basket + in_hand,
+					basket.get_inventory().get_count(loaf)
+					+ player.get_inventory().get_count(loaf)],
+				basket.get_inventory().get_count(loaf)
+				+ player.get_inventory().get_count(loaf) == in_basket + in_hand)
+
+			# WALK AWAY AND THE VERB LEAVES. The reach band, on the one verb whose
+			# band is tightest — asserted by moving rather than by reading the
+			# number, because a band nothing ever steps outside of is not a band.
+			player.global_position = basket.global_position + Vector3(0.0, 0.0, 12.0)
+			_held("out of arm's reach, taking is not offered",
+				not take.is_available_toward(player, basket))
+
+			# And put him back beside the man for the giving.
+			player.global_position = npc.global_position - Vector3(2.0, 0.0, 0.0)
+			take.perform(player, basket) # nothing: he is far from the basket now
+			player.get_inventory().add(loaf, 2)
+
 		var giver_before: int = player.get_inventory().get_count(loaf)
 		var taker_before: int = npc.get_inventory().get_count(loaf)
 		var handed: Node = broker.offer(player, npc, give)
@@ -496,6 +567,99 @@ func _process(_delta: float) -> bool:
 				% npc.brain.describe_current_action(),
 				npc.brain.current_action != errand
 				and npc.brain.get_open_actions().has(errand))
+
+	# --- BECKON AND FOLLOW -----------------------------------------------------
+	#
+	# The first outcome you can watch from across a field: he walks to you. Both
+	# verbs are the same landed action differing by one flag, so the claims below
+	# are mostly about the ONE thing that differs — whether answering ends it.
+
+	var beckon: Action = null
+	var follow: Action = null
+	for action in player.brain.get_known_actions():
+		if action.scene_file_path == "res://workbench/exchanges/beckon.tscn":
+			beckon = action
+		if action.scene_file_path == "res://workbench/exchanges/follow.tscn":
+			follow = action
+	_held("the player can beckon and can ask a man along",
+		beckon != null and follow != null)
+
+	if beckon != null and follow != null:
+		# THE OTHER BOOK, and the first gate in this folder that reads it. Follow
+		# turns on what HE thinks of ME; every gate before it read what I think of
+		# him. Right now he regards the player at 23 (greeted 8, given 15) — so it
+		# is open — and the player regards HIM at 10, which is BELOW follow's
+		# threshold of 20. If the gate were reading the wrong book it would be
+		# shut, so this passes for a reason rather than by luck.
+		_held("he thinks more of the player (%.0f) than the player does of him (%.0f)"
+			% [Acquaintance.get_warmth(npc, player), Acquaintance.get_warmth(player, npc)],
+			Acquaintance.get_warmth(npc, player) > Acquaintance.get_warmth(player, npc))
+		_held("follow reads HIS regard for the player, not the other way about",
+			follow.is_available_toward(player, npc))
+		_held("and a man who thinks nothing of you will not come along",
+			not follow.is_available_toward(player, bystander))
+
+		# --- BECKON: he walks over, and then it is over ------------------------
+		npc.global_position = player.global_position + Vector3(14.0, 0.0, 0.0)
+		npc.stats.set_stat(&"adenosine", 0.0)
+		npc.stats.set_stat(&"hunger", 0.0)
+		clock.hours_elapsed = 12.0     # noon: StayUp at its loudest, 87.3
+		var called: Node = broker.offer(player, npc, beckon)
+		_held("the beckon opened an exchange", called != null)
+
+		var summons: Action = beckon.find_landed(beckon.lands_on_recipient, npc)
+		_held("a summons landed on him", summons != null)
+		_held("and it names who called him", summons.summoner == player)
+
+		broker.end(called)
+		var waited_at := npc.global_position
+		crowd.think_for_everyone(0.02)
+		_held("even at noon he answers rather than going about his day: he is %s"
+			% npc.brain.describe_current_action(), npc.brain.current_action == summons)
+		_held("and he closes the distance: %.1f m -> %.1f m"
+			% [waited_at.distance_to(player.global_position),
+				npc.global_position.distance_to(player.global_position)],
+			npc.global_position.distance_to(player.global_position)
+				< waited_at.distance_to(player.global_position))
+
+		# ARRIVAL, and the discharge that IS the arrival. Walked in for as long as
+		# it takes rather than teleported, so the stopping distance is measured
+		# rather than assumed.
+		for _tick in 200:
+			crowd.think_for_everyone(0.05)
+		var apart := npc.global_position.distance_to(player.global_position)
+		_held("he stops BESIDE the man, not on top of him: %.2f m apart" % apart,
+			apart > 0.1 and apart <= summons.closes_to + 0.01)
+		_held("a beckon is answered ONCE — nobody is calling him any more",
+			summons.summoner == null)
+		_held("so the summons is shut and he goes back to his own day: he is %s"
+			% npc.brain.describe_current_action(),
+			not summons.is_available_to(npc) and npc.brain.current_action != summons)
+
+		# --- FOLLOW: the same walk, and it does NOT end ------------------------
+		var along: Node = broker.offer(player, npc, follow)
+		_held("the follow opened an exchange", along != null)
+		var keeping: Action = follow.find_landed(follow.lands_on_recipient, npc)
+		_held("a different summons landed — following is not beckoning",
+			keeping != null and keeping != summons)
+		broker.end(along)
+
+		for _tick in 200:
+			crowd.think_for_everyone(0.05)
+		_held("he catches up", npc.global_position.distance_to(player.global_position)
+			<= keeping.closes_to + 0.01)
+		_held("and having arrived he is STILL following — the one flag that differs",
+			keeping.summoner == player and keeping.is_available_to(npc))
+
+		# AND HE KEEPS UP. The claim the beckon case cannot make: move the man he
+		# is following and he closes the gap again, with nobody asking twice.
+		player.global_position += Vector3(0.0, 0.0, -12.0)
+		for _tick in 200:
+			crowd.think_for_everyone(0.05)
+		_held("moved away, he follows without being asked again: %.2f m apart"
+			% npc.global_position.distance_to(player.global_position),
+			npc.global_position.distance_to(player.global_position)
+				<= keeping.closes_to + 0.01)
 
 	print("")
 	print("seam check: all held." if _bad == 0 else "seam check: %d FAILED." % _bad)

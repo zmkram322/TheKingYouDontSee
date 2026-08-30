@@ -49,11 +49,28 @@ const FollowCamera := preload("res://workbench/exchanges/follow_camera.gd")
 # per second.
 @export var braking := 24.0
 
-# Which rig says where forward is. CORRECTED 2026-08-21 after probe claim 4
-# went red on exactly this: a BARE NodePath export needs node_paths on the
-# .tscn node header too, not just a Node-typed one — the earlier note here
-# claimed otherwise and was wrong. This particular wire survives only because
-# it carries a default below, so nothing has to set it in a scene at all.
+# Which rig says where forward is.
+#
+# THE NOTE THAT WAS HERE WAS WRONG, AND IT WAS WRONG BECAUSE IT BELIEVED THE
+# PROBE OVER THE ENGINE. It read: "CORRECTED 2026-08-21 after probe claim 4 went
+# red on exactly this: a BARE NodePath export needs node_paths on the .tscn node
+# header too, not just a Node-typed one — the earlier note here claimed otherwise
+# and was wrong." The note it called wrong was right.
+#
+# MEASURED 2026-08-30, decisively. person_with_exchange.tscn was given
+# `steered_by_camera = NodePath("../DecisiveTestValue")` — deliberately DIFFERENT
+# from the default below, so a dropped value could not hide behind it — and the
+# instantiated Brain read it back intact and non-empty. A bare NodePath export
+# stores a NodePath and needs no resolution, so `node_paths` does not apply to
+# it; that list exists for properties typed as a NODE, where the loader has to
+# turn a path into an object. get_node_or_null() below does the resolving here,
+# at runtime, which is the whole reason the type is NodePath in the first place.
+#
+# SO PROBE CLAIM 4 HAS A FALSE POSITIVE, and it is the mirror of the blind spot
+# already recorded in DECISIONS.md: it flags any NodePath(...) assignment missing
+# from node_paths, which is only a bug when the property is Node-typed. Claim 4
+# is red on this file today and the wire is fine. Left for the author to rule on
+# rather than quietly patched — it is the project's standing green.
 @export var steered_by_camera := NodePath("../FollowCamera")
 
 var _camera: FollowCamera
